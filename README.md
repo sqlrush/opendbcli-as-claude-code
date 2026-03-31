@@ -93,20 +93,21 @@ OpenDB auto-detects input type and routes to the right handler — no mode switc
 curl -fsSL https://opendb.ai/install.sh | bash
 ```
 
-**Or build from source:**
-
-```bash
-git clone https://github.com/sqlrush/opendb.git
-cd opendb && make build
-```
-
 **Run the setup wizard:**
 
 ```bash
-opendb --setup
+opendb setup
 ```
 
 The wizard walks you through database connection, LLM configuration, and rule engine setup — you're operational in under a minute.
+
+**Modify existing configuration:**
+
+```bash
+opendb configure
+```
+
+Adjust database connections, LLM models, or rule engine settings at any time.
 
 ## Features
 
@@ -685,27 +686,9 @@ The LLM Agent isn't one-shot Q&A — it's a **controllable multi-round reasoning
 - **Anti-hallucination**: The biggest risk of LLM diagnosis is fabricating non-existent problems. OpenDB enforces hard constraints in the system prompt: "values cited in conclusions must come from tool query results", "repair SQL must verify object existence first" — turning diagnosis from guesswork into evidence-based reasoning
 - **Dual model strategy**: Small models (≤9B) use GuidedStrategy (OpenDB-orchestrated, 3 rounds read-only), large models (≥27B) use AutonomousStrategy (10 rounds full-tool autonomous diagnosis) — automatically selecting the optimal strategy based on model capability
 
-For detailed technical documentation, see [docs/](./docs/).
-
-## Contributing
-
-We welcome contributions! Whether it's bug reports, feature requests, or pull requests — all are appreciated.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feat/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feat/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-OpenDB is available under the [Apache License 2.0](./LICENSE).
-
-**Community Edition** is fully open source. **Enterprise Edition** with advanced features is available for commercial use — [contact us](mailto:contact@opendb.ai) for details.
-
 ---
 
 <p align="center">
   <strong>One agent. All databases. Zero complexity.</strong><br>
-  <a href="https://opendb.ai">Website</a> · <a href="https://github.com/sqlrush/opendb/issues">Issues</a> · <a href="./docs/">Documentation</a>
+  <a href="https://opendb.ai">Website</a> · <a href="https://github.com/sqlrush/opendb/issues">Issues</a>
 </p>
