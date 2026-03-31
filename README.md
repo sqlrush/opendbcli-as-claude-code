@@ -90,7 +90,7 @@ OpenDB auto-detects input type and routes to the right handler — no mode switc
 **Install** (Linux / macOS):
 
 ```bash
-curl -fsSL https://opendbcli.org/install.sh | bash
+curl -fsSL https://www.opendbcli.org/install.sh | bash
 ```
 
 **Run the setup wizard:**
@@ -690,5 +690,5 @@ The LLM Agent isn't one-shot Q&A — it's a **controllable multi-round reasoning
 
 <p align="center">
   <strong>One agent. All databases. Zero complexity.</strong><br>
-  <a href="https://opendbcli.org">Website</a> · <a href="https://github.com/sqlrush/opendb/issues">Issues</a>
+  <a href="https://www.opendbcli.org">Website</a> · <a href="https://github.com/sqlrush/opendb/issues">Issues</a>
 </p>
