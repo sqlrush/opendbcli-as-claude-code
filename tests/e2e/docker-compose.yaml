@@ -1,0 +1,152 @@
+# OpenDB Autopilot — End-to-End Test Environment
+# Spins up a complete cluster: 1 Cerebrate + 2 Overlords + 3 Workers + test databases
+#
+# Usage:
+#   cd tests/e2e
+#   docker compose up -d        # start all services
+#   docker compose logs -f      # watch logs
+#   docker compose down -v      # tear down
+#
+# Architecture:
+#   cerebrate (manager, port 9100, web 8080)
+#     ├── overlord-a (memory, region china-east, port 9200)
+#     │    ├── worker-oracle (port 9301, connects to oracle-db)
+#     │    └── worker-mysql  (port 9302, connects to mysql-db)
+#     └── overlord-b (memory, region china-north, port 9210)
+#          └── worker-pg     (port 9303, connects to pg-db)
+
+services:
+  # ============================================================================
+  # Test Databases
+  # ============================================================================
+
+  mysql-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass
+      MYSQL_DATABASE: testdb
+    ports:
+      - "13306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptestpass"]
+      interval: 5s
+      retries: 10
+
+  pg-db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: testdb
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  # ============================================================================
+  # Cerebrate (Manager Agent)
+  # ============================================================================
+
+  cerebrate:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    command: >
+      sh -c "
+        opendb cluster init --role manager --listen 0.0.0.0:9100 --web 0.0.0.0:8080 &&
+        opendb agent start --role manager --listen 0.0.0.0:9100 --web 0.0.0.0:8080
+      "
+    ports:
+      - "9100:9100"   # gRPC
+      - "8080:8080"   # Web dashboard
+    healthcheck:
+      test: ["CMD", "opendb", "agent", "status"]
+      interval: 10s
+      retries: 5
+
+  # ============================================================================
+  # Overlords (Memory Agents)
+  # ============================================================================
+
+  overlord-a:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    command: >
+      sh -c "
+        sleep 5 &&
+        opendb cluster join --role memory --cerebrate cerebrate:9100 --region china-east --token auto --listen 0.0.0.0:9200 &&
+        opendb agent start --role memory --listen 0.0.0.0:9200
+      "
+    ports:
+      - "9200:9200"
+    depends_on:
+      cerebrate:
+        condition: service_healthy
+
+  overlord-b:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    command: >
+      sh -c "
+        sleep 5 &&
+        opendb cluster join --role memory --cerebrate cerebrate:9100 --region china-north --token auto --listen 0.0.0.0:9210 &&
+        opendb agent start --role memory --listen 0.0.0.0:9210
+      "
+    ports:
+      - "9210:9210"
+    depends_on:
+      cerebrate:
+        condition: service_healthy
+
+  # ============================================================================
+  # Workers (Worker Agents)
+  # ============================================================================
+
+  worker-mysql:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    command: >
+      sh -c "
+        sleep 10 &&
+        opendb cluster join --role worker --overlord overlord-a:9200 --token auto &&
+        opendb agent start --role worker --overlord overlord-a:9200 --listen 0.0.0.0:9302 --db-type mysql
+      "
+    ports:
+      - "9302:9302"
+    depends_on:
+      overlord-a:
+        condition: service_started
+      mysql-db:
+        condition: service_healthy
+    environment:
+      OPENDB_DB_HOST: mysql-db
+      OPENDB_DB_PORT: "3306"
+      OPENDB_DB_USER: root
+      OPENDB_DB_PASS: testpass
+
+  worker-pg:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    command: >
+      sh -c "
+        sleep 10 &&
+        opendb cluster join --role worker --overlord overlord-b:9210 --token auto &&
+        opendb agent start --role worker --overlord overlord-b:9210 --listen 0.0.0.0:9303 --db-type postgres
+      "
+    ports:
+      - "9303:9303"
+    depends_on:
+      overlord-b:
+        condition: service_started
+      pg-db:
+        condition: service_healthy
+    environment:
+      OPENDB_DB_HOST: pg-db
+      OPENDB_DB_PORT: "5432"
+      OPENDB_DB_USER: postgres
+      OPENDB_DB_PASS: testpass

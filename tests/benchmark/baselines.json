@@ -1,0 +1,14 @@
+{
+    "BenchmarkFleetAPI":            {"ns_per_op": 18400, "tolerance_pct": 20},
+    "BenchmarkTopologyAPI":         {"ns_per_op": 19400, "tolerance_pct": 20},
+    "BenchmarkTimelineAPI":         {"ns_per_op": 22200, "tolerance_pct": 20},
+    "BenchmarkReportList":          {"ns_per_op": 9100,  "tolerance_pct": 20},
+    "BenchmarkGenerateFaultReport": {"ns_per_op": 1200,  "tolerance_pct": 25},
+    "BenchmarkRenderMarkdown":      {"ns_per_op": 850,   "tolerance_pct": 25},
+    "BenchmarkMarkdownToHTML":      {"ns_per_op": 31400, "tolerance_pct": 20},
+    "BenchmarkReportStore_Add":     {"ns_per_op": 29000, "tolerance_pct": 25},
+    "BenchmarkReportStore_Get":     {"ns_per_op": 1140,  "tolerance_pct": 20},
+    "BenchmarkReportStore_List":    {"ns_per_op": 135,   "tolerance_pct": 25},
+    "BenchmarkTimelineStore_Add":   {"ns_per_op": 315600, "tolerance_pct": 25},
+    "BenchmarkTimelineStore_List":  {"ns_per_op": 2400,  "tolerance_pct": 20}
+}

@@ -16,8 +16,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/sqlrush/opendb/releases"><img alt="Release" src="https://img.shields.io/github/v/release/sqlrush/opendb?style=flat-square&color=blue"></a>
-  <a href="https://github.com/sqlrush/opendb/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square"></a>
+  <a href="https://github.com/sqlrush/opendbcli-as-claude-code/releases"><img alt="Release" src="https://img.shields.io/github/v/release/sqlrush/opendbcli-as-claude-code?style=flat-square&color=blue"></a>
+  <a href="https://github.com/sqlrush/opendbcli-as-claude-code/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-linux%20%7C%20macOS-lightgrey?style=flat-square">
   <img alt="Go" src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go&logoColor=white">
 </p>
@@ -688,7 +688,104 @@ The LLM Agent isn't one-shot Q&A — it's a **controllable multi-round reasoning
 
 ---
 
+
+
+## Build from Source
+
+Five minutes from clone to a working binary.
+
+### Prerequisites
+
+- **Go 1.24+** (`go version` to verify)
+- **Git**
+
+Optional:
+- **UPX** — compresses Linux binary ~80% (53 MB → 10 MB). `brew install upx` / `apt install upx-ucl`.
+- **codesign** — required for macOS Apple Silicon binaries (built into macOS). Without re-signing after `cp`, the kernel kills the binary with no message.
+
+### Clone & Build
+
+```bash
+git clone https://github.com/sqlrush/opendbcli-as-claude-code.git
+cd opendbcli-as-claude-code
+
+# Build for current platform with all DB drivers
+go build -tags 'oracle mysql postgres opengauss gaussdb' -ldflags='-s -w' -o opendb ./cmd/opendb/
+
+./opendb --version
+# opendb v1.1.31 ...
+```
+
+### Build Tags
+
+OpenDB uses Go build tags to pick database drivers — only the drivers you tag get linked, keeping the binary lean.
+
+| Tag | Database |
+|---|---|
+| `oracle` | Oracle (go-ora pure-Go driver, no Oracle Client needed) |
+| `mysql` | MySQL |
+| `postgres` | PostgreSQL |
+| `opengauss` | openGauss (open-source community, pgx-compatible) |
+| `gaussdb` | GaussDB (Huawei commercial, gaussdb-go, SCRAM-SHA256(10)) |
+| `full` | All five drivers above |
+
+DM (达梦) driver is proprietary; out-of-scope for this open-source repo.
+
+### Cross-Compile
+
+```bash
+# Linux x86_64
+GOOS=linux GOARCH=amd64 go build -tags 'oracle mysql postgres opengauss gaussdb' \
+    -ldflags='-s -w' -o opendb-linux-amd64 ./cmd/opendb/
+
+# Linux ARM64 (Kunpeng / Phytium / Apple Silicon Linux)
+GOOS=linux GOARCH=arm64 go build -tags 'oracle mysql postgres opengauss gaussdb' \
+    -ldflags='-s -w' -o opendb-linux-arm64 ./cmd/opendb/
+
+# macOS Apple Silicon
+GOOS=darwin GOARCH=arm64 go build -tags 'oracle mysql postgres opengauss gaussdb' \
+    -ldflags='-s -w' -o opendb-darwin-arm64 ./cmd/opendb/
+
+# macOS Intel
+GOOS=darwin GOARCH=amd64 go build -tags 'oracle mysql postgres opengauss gaussdb' \
+    -ldflags='-s -w' -o opendb-darwin-amd64 ./cmd/opendb/
+```
+
+### Compress (optional, Linux only)
+
+```bash
+upx --best --lzma opendb-linux-amd64
+# Typical: 53 MB → 10 MB
+```
+
+### macOS Apple Silicon: Re-sign After Copy
+
+```bash
+codesign --force -s - opendb-darwin-arm64
+chmod +x opendb-darwin-arm64
+sudo cp opendb-darwin-arm64 /usr/local/bin/opendb
+sudo codesign --force -s - /usr/local/bin/opendb
+```
+
+Skipping this gives "zsh: killed opendb" with no further explanation.
+
+### One-Shot Pipeline
+
+`scripts/publish.sh` automates the four-platform build, UPX, codesign, gzip + sha256 packaging:
+
+```bash
+./scripts/publish.sh --build-only
+# Artifacts: dist/releases/<version>/opendb/upload/*.gz + .sha256
+```
+
+### Run Tests
+
+```bash
+go test -tags 'oracle mysql postgres opengauss gaussdb' ./...
+```
+
+---
 <p align="center">
   <strong>One agent. All databases. Zero complexity.</strong><br>
-  <a href="https://www.opendbcli.org">Website</a> · <a href="https://github.com/sqlrush/opendb/issues">Issues</a>
+  <a href="https://www.opendbcli.org">Website</a> · <a href="https://github.com/sqlrush/opendbcli-as-claude-code/issues">Issues</a>
 </p>

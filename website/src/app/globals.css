@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --text-secondary: rgba(38, 37, 30, 0.55);
+  --text-tertiary: rgba(38, 37, 30, 0.3);
+  --border: rgba(38, 37, 30, 0.08);
+  --fill: rgba(38, 37, 30, 0.04);
+  --fill-hover: rgba(38, 37, 30, 0.07);
+  --terminal-dim: rgba(237, 236, 236, 0.35);
+  --terminal-border: rgba(237, 236, 236, 0.08);
+}
+
+body {
+  background-color: #f7f7f4;
+  color: #26251e;
+}

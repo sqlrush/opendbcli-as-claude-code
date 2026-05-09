@@ -1,0 +1,338 @@
+syntax = "proto3";
+
+package cluster;
+
+option go_package = "github.com/sqlrush/opendb/internal/cluster/proto";
+
+// ============================================================================
+// AgentService — Overlord ↔ Worker 通信
+// Worker 作为 gRPC Server，Overlord 作为 Client 连接
+// ============================================================================
+
+service AgentService {
+  // Register: Worker 向 Overlord 注册自身
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Heartbeat: Worker 定期上报心跳
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+
+  // GetStatus: Overlord 拉取 Worker 当前状态
+  rpc GetStatus(StatusRequest) returns (StatusResponse);
+
+  // PushCommand: Overlord 下发指令给 Worker
+  rpc PushCommand(CommandRequest) returns (CommandResponse);
+
+  // EventStream: Worker → Overlord 的事件推送（双向流）
+  // Worker 推送异常事件、memory 同步等；Overlord 可推送指令
+  rpc EventStream(stream AgentEvent) returns (stream AgentEvent);
+
+  // RedirectWorker: Cerebrate/Overlord 指示 Worker 切换到新 Overlord (C09)
+  rpc RedirectWorker(RedirectWorkerRequest) returns (RedirectWorkerResponse);
+
+  // PushDiagnosis: Overlord 将诊断结论推回 Worker（覆盖或补充本地诊断）
+  rpc PushDiagnosis(PushDiagnosisRequest) returns (PushDiagnosisResponse);
+}
+
+// ============================================================================
+// OverlordService — Cerebrate ↔ Overlord 通信
+// Overlord 作为 gRPC Server，Cerebrate 作为 Client 连接
+// ============================================================================
+
+service OverlordService {
+  // RegisterOverlord: Overlord 向 Cerebrate 注册
+  rpc RegisterOverlord(RegisterOverlordRequest) returns (RegisterOverlordResponse);
+
+  // Heartbeat: Overlord 定期上报心跳
+  rpc OverlordHeartbeat(OverlordHeartbeatRequest) returns (OverlordHeartbeatResponse);
+
+  // GetRegionStatus: Cerebrate 拉取区域状态
+  rpc GetRegionStatus(RegionStatusRequest) returns (RegionStatusResponse);
+
+  // PushPolicy: Cerebrate 下发策略到 Overlord
+  rpc PushPolicy(PolicyRequest) returns (PolicyResponse);
+
+  // OverlordEventStream: 双向流（事件上报 + 指令下发）
+  rpc OverlordEventStream(stream OverlordEvent) returns (stream OverlordEvent);
+
+  // ElectionVote: Backup Overlord 发起选举投票 (C10)
+  rpc ElectionVote(ElectionVoteRequest) returns (ElectionVoteResponse);
+}
+
+// ============================================================================
+// Common Types
+// ============================================================================
+
+// AgentRole defines the role of an agent in the cluster.
+enum AgentRole {
+  ROLE_UNKNOWN = 0;
+  ROLE_WORKER = 1;
+  ROLE_MEMORY = 2;
+  ROLE_MANAGER = 3;
+}
+
+// AgentState represents the current state of an agent.
+enum AgentState {
+  STATE_UNKNOWN = 0;
+  STATE_STARTING = 1;
+  STATE_RUNNING = 2;
+  STATE_DEGRADED = 3;  // 降级运行（如 LLM 不可用，Rule Engine 兜底）
+  STATE_STOPPING = 4;
+  STATE_OFFLINE = 5;
+}
+
+// HealthScore is a 0-100 health score.
+message HealthScore {
+  int32 score = 1;
+  string summary = 2;
+}
+
+// ============================================================================
+// Worker ↔ Overlord Messages
+// ============================================================================
+
+message RegisterRequest {
+  string worker_id = 1;
+  string hostname = 2;
+  string db_type = 3;       // oracle, mysql, postgres, opengauss
+  string db_version = 4;
+  string instance_name = 5;
+  string listen_addr = 6;   // Worker gRPC listen address
+  string join_token = 7;    // One-time join token
+}
+
+message RegisterResponse {
+  bool accepted = 1;
+  string overlord_id = 2;
+  string message = 3;
+  bytes tls_cert = 4;       // mTLS cert issued by Cerebrate (Phase 2+)
+}
+
+message HeartbeatRequest {
+  string worker_id = 1;
+  int64 timestamp = 2;      // Unix timestamp
+  AgentState state = 3;
+  HealthScore health = 4;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+  // Overlord may piggyback commands on heartbeat responses.
+  repeated CommandRequest pending_commands = 2;
+}
+
+message StatusRequest {
+  string worker_id = 1;
+}
+
+message StatusResponse {
+  string worker_id = 1;
+  AgentState state = 2;
+  string db_type = 3;
+  string instance_name = 4;
+  HealthScore health = 5;
+  int64 uptime_seconds = 6;
+  string sentinel_state = 7;   // idle, watch, burst, cooldown
+  int32 anomaly_count = 8;     // 今日异常次数
+  int64 last_anomaly_ts = 9;   // 最近异常时间戳
+  int32 llm_calls_today = 10;  // 今日 LLM 调用次数
+}
+
+message CommandRequest {
+  string command_id = 1;
+  string command_type = 2;     // "execute_sql", "set_parameter", "health_check", etc.
+  string payload = 3;          // JSON payload
+  int32 priority = 4;          // 0=normal, 1=high, 2=urgent
+}
+
+message CommandResponse {
+  string command_id = 1;
+  bool success = 2;
+  string result = 3;           // JSON result
+  string error_message = 4;
+}
+
+// AgentEvent is used in the bidirectional EventStream.
+message AgentEvent {
+  string event_id = 1;
+  int64 timestamp = 2;
+
+  oneof payload {
+    AlertEvent alert = 10;           // Worker → Overlord: 异常事件
+    MemorySyncEvent memory_sync = 11; // Worker → Overlord: memory 增量同步
+    AuditEntry audit = 12;           // Worker → Overlord: 审计日志同步
+    CommandRequest command = 13;      // Overlord → Worker: 指令下发
+    CommandResponse command_result = 14; // Worker → Overlord: 指令结果
+  }
+}
+
+message AlertEvent {
+  string worker_id = 1;
+  string description = 2;
+  string cause_name = 3;
+  double duration_sec = 4;
+  string severity = 5;        // info, warning, critical
+  bool self_healed = 6;       // Worker 是否已自愈
+  string repair_summary = 7;  // 自愈摘要
+}
+
+message MemorySyncEvent {
+  string worker_id = 1;
+  string instance_name = 2;
+  string file_name = 3;       // e.g., "incident_temp_20260409.md"
+  bytes content = 4;           // 文件内容
+  string action = 5;           // "create", "update", "delete"
+}
+
+message AuditEntry {
+  string worker_id = 1;
+  int64 timestamp = 2;
+  string operation = 3;
+  string target = 4;
+  string reason = 5;
+  string result = 6;
+}
+
+// ============================================================================
+// Overlord ↔ Cerebrate Messages
+// ============================================================================
+
+message RegisterOverlordRequest {
+  string overlord_id = 1;
+  string hostname = 2;
+  string region = 3;
+  string listen_addr = 4;
+  string join_token = 5;
+  int32 worker_capacity = 6;  // 最大管理节点数
+}
+
+message RegisterOverlordResponse {
+  bool accepted = 1;
+  string cerebrate_id = 2;
+  string message = 3;
+}
+
+message OverlordHeartbeatRequest {
+  string overlord_id = 1;
+  int64 timestamp = 2;
+  AgentState state = 3;
+  int32 worker_count = 4;
+  int32 worker_online = 5;
+  HealthScore region_health = 6;
+}
+
+message OverlordHeartbeatResponse {
+  bool acknowledged = 1;
+}
+
+message RegionStatusRequest {
+  string overlord_id = 1;
+}
+
+message RegionStatusResponse {
+  string overlord_id = 1;
+  string region = 2;
+  int32 worker_count = 3;
+  int32 worker_online = 4;
+  HealthScore region_health = 5;
+  repeated WorkerSummary workers = 6;
+}
+
+message WorkerSummary {
+  string worker_id = 1;
+  string db_type = 2;
+  string instance_name = 3;
+  AgentState state = 4;
+  HealthScore health = 5;
+  string addr = 6;          // Worker gRPC address (for redirect)
+}
+
+message PolicyRequest {
+  string policy_id = 1;
+  string policy_type = 2;  // "blacklist", "config", "prompt"
+  bytes content = 3;
+  string action = 4;       // "add", "update", "remove"
+}
+
+message PolicyResponse {
+  bool success = 1;
+  int32 workers_updated = 2;
+  string message = 3;
+}
+
+// OverlordEvent is used in the bidirectional OverlordEventStream.
+message OverlordEvent {
+  string event_id = 1;
+  int64 timestamp = 2;
+
+  oneof payload {
+    AlertEvent escalation = 10;        // Overlord → Cerebrate: 重大事件上报
+    RegionStatusResponse region_update = 11; // Overlord → Cerebrate: 区域状态更新
+    PolicyRequest policy_push = 12;    // Cerebrate → Overlord: 策略下发
+    MaintenancePlan maintenance = 13;  // Cerebrate → Overlord: 维护计划
+  }
+}
+
+message MaintenancePlan {
+  string plan_id = 1;
+  string description = 2;
+  repeated MaintenanceTask tasks = 3;
+  string window_start = 4;  // ISO8601
+  string window_end = 5;
+  int32 concurrency = 6;    // 并发度
+}
+
+message MaintenanceTask {
+  string task_id = 1;
+  string worker_id = 2;
+  string action = 3;        // "tablespace_extend", "password_rotate", etc.
+  string payload = 4;       // JSON
+}
+
+// ============================================================================
+// C09 — Worker Redirect Messages
+// ============================================================================
+
+message RedirectWorkerRequest {
+  string new_overlord_addr = 1;  // 新 Overlord 的 gRPC 地址
+  string new_overlord_id = 2;    // 新 Overlord ID
+  string reason = 3;             // 重定向原因
+}
+
+message RedirectWorkerResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ============================================================================
+// C10 — HA Election Messages
+// ============================================================================
+
+message ElectionVoteRequest {
+  string candidate_id = 1;      // 发起选举的 Overlord ID
+  string candidate_addr = 2;    // 发起者的 gRPC 地址
+  int64 timestamp = 3;          // 选举发起时间
+}
+
+message ElectionVoteResponse {
+  bool accept = 1;              // 是否接受该候选人
+  string voter_id = 2;          // 投票者的 Overlord ID
+  string message = 3;
+}
+
+// ============================================================================
+// PushDiagnosis — Overlord 将诊断结论推回 Worker
+// ============================================================================
+
+message PushDiagnosisRequest {
+  string worker_id = 1;
+  string alert_id = 2;           // 对应的原始 AlertEvent ID
+  string diagnosis = 3;          // Overlord 的诊断结论（Markdown）
+  string recommended_action = 4; // 建议操作
+  bool overrides_local = 5;      // true=覆盖 Worker 本地诊断, false=追加补充
+  string source = 6;             // "overlord_cross_node" | "overlord_confirmed" | "cerebrate_global"
+}
+
+message PushDiagnosisResponse {
+  bool accepted = 1;
+  string message = 2;
+}

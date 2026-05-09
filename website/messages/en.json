@@ -1,0 +1,80 @@
+{
+  "nav": {
+    "features": "Features",
+    "docs": "Docs",
+    "github": "GitHub",
+    "blog": "Blog",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "badge": "DBCLI Agent with Claude Code's Interaction Model",
+    "title1": "Least Interaction",
+    "title2": "Optimal Diagnosis",
+    "subtitle": "Oracle · MySQL · PostgreSQL — Slash Commands / Native SQL / Natural Language",
+    "quickInstall": "Quick Install",
+    "copy": "Copy",
+    "copied": "Copied ✓"
+  },
+  "modes": {
+    "title": "Three Modes. One Agent.",
+    "subtitle": "Type however you think — OpenDB understands slash commands, native SQL, and natural language.",
+    "slash": {
+      "label": "Slash Commands",
+      "title": "60+ Built-in Skills",
+      "desc": "Complex operations as one-liners. Like Claude Code, but for databases."
+    },
+    "sql": {
+      "label": "Native SQL",
+      "title": "Your Habits, Preserved",
+      "desc": "Run SQL directly. Works like sqlplus, mysql, psql — no learning curve."
+    },
+    "natural": {
+      "label": "Natural Language",
+      "title": "Ask in Plain Words",
+      "desc": "Describe problems naturally. AI translates intent into diagnosis and action."
+    }
+  },
+  "features": {
+    "title": "From Monitoring to Root Cause",
+    "subtitle": "A three-layer diagnosis system — from continuous sensing to AI-powered reasoning.",
+    "health": {
+      "title": "Full-Spectrum Health Check",
+      "desc": "20+ checks across 7 dimensions — instance, storage, sessions, memory, logs, backup, and security. Get a complete picture in one command.",
+      "stat1Label": "Dimensions",
+      "stat2Label": "Check Items",
+      "stat3Label": "Full Scan"
+    },
+    "dbtop": {
+      "title": "Real-Time Performance Dashboard",
+      "desc": "Like Linux top for databases. 1-second refresh showing SGA, PGA, TPS, QPS, wait events, and active sessions live.",
+      "stat1Label": "Refresh Rate",
+      "stat2Label": "Live Metrics"
+    },
+    "rule": {
+      "title": "273-Rule Decision Engine",
+      "desc": "Millisecond-level deterministic diagnosis. Works offline — no LLM, no network, no API cost. Your safety net when AI is unavailable.",
+      "stat1Label": "Rules",
+      "stat2Label": "Diagnosis",
+      "stat3Label": "Dependencies"
+    },
+    "llm": {
+      "title": "AI-Powered Deep Diagnosis",
+      "desc": "Multi-round LLM reasoning with function calling. Automatically collects evidence, correlates symptoms, and delivers executable fix SQL — not vague suggestions.",
+      "stat1Label": "Max Rounds",
+      "stat2Label": "Skills"
+    },
+    "sentinel": {
+      "title": "24/7 Anomaly Detection",
+      "desc": "Background probe monitoring 48 metrics with adaptive 3-sigma baselines. Detects anomalies before they become outages.",
+      "stat1Label": "Metrics",
+      "stat2Label": "Detection",
+      "stat3Label": "Monitoring"
+    }
+  },
+  "footer": {
+    "tagline": "Least interaction, optimal diagnosis.",
+    "docs": "Docs",
+    "issues": "Issues",
+    "license": "License"
+  }
+}

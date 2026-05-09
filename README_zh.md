@@ -16,8 +16,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/sqlrush/opendb/releases"><img alt="Release" src="https://img.shields.io/github/v/release/sqlrush/opendb?style=flat-square&color=blue"></a>
-  <a href="https://github.com/sqlrush/opendb/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square"></a>
+  <a href="https://github.com/sqlrush/opendbcli-as-claude-code/releases"><img alt="Release" src="https://img.shields.io/github/v/release/sqlrush/opendbcli-as-claude-code?style=flat-square&color=blue"></a>
+  <a href="https://github.com/sqlrush/opendbcli-as-claude-code/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-linux%20%7C%20macOS-lightgrey?style=flat-square">
   <img alt="Go" src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go&logoColor=white">
 </p>
@@ -682,7 +682,102 @@ LLM Agent 不是一次性问答 — 它是一个**可控的多轮推理循环**�
 
 ---
 
+
+
+## 从源码编译
+
+5 分钟从 clone 到可运行二进制。
+
+### 前置依赖
+
+- **Go 1.24+**（`go version` 验证）
+- **Git**
+
+可选：
+- **UPX** — 压缩 Linux 二进制 ~80%（53 MB → 10 MB）。`brew install upx` / `apt install upx-ucl`。
+- **codesign** — macOS Apple Silicon 必须（系统自带）。`cp` 后不重签会被内核 kill 掉，无任何错误提示。
+
+### Clone 与编译
+
+```bash
+git clone https://github.com/sqlrush/opendbcli-as-claude-code.git
+cd opendbcli-as-claude-code
+
+# 当前平台 + 全部数据库驱动
+go build -tags 'oracle mysql postgres opengauss gaussdb' -ldflags='-s -w' -o opendb ./cmd/opendb/
+
+./opendb --version
+# opendb v1.1.31 ...
+```
+
+### Build Tags（按需挑驱动，二进制精简）
+
+| Tag | 数据库 |
+|---|---|
+| `oracle` | Oracle（go-ora 纯 Go 驱动，免装 Oracle Client）|
+| `mysql` | MySQL |
+| `postgres` | PostgreSQL |
+| `opengauss` | openGauss（开源社区版，pgx 兼容）|
+| `gaussdb` | GaussDB（华为商业版，gaussdb-go，SCRAM-SHA256(10)）|
+| `full` | 上面 5 个全包含 |
+
+> 达梦 DM 驱动是商业代码，不在本开源仓范围。
+
+### 交叉编译
+
+```bash
+# Linux x86_64
+GOOS=linux GOARCH=amd64 go build -tags 'oracle mysql postgres opengauss gaussdb' \
+    -ldflags='-s -w' -o opendb-linux-amd64 ./cmd/opendb/
+
+# Linux ARM64（鲲鹏/飞腾国产化）
+GOOS=linux GOARCH=arm64 go build -tags 'oracle mysql postgres opengauss gaussdb' \
+    -ldflags='-s -w' -o opendb-linux-arm64 ./cmd/opendb/
+
+# macOS Apple Silicon
+GOOS=darwin GOARCH=arm64 go build -tags 'oracle mysql postgres opengauss gaussdb' \
+    -ldflags='-s -w' -o opendb-darwin-arm64 ./cmd/opendb/
+
+# macOS Intel
+GOOS=darwin GOARCH=amd64 go build -tags 'oracle mysql postgres opengauss gaussdb' \
+    -ldflags='-s -w' -o opendb-darwin-amd64 ./cmd/opendb/
+```
+
+### 压缩（可选，仅 Linux）
+
+```bash
+upx --best --lzma opendb-linux-amd64
+# 实测: 53 MB → 10 MB
+```
+
+### macOS Apple Silicon：cp 后重签名
+
+```bash
+codesign --force -s - opendb-darwin-arm64
+chmod +x opendb-darwin-arm64
+sudo cp opendb-darwin-arm64 /usr/local/bin/opendb
+sudo codesign --force -s - /usr/local/bin/opendb
+```
+
+不重签会得到 `zsh: killed opendb`，无任何错误提示。
+
+### 一键流水线
+
+`scripts/publish.sh` 自动完成 4 平台编译 + UPX + codesign + gzip + sha256：
+
+```bash
+./scripts/publish.sh --build-only
+# 产物: dist/releases/<version>/opendb/upload/*.gz + .sha256
+```
+
+### 跑测试
+
+```bash
+go test -tags 'oracle mysql postgres opengauss gaussdb' ./...
+```
+
+---
 <p align="center">
   <strong>一个智能体，所有数据库，零复杂度。</strong><br>
-  <a href="https://www.opendbcli.org">官网</a> · <a href="https://github.com/sqlrush/opendb/issues">问题反馈</a>
+  <a href="https://www.opendbcli.org">官网</a> · <a href="https://github.com/sqlrush/opendbcli-as-claude-code/issues">问题反馈</a>
 </p>

@@ -1,0 +1,13 @@
+# OpenDB default configuration
+connections_dir: ~/.opendb/connections
+security:
+  default_level: 0
+  confirm_on_dangerous: true
+output:
+  format: terminal
+  max_rows: 1000
+llm:
+  provider: none
+session:
+  restore_on_switch: true
+  history_dir: ~/.opendb/history
