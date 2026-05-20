@@ -439,6 +439,14 @@ func universalSystemPromptStrict() string {
   → 识别出主要问题是某条 SQL 后，**输出末尾建议** "用 /sqltune <SQL> 深挖此 SQL 的优化空间"
   → 不要自己尝试用 explain 做完整 SQL 调优（深度不够），转给 sqltune
 
+**用户意图: WDR 报告分析**（"分析 wdr 报告 / wdr 风险 / 解读 wdr / wdr 怎么样 / wdr 文件 *.html"）
+  → **第一调用 wdranalyze** 工具，传 ` + "`file <path>`" + ` 或 ` + "`latest`" + ` 或 ` + "`<snapA> <snapB>`" + `
+  → wdranalyze 内部跑 7 阶段（采集 → 解析 → 规则评分 → TopSQL 深挖 → LLM 综合 → 渲染 → 持久化），
+     输出含 Layer 1 总览评估 / Layer 2 风险详解 / Layer 3 优化方案 的**完整 markdown 报告**
+  → **直接转给用户即可，不要再加自己的分析、不要重新格式化、不要抽取子章节**
+     （工具结果开头会有 ` + "`<!-- WDR_REPORT_BEGIN: ... -->`" + ` 注释作为 passthrough 标记）
+  → 同 sqltune: 工具输出已是终态报告, 二次加工只会损失结构化信息
+
 **判断关键**：用户消息中是否粘贴了一条具体 SQL **或者给了 SQL_ID** + 问"怎么优化 / 怎么改 / 有没有优化空间"。
 是 → sqltune；否 → 标准诊断。
 
@@ -528,6 +536,11 @@ SELECT schema_name, query
 
 最终诊断按以下结构（无 Sentinel 报告时可省略"## 紧急措施"）：
 
+**例外**: 当工具返回的已是完整 markdown 报告（sqltune / wdranalyze，标志：内容含
+` + "`<!-- WDR_REPORT_BEGIN`" + ` 或 ` + "`## Layer 1`" + ` 等）— **跳过下面的"根因分析 /
+紧急措施 / 根因修复"模板，把工具返回的 markdown 原样输出给用户**，不要重新组织、
+不要抽取摘要、不要把表格换格式。
+
 ## 根因分析
 - 先用 1 个表格列关键证据（指标 / 数据 / 来源工具），不超过 4 列
 - 再给明确的根因结论 + 因果链
@@ -586,7 +599,15 @@ func universalSystemPromptTemplated() string {
   → 走标准诊断流程: health → alert → activesessions → waits → ...
   → 末尾建议"用 /sqltune <SQL> 深挖此 SQL"
 
-**判断关键**：用户消息是否粘贴了一条具体 SQL + 问"怎么优化"。是 → sqltune；否 → 标准诊断。
+**意图 C: WDR 报告分析**（"分析 wdr 报告 / wdr 风险 / 解读 wdr / wdr 文件 *.html"）
+  → **第一调用 wdranalyze 工具**, 传 ` + "`file <path>`" + ` 或 ` + "`latest`" + ` 或 ` + "`<snapA> <snapB>`" + `
+  → wdranalyze 输出含 Layer 1 总览评估 / Layer 2 风险详解 / Layer 3 优化方案 的**完整 markdown 报告**
+  → **直接转给用户即可, 不要再加自己的根因分析、不要重新格式化、不要抽取子章节**
+     (工具结果开头有 ` + "`<!-- WDR_REPORT_BEGIN: ... -->`" + ` 注释作为 passthrough 标记)
+  → 同 sqltune: 工具输出已是终态报告, 二次加工只会损失结构化信息
+
+**判断关键**：用户消息是否粘贴了一条具体 SQL + 问"怎么优化"。是 → sqltune；
+       是否提到 wdr 报告? 是 → wdranalyze; 否 → 标准诊断。
 
 # 主动深挖（强制）
 
@@ -602,6 +623,12 @@ func universalSystemPromptTemplated() string {
 唯一例外：操作类工具（kill/alter/drop）需用户确认。查询类（含 explain/sql/topsql/ash）一律自己调。
 
 # 输出模板（必须严格按下面格式填充，不留抽象描述）
+
+**例外: 工具结果已是完整报告时直接转发**
+当工具返回 markdown 报告 (sqltune / wdranalyze) — 标志: 内容包含 ` + "`<!-- WDR_REPORT_BEGIN`" + ` 或
+` + "`# SQL 调优`" + ` 或 ` + "`## Layer 1`" + ` 这类完整报告章节 — **跳过下面的 "根因分析 /
+紧急措施 / 根因修复" 模板, 把工具返回的 markdown 原样输出给用户即可**, 不要重新组织
+不要抽取摘要不要把表格换格式. 这是已加工好的终态报告.
 
 ## 根因分析
 

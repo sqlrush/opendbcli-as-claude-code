@@ -42,7 +42,7 @@ func BuildSystemPrompt(dialect *DialectInfo) string {
 	// Section 2: M7 当前环境注入
 	b.WriteString("# 当前数据库环境\n\n")
 	if dialect != nil {
-		b.WriteString(dialect.PromptSection2())
+		b.WriteString(promptSection2(dialect))
 	}
 	b.WriteString("\n---\n\n")
 
@@ -268,7 +268,7 @@ func BuildUserMessage(cc *CollectedContext) string {
 
 	if cc.Runtime != nil {
 		b.WriteString("# Runtime 上下文\n\n")
-		b.WriteString(cc.Runtime.PromptBlock())
+		b.WriteString(promptBlock(cc.Runtime))
 		b.WriteString("\n")
 	}
 

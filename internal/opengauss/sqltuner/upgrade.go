@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sqlrush/opendb/internal/sqltune"
+
 	"github.com/sqlrush/opendb/internal/llm"
 )
 
@@ -87,8 +89,8 @@ func EvaluateUpgrade(cc *CollectedContext, round1 *Round1Output, verifies []Veri
 		complexityReason = fmt.Sprintf("SQL %d 行 > 500", lines)
 	} else if len(cc.InvolvedTables) > 20 {
 		complexityReason = fmt.Sprintf("涉及表 %d 个 > 20", len(cc.InvolvedTables))
-	} else if cc.Plan != nil && countPlanNodes(cc.Plan.Root) > 100 {
-		complexityReason = fmt.Sprintf("plan 节点 %d > 100", countPlanNodes(cc.Plan.Root))
+	} else if cc.Plan != nil && sqltune.CountPlanNodes(cc.Plan.Root) > 100 {
+		complexityReason = fmt.Sprintf("plan 节点 %d > 100", sqltune.CountPlanNodes(cc.Plan.Root))
 	}
 	if complexityReason != "" {
 		d.ShouldUpgrade = true

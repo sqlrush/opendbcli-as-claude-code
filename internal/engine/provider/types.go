@@ -91,6 +91,16 @@ type Response struct {
 	CacheStats     CacheStats
 	Truncated      bool
 	RawHeaders     map[string]string
+
+	// v1.2.1: PromptToolAdapter parse-failure feedback. Set by
+	// PromptModeBuilder.PostProcessResponse when the LLM produced text
+	// that looked like a tool_call but failed to parse (malformed JSON,
+	// schema violation, etc). Engine reads NeedRetry — when true,
+	// instead of treating Content as a final answer, it appends
+	// RetryFeedback as a system message and runs another LLM turn
+	// (within MaxParseRetries cap).
+	NeedRetry     bool
+	RetryFeedback string
 }
 
 // Usage tracks token consumption across all providers.

@@ -83,6 +83,10 @@ func RegisterSkills(
 	// /sqlfetch: 按 DIGEST 拉 SQL 文本（events_statements_summary_by_digest 归一化 + 占位符提示）
 	reg(query.NewSQLFetchSkill(driver))
 
+	// /sqltune (M2.1): MySQL EXPLAIN JSON + optimizer_trace MVP.
+	// memStore=nil — memory injection optional, same as og.
+	reg(query.NewSQLTuneSkill(driver, modelMgr, nil))
+
 	// Admin
 	reg(admin.NewKillSkill(driver))
 	reg(admin.NewSpaceSkill(driver))

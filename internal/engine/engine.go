@@ -124,10 +124,14 @@ func (e *Engine) Run(ctx context.Context, input EngineInput) (*EngineResult, err
 			copy(historyMessages, prev.Messages)
 		}
 	}
-	// Topic drift: when the follow-up is on a different topic, drop stale
-	// history so the LLM starts clean. Prevents session resume from feeding
-	// 20-turn traces into an unrelated new question.
-	historyMessages = econtext.DropHistoryOnDrift(historyMessages, input.UserMessage)
+	// v1.1.47 removed: automatic topic-drift detection (Jaccard-based).
+	// Heuristic was unreliable — multiple bugs observed:
+	//   1. Wrapped user messages had 67% boilerplate overlap, drift never fired
+	//   2. Shared SQL_IDs/identifiers gave 20% overlap, drift never fired
+	//   3. Threshold tuning is an endless arms race
+	// Adopting Claude Code design: keep full history, let user explicitly
+	// manage context via /clear (drops session + screen) or session resume.
+	// Auto-compact for context-window-full will land separately (M9.x).
 
 	built := e.contextBuilder.Build(econtext.BuildInput{
 		UserMessage:      input.UserMessage,
@@ -219,7 +223,32 @@ func (e *Engine) Run(ctx context.Context, input EngineInput) (*EngineResult, err
 		))
 	}()
 
+	// v1.2.1: PromptToolAdapter parse-retry counter. Bumped each time the
+	// LLM produces malformed JSON tool_call output; capped at maxParseRetries
+	// inside the loop to avoid stubborn-LLM infinite loops.
+	parseRetries := 0
+
+	// v1.2.2: cross-turn tool call deduplication. Track signatures (name +
+	// args hash) per turn. When the same signature shows up ≥ 2 times
+	// across the run, inject a system-reminder before the next LLM call
+	// telling the model to switch strategy. Without this, smaller models
+	// (35B-class in prompt mode) get stuck calling the same failing tool
+	// over and over until they hit MaxTurns or the diagnosis timeout.
+	toolCallCounts := make(map[string]int)
+	var dedupWarning string
+
 	for turn := 0; turn < maxTurns; turn++ {
+		// v1.2.2: inject dedup warning at top of turn if previous turn
+		// detected repeated tool calls. The reminder reaches the LLM via
+		// the next Chat() call's message history.
+		if dedupWarning != "" {
+			messages = append(messages, econtext.Message{
+				Role: "user", IsMeta: true,
+				Content: "<system-reminder>" + dedupWarning + "</system-reminder>",
+			})
+			dedupWarning = ""
+		}
+
 		// 2a. Compression
 		if e.config.EnableCompression && turn > 0 {
 			if e.contextManager.ShouldBlock(messages) {
@@ -267,6 +296,28 @@ func (e *Engine) Run(ctx context.Context, input EngineInput) (*EngineResult, err
 				resp = upgraded
 				totalUsage = totalUsage.Add(upgraded.Usage)
 			}
+		}
+
+		// v1.2.1: PromptToolAdapter parse-failure retry. If the LLM produced
+		// content that LOOKED like a tool_call but failed to parse (malformed
+		// JSON, schema violation), PostProcessResponse sets NeedRetry. Engine
+		// appends a corrective system-reminder and re-runs the LLM, up to
+		// maxParseRetries times. Without this, parse failure silently turns
+		// into "treat as final answer" — user sees a JSON snippet as the
+		// answer, which is the worst possible UX.
+		const maxParseRetries = 2
+		if resp.NeedRetry && parseRetries < maxParseRetries {
+			parseRetries++
+			messages = e.contextBuilder.PrepareMessagesForNextTurn(
+				append(messages, econtext.Message{
+					Role: "assistant", Content: resp.Content, Thinking: resp.Thinking,
+				}), false,
+			)
+			messages = append(messages, econtext.Message{
+				Role: "user", IsMeta: true,
+				Content: "<system-reminder>" + resp.RetryFeedback + "</system-reminder>",
+			})
+			continue
 		}
 
 		// 2g. No tool calls → done (final round)
@@ -379,10 +430,45 @@ func (e *Engine) Run(ctx context.Context, input EngineInput) (*EngineResult, err
 			append(messages, assistantMsg), false,
 		)
 
-		remaining := e.contextManager.RemainingTokens(messages)
-		toolResults := e.toolOrch.Execute(ctx, resp.ToolCalls)
-		toolResults = e.resultHandler.Process(toolResults, remaining)
+		// v1.2.2: track tool call signatures before execution. If a
+		// signature repeats, queue a system-reminder for next turn.
+		for _, tc := range resp.ToolCalls {
+			sig := toolCallSignature(tc.Name, tc.Arguments)
+			toolCallCounts[sig]++
+			if toolCallCounts[sig] >= 2 && dedupWarning == "" {
+				dedupWarning = fmt.Sprintf(
+					"⚠️ 检测到重复工具调用: 你已经用相同参数调用过 `%s` 工具 %d 次. "+
+						"重复调用大概率拿到相同结果. 请换一种策略:\n"+
+						"  - 如果之前调用失败 → 换工具 (e.g. 失败的 sqltune 换 explain 或 sql)\n"+
+						"  - 如果之前已拿到数据 → 直接基于已有数据给最终答案 (格式 B)\n"+
+						"  - 如果是 SQL_ID 调优场景: 必须先 sqlfetch 再 sqltune, 别反复调 sqltune",
+					tc.Name, toolCallCounts[sig])
+				break
+			}
+		}
 
+		remaining := e.contextManager.RemainingTokens(messages)
+		rawResults := e.toolOrch.Execute(ctx, resp.ToolCalls)
+
+		// v1.1.51: passthrough check on RAW (untruncated) tool output.
+		// SmartTruncate runs next and can drop content mid-Layer-2, so we
+		// detect the WDR/sqltune marker on the original full output and
+		// keep it as the user-facing response if found.
+		var passthrough string
+		for _, tr := range rawResults {
+			if tr.Error != "" {
+				continue
+			}
+			if containsPassthroughMarker(tr.Content) {
+				passthrough = stripPassthroughMarker(tr.Content)
+				break
+			}
+		}
+
+		toolResults := e.resultHandler.Process(rawResults, remaining)
+
+		// Persist tool results into message history (truncated, marker stripped
+		// to prevent re-quote on later session loads).
 		for _, tr := range toolResults {
 			result.ToolsInvoked = append(result.ToolsInvoked, tr.Name)
 			if tr.Error != "" {
@@ -392,9 +478,29 @@ func (e *Engine) Run(ctx context.Context, input EngineInput) (*EngineResult, err
 			if tr.Error != "" {
 				content = "Error: " + tr.Error
 			}
+			if containsPassthroughMarker(content) {
+				content = stripPassthroughMarker(content)
+			}
 			messages = append(messages, econtext.Message{
 				Role: "tool", Content: content, ToolCallID: tr.ToolCallID,
 			})
+		}
+
+		if passthrough != "" {
+			// v1.1.54: REPL renders streamed content (not result.Content), so
+			// passthrough text was invisible in interactive sessions even
+			// though batch mode worked. Push the full report via OnStream so
+			// REPL displays it. Add a leading "\n\n" separator in case the
+			// LLM already streamed pre-tool reasoning text.
+			if input.OnStream != nil {
+				input.OnStream("\n\n" + passthrough)
+			}
+			result.Content = passthrough
+			result.TurnsUsed = turn + 1
+			result.TotalUsage = totalUsage
+			e.triggerMemoryRoundIfNeeded(ctx, messages, input)
+			saveSession(messages, maxTurns)
+			return result, nil
 		}
 
 		if input.OnRound != nil {
@@ -1083,4 +1189,54 @@ func extractSourceLines(content string) string {
 		}
 	}
 	return buf.String()
+}
+
+// passthroughMarker identifies tool results that are already finalized
+// markdown reports (sqltune, wdranalyze) and should bypass post-tool LLM
+// re-summarization. v1.1.51: smaller models reliably ignored prompt-level
+// passthrough directives, so the engine enforces it.
+const passthroughMarker = "<!-- WDR_REPORT_BEGIN"
+
+func containsPassthroughMarker(content string) bool {
+	return strings.Contains(content, passthroughMarker)
+}
+
+// stripPassthroughMarker removes the marker comment line so it doesn't
+// leak into user-facing output. Keeps everything after the closing -->.
+func stripPassthroughMarker(content string) string {
+	idx := strings.Index(content, passthroughMarker)
+	if idx == -1 {
+		return content
+	}
+	rest := content[idx:]
+	closeIdx := strings.Index(rest, "-->")
+	if closeIdx == -1 {
+		return content
+	}
+	out := content[:idx] + rest[closeIdx+3:]
+	return strings.TrimLeft(out, "\n")
+}
+
+// toolCallSignature returns a string that uniquely identifies a (tool, args)
+// pair for cross-turn deduplication. v1.2.2 uses this to detect when the
+// LLM is stuck calling the same tool with identical arguments — common
+// failure mode for smaller models (35B-class) in prompt mode that don't
+// switch strategies after a failed tool.
+//
+// Normalization:
+//   - args JSON is canonicalized via strings.TrimSpace + lowercase the
+//     argument value when it's a short string. Real LLMs sometimes emit
+//     args with cosmetic whitespace differences for the same intent.
+//   - For long args (e.g., SQL text), use first 80 chars of trimmed content
+//     so minor formatting tweaks (extra space, casing) don't dodge dedup.
+//
+// Not cryptographic — collisions are acceptable here (worst case = false
+// positive dedup warning, which is recoverable).
+func toolCallSignature(name string, args string) string {
+	args = strings.TrimSpace(args)
+	if len(args) > 80 {
+		args = args[:80]
+	}
+	args = strings.ToLower(args)
+	return name + "|" + args
 }

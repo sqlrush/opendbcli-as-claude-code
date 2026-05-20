@@ -298,6 +298,7 @@ func (s *DiagnoseSkill) executeDiagnose(ctx context.Context, params skill.Params
 			diagnoser.SetContextStoresFrom(s.sessionStore, s.memoryStore, s.policyLoader, s.sessionID)
 		}
 		diagnoser.SetCapability(s.modelMgr.Capability())
+		diagnoser.SetToolMode(s.modelMgr.ToolMode())
 		diagnoser.SetOnRound(onRound)
 		diagnoser.SetOnStream(onStream)
 		llmResult, err = diagnoser.Diagnose(ctx, mode, report, question)
@@ -409,6 +410,8 @@ func (s *DiagnoseSkill) executeOnDemand(ctx context.Context, params skill.Params
 	if s.sessionStore != nil {
 		src = agent.NewDiagnoser(provider, s.executor, s.registry)
 		src.SetContextStoresFrom(s.sessionStore, s.memoryStore, s.policyLoader, s.sessionID)
+		src.SetCapability(s.modelMgr.Capability())
+		src.SetToolMode(s.modelMgr.ToolMode())
 	}
 	if as, ok := strategy.(*agent.AutonomousStrategy); ok {
 		if src != nil {

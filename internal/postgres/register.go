@@ -91,6 +91,10 @@ func RegisterSkills(
 	reg(query.NewSQLFetchSkill(driver))
 	reg(query.NewASHSkill(driver))
 	reg(query.NewPGErrSkill())
+
+	// /sqltune (M3.1): PG EXPLAIN JSON + pg_stats 旁路 MVP.
+	// memStore=nil — memory injection optional, same as og/mysql.
+	reg(query.NewSQLTuneSkill(driver, modelMgr, nil))
 	// 暂时关闭 /sqladvisor 注册 — 见 oracle/register.go 注释.
 	// reg(query.NewSQLAdvisorSkill(driver))
 	_ = query.NewSQLAdvisorSkill

@@ -55,11 +55,14 @@ func (g *GuidedStrategy) SetOnRound(fn OnRoundFunc)   { g.diagnoser.SetOnRound(f
 func (g *GuidedStrategy) SetOnStream(fn OnStreamFunc) { g.diagnoser.SetOnStream(fn) }
 
 // SetContextStoresFrom propagates context stores from a source diagnoser.
+// v1.2.0: also propagates capability + toolMode for PromptToolAdapter.
 func (g *GuidedStrategy) SetContextStoresFrom(src *Diagnoser) {
 	g.diagnoser.sessionStore = src.sessionStore
 	g.diagnoser.memoryStore = src.memoryStore
 	g.diagnoser.policyLoader = src.policyLoader
 	g.diagnoser.sessionID = src.sessionID
+	g.diagnoser.capability = src.capability
+	g.diagnoser.toolMode = src.toolMode
 }
 
 func (g *GuidedStrategy) Diagnose(ctx context.Context, report *sentinel.BurstReport, userInput string) (DiagnoseResult, error) {
@@ -96,15 +99,21 @@ func (a *AutonomousStrategy) SetOnStream(fn OnStreamFunc) {
 
 // SetContextStoresFrom propagates context stores to both diagnosers so
 // session/memory/policy work consistently across primary and fallback.
+// v1.2.0: also propagates toolMode + capability so PromptToolAdapter selection
+// works on both branches of autonomous→guided fallback.
 func (a *AutonomousStrategy) SetContextStoresFrom(d *Diagnoser) {
 	a.diagnoser.sessionStore = d.sessionStore
 	a.diagnoser.memoryStore = d.memoryStore
 	a.diagnoser.policyLoader = d.policyLoader
 	a.diagnoser.sessionID = d.sessionID
+	a.diagnoser.capability = d.capability
+	a.diagnoser.toolMode = d.toolMode
 	a.fallback.diagnoser.sessionStore = d.sessionStore
 	a.fallback.diagnoser.memoryStore = d.memoryStore
 	a.fallback.diagnoser.policyLoader = d.policyLoader
 	a.fallback.diagnoser.sessionID = d.sessionID
+	a.fallback.diagnoser.capability = d.capability
+	a.fallback.diagnoser.toolMode = d.toolMode
 }
 
 func (a *AutonomousStrategy) Diagnose(ctx context.Context, report *sentinel.BurstReport, userInput string) (DiagnoseResult, error) {

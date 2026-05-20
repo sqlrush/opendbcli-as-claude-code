@@ -21,6 +21,24 @@ import (
 	"testing"
 )
 
+// TestSubstitute_IntervalKeyword 真机 E2E 测试发现的 bug:
+// `interval ?` 默认填 `1` 触发 og EXPLAIN syntax error (interval 1 不是有效语法).
+// 修复后必须填字符串字面量 '1 day'.
+func TestSubstitute_IntervalKeyword(t *testing.T) {
+	s := NewPlaceholderSubstituter(nil)
+	sql := `SELECT * FROM orders WHERE created_at >= now() - interval ?`
+	out, _, err := s.Substitute(context.Background(), sql, "")
+	if err != nil {
+		t.Fatalf("Substitute err: %v", err)
+	}
+	if !strings.Contains(out, "interval '1 day'") {
+		t.Errorf("interval ? should substitute to interval '1 day', got: %s", out)
+	}
+	if strings.Contains(out, "interval 1") && !strings.Contains(out, "interval '1") {
+		t.Errorf("interval should NOT be filled with bare integer (og syntax error); got: %s", out)
+	}
+}
+
 func TestSubstitute_LikeOperator(t *testing.T) {
 	s := NewPlaceholderSubstituter(nil)
 	sql := `SELECT * FROM customers WHERE email LIKE ?`

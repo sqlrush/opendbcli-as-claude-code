@@ -98,7 +98,13 @@ func (r *REPL) buildWelcomeLines() []string {
 			groupMaxW = lw
 		}
 	}
+	// Clamp non-negative: when terminal is too narrow (or cols=0 in PTY/CI),
+	// groupMaxW may exceed leftW and groupIndent goes negative. Downstream
+	// strings.Repeat(" ", lPadLeft) at line 253 panics on negative count.
 	groupIndent := (leftW - groupMaxW) / 2
+	if groupIndent < 0 {
+		groupIndent = 0
+	}
 
 	leftTexts := []leftEntry{
 		{"", -1, false},
@@ -229,9 +235,15 @@ func (r *REPL) buildWelcomeLines() []string {
 			// Left-align with group indent (cat logo + "欢迎回来!" aligned).
 			lPadLeft = groupIndent
 			lPadRight = lPadTotal - lPadLeft
-			if lPadRight < 0 {
-				lPadRight = 0
-			}
+		}
+		// Defense-in-depth: strings.Repeat panics on negative count. Guard
+		// here so a future regression in groupIndent / lPadTotal computation
+		// degrades gracefully (welcome looks ugly) instead of crashing.
+		if lPadLeft < 0 {
+			lPadLeft = 0
+		}
+		if lPadRight < 0 {
+			lPadRight = 0
 		}
 
 		rightContent := ""

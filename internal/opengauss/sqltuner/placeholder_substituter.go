@@ -245,6 +245,12 @@ func chooseSubstitution(leftContext, original, schema string) (string, string) {
 		return "0", "rule"
 	}
 
+	// `interval ?` — must be string literal not bare integer (PG/og syntax).
+	// 真机 35B agent E2E 测试发现此 bug: 默认填 1 触发 EXPLAIN syntax error.
+	if strings.HasSuffix(trimmed, "interval") {
+		return "'1 day'", "rule"
+	}
+
 	// LIKE / NOT LIKE / ILIKE (string pattern)
 	if endsWithKeyword(trimmed, "like") || endsWithKeyword(trimmed, "ilike") {
 		return "'%test%'", "rule"

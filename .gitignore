@@ -16,7 +16,6 @@
 *.bin
 *.env
 .env.*
-~/.opendb/credentials/
 
 # Logs and run-time
 *.log

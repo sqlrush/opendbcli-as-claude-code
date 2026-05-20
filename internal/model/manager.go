@@ -156,6 +156,7 @@ type InlineModel struct {
 	APIKey      string
 	StripThink  bool
 	Description string
+	ToolMode    string // "" / "native" / "prompt" (v1.2.0)
 }
 
 // modelNames returns sorted model entry names. Lock-free helper used during
@@ -220,6 +221,18 @@ func (m *Manager) Capability() string {
 		return ""
 	}
 	return m.active.Capability
+}
+
+// ToolMode returns the active model's tool_mode field, or "" if no active
+// model. v1.2.0: callers use this to select between native FC and the
+// PromptToolAdapter at provider construction time.
+func (m *Manager) ToolMode() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.active == nil {
+		return ""
+	}
+	return m.active.ToolMode
 }
 
 // Switch activates a named model profile and rebuilds the provider.
@@ -332,6 +345,7 @@ func (m *Manager) AddProfile(p ModelProfile) {
 		APIKey:      p.APIKey,
 		StripThink:  p.StripThink,
 		Description: p.Description,
+		ToolMode:    p.ToolMode,
 	})
 }
 

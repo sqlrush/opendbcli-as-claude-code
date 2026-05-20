@@ -30,6 +30,7 @@ import (
 	"github.com/sqlrush/opendb/internal/connection"
 	"github.com/sqlrush/opendb/internal/db"
 	gaussdriver "github.com/sqlrush/opendb/internal/gaussdb/driver"
+	gaussdbquery "github.com/sqlrush/opendb/internal/gaussdb/skill/query"
 	"github.com/sqlrush/opendb/internal/model"
 	"github.com/sqlrush/opendb/internal/opengauss/skill/admin"
 	"github.com/sqlrush/opendb/internal/opengauss/skill/ai"
@@ -126,7 +127,10 @@ func RegisterSkills(
 	reg(query.NewOGErrSkill())
 	reg(query.NewWDRSkill(driver))
 	reg(query.NewPlanHistorySkill(driver))
-	reg(query.NewSQLTuneSkill(driver, modelMgr, nil))
+	// /sqltune: GaussDB-specific skill that routes through DialectGaussDB
+	// → gaussdbPlanner (decorates og planner + GS_PLAN_TRACE). Cannot
+	// reuse og's NewSQLTuneSkill because it hard-codes DialectOpenGauss.
+	reg(gaussdbquery.NewSQLTuneSkill(driver, modelMgr, nil))
 
 	// Admin
 	reg(admin.NewKillSkill(driver))

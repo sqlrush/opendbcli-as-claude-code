@@ -78,16 +78,10 @@ func (m *Manager) ShouldBlock(messages []Message) bool {
 	return m.TokenUsage(messages).Percentage > 95.0
 }
 
-// MessageCountTrigger is the point at which we proactively compress based on
-// message count alone, independent of token count. Context windows like
-// GLM-5's 128K mean token thresholds rarely trigger, but a session with 20+
-// messages (each containing big tool results) degrades LLM decision quality
-// long before any token limit. v1.1.09 benchmark prompt 6 timeout was
-// directly caused by this: the 20-turn session from prompt 5 overwhelmed
-// GLM-5 on the follow-up question.
-//
-// 15 keeps the last ~7 full turns (user+assistant+tool) intact, which is
-// enough for continuous diagnosis while pruning old tool results.
+// MessageCountTrigger — DEPRECATED v1.1.48. Kept as constant for backward
+// compatibility (some test files reference it) but the MaybeCompress logic
+// no longer triggers on it. See removed `if len(messages) >= MessageCountTrigger`
+// block below for why.
 const MessageCountTrigger = 15
 
 // MaybeCompress checks whether compression is needed and applies it.
@@ -96,29 +90,21 @@ const MessageCountTrigger = 15
 //
 // Thresholds (any one triggers):
 //
-//	< 80% tokens AND < MessageCountTrigger msgs → no action
-//	80-90% tokens                               → Turn Collapse (fold early turns into summary)
-//	> 90% tokens                                → Emergency Truncate (keep first + last 3)
-//	>= MessageCountTrigger msgs                 → Turn Collapse (proactive, regardless of tokens)
+//	< 80% tokens → no action
+//	80-90% tokens → Turn Collapse (fold early turns into summary)
+//	> 90% tokens  → Emergency Truncate (keep first + last 3)
 //
-// The message-count trigger is primarily for follow-up queries in large
-// context-window models where token thresholds rarely kick in but the LLM
-// still struggles with long histories.
+// v1.1.48 removed: message-count-based proactive collapse. Reason:
+// CollapseTurns folds middle turns and keeps turns[0] as "anchor". When
+// user asks a NEW question after a long prior session, the new user
+// message lands in middle turns and gets summarized — LLM only sees the
+// OLD turns[0] task as primary and answers wrong question. Same root
+// cause as v1.1.47 drift detection removal: heuristic context management
+// auto-destroys data. Token thresholds remain for true context-window
+// safety. Users with long sessions should `/clear` explicitly.
 func (m *Manager) MaybeCompress(messages []Message) ([]Message, bool) {
 	info := m.TokenUsage(messages)
 	threshold := float64(m.maxContextTokens - m.safetyBuffer)
-
-	// Proactive message-count trigger: protects against session resume loading
-	// 15+ messages from a prior /llm run. Applies Turn Collapse to fold old
-	// tool results into a summary, keeping recent turns verbatim.
-	if len(messages) >= MessageCountTrigger && float64(info.Used) < threshold*0.9 {
-		collapsed := m.compressor.CollapseTurns(messages)
-		// Only use the compressed version if it actually shrunk the list —
-		// protects against pathological Collapse producing a larger output.
-		if len(collapsed) < len(messages) {
-			return collapsed, true
-		}
-	}
 
 	if float64(info.Used) < threshold*0.8 {
 		return messages, false

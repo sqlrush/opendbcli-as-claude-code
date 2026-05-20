@@ -36,6 +36,17 @@ type ModelProfile struct {
 	APIKey      string `yaml:"api_key,omitempty"`      // supports ${ENV_VAR}
 	StripThink  bool   `yaml:"strip_think,omitempty"` // strip <think>...</think> from response
 	Description string `yaml:"description,omitempty"`
+	// ToolMode controls how function calling is delivered to the LLM.
+	// Values:
+	//   "" / "native" (default): use the provider's native function-calling
+	//     API (OpenAI tools parameter, Anthropic tool_use, etc.). Requires
+	//     the deployment to support function calling.
+	//   "prompt": inject tool descriptions into the system prompt and parse
+	//     JSON tool_calls from the response (v1.2.0 PromptToolAdapter). Use
+	//     this for LLMs/deployments that don't expose native FC (Qwen3 on
+	//     older vLLM, gateways that strip the tools parameter, etc.).
+	//   "auto": (v1.2.1+) probe once and cache.
+	ToolMode    string `yaml:"tool_mode,omitempty"`
 	Group       string `yaml:"-"` // set from parent file
 }
 

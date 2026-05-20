@@ -118,7 +118,10 @@ func RegisterSkills(
 	reg(query.NewSQLTuneSkill(driver, modelMgr, nil))
 	// /sqlfetch: 按 SQL_ID 拉取可 EXPLAIN 的完整 SQL，桥接 /llm → /sqltune
 	// 路由失败的根因（实测 4 个 LLM 都不知道 og 元数据列名）。先调它再调 sqltune。
-	reg(query.NewSQLFetchSkill(driver))
+	sqlfetchSkill := query.NewSQLFetchSkill(driver)
+	reg(sqlfetchSkill)
+	// /wdranalyze: 解读 WDR 报告 (M1 parser + Fallback 5 rules + M3 sqltune drill + M4 LLM synthesis)
+	reg(query.NewWDRAnalyzeSkill(driver, sqlfetchSkill, modelMgr, nil))
 
 	// Admin
 	reg(admin.NewKillSkill(driver)) // /kill now handles both terminate and cancel

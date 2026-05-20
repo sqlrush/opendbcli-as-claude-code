@@ -192,11 +192,14 @@ func (r *REPL) startSkillAsync(input string) {
 	})
 
 	odberr.SafeGo(odberr.ErrSkillExec, func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		// 10 min timeout — long enough for /sqltune (typical 1-3 min, edge
+		// cases 5+ min) and other LLM-driven skills. 2 min was too short
+		// and caused mysleading "请检查数据库连接状态" errors.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
 		result, err := r.dispatcher.Dispatch(ctx, dispatchInput)
 		if ctx.Err() == context.DeadlineExceeded && err == nil {
-			err = fmt.Errorf("执行超时（2 分钟），请检查数据库连接状态")
+			err = fmt.Errorf("执行超时（10 分钟）— 可能 LLM 响应慢 / SQL 复杂度高 / 工具调用挂起。可重试或检查 LLM 配置 (/model)")
 		}
 		ch <- SkillResultEvent{
 			Result:   result,

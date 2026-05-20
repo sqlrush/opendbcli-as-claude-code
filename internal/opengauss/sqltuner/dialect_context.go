@@ -111,9 +111,17 @@ func (d *DialectCollector) Snapshot(ctx context.Context) (*DialectInfo, error) {
 	return info, nil
 }
 
-// PromptSection2 returns the M7 dialect block for system prompt injection.
+// promptSection2 returns the M7 dialect block for system prompt injection.
 // Injected verbatim into Section 2 of the 9-section prompt.
-func (d *DialectInfo) PromptSection2() string {
+//
+// Free function (not a method) because DialectInfo is now a type alias
+// to internal/sqltune.DialectInfo and Go disallows methods on aliases.
+// og's prompt rendering is og-specific anyway, so a package function
+// is the natural home.
+func promptSection2(d *DialectInfo) string {
+	if d == nil {
+		return ""
+	}
 	var b strings.Builder
 	b.WriteString("当前数据库环境：\n")
 	if d.Version != "" {

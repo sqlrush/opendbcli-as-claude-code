@@ -105,8 +105,14 @@ LIMIT 100`
 	return info, nil
 }
 
-// PromptBlock returns runtime context formatted for the LLM user message.
-func (r *RuntimeInfo) PromptBlock() string {
+// promptBlock returns runtime context formatted for the LLM user message.
+//
+// Free function (not a method) because RuntimeInfo is now a type alias
+// to internal/sqltune.RuntimeInfo and Go disallows methods on aliases.
+func promptBlock(r *RuntimeInfo) string {
+	if r == nil {
+		return ""
+	}
 	var b strings.Builder
 	if r.Degraded {
 		b.WriteString("Runtime 上下文（部分降级 — 用户权限不足，看不到其他会话 query 文本）:\n")

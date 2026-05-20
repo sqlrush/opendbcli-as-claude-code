@@ -29,16 +29,43 @@ import (
 // LegacyProviderWrapper wraps the old llm.Provider interface to satisfy
 // the new provider.ProviderAdapter interface. This allows existing callers
 // (diag_skill.go) to keep passing llm.Provider without changes.
+//
+// v1.2.0: holds an optional PromptBuilder for tool-mode adaptation. The
+// default NativeFCBuilder is a no-op (zero impact on existing behavior);
+// pass PromptModeBuilder via WithPromptBuilder for non-FC LLM deployments.
 type LegacyProviderWrapper struct {
-	inner llm.Provider
-	caps  *provider.ProviderCapability
+	inner   llm.Provider
+	caps    *provider.ProviderCapability
+	builder provider.PromptBuilder
+}
+
+// WrapOption configures LegacyProviderWrapper at construction time.
+type WrapOption func(*LegacyProviderWrapper)
+
+// WithPromptBuilder injects a PromptBuilder for tool-mode adaptation.
+// Use provider.NewPromptModeBuilder(...) for prompt-mode LLMs.
+func WithPromptBuilder(b provider.PromptBuilder) WrapOption {
+	return func(w *LegacyProviderWrapper) {
+		if b != nil {
+			w.builder = b
+		}
+	}
 }
 
 // WrapLegacyProvider creates a ProviderAdapter from an old llm.Provider.
 // The capability is inferred from the provider name (ollama/openai).
-func WrapLegacyProvider(p llm.Provider) provider.ProviderAdapter {
+// v1.2.0: accepts optional WrapOptions for PromptBuilder injection.
+func WrapLegacyProvider(p llm.Provider, opts ...WrapOption) provider.ProviderAdapter {
 	caps := inferCapability(p.Name())
-	return &LegacyProviderWrapper{inner: p, caps: caps}
+	w := &LegacyProviderWrapper{
+		inner:   p,
+		caps:    caps,
+		builder: provider.NativeFCBuilder{}, // default = pre-v1.2.0 behavior
+	}
+	for _, o := range opts {
+		o(w)
+	}
+	return w
 }
 
 func (w *LegacyProviderWrapper) Name() string { return w.inner.Name() }
@@ -51,24 +78,82 @@ func (w *LegacyProviderWrapper) ParseRateLimitHeaders(h http.Header) *provider.R
 	return nil
 }
 
+// applyPromptBuilder runs the v1.2.0 PromptBuilder hooks (BuildSystemPrompt,
+// PrepareRequest) before request conversion. NativeFCBuilder is a no-op so
+// this is free for existing FC users.
+func (w *LegacyProviderWrapper) applyPromptBuilder(req *provider.Request) {
+	if w.builder == nil {
+		return
+	}
+	// BuildSystemPrompt: rewrites SystemPrompt[0].Text. PromptModeBuilder
+	// appends tool descriptions + Format A/B rules + few-shot to it.
+	if len(req.SystemPrompt) > 0 {
+		req.SystemPrompt[0].Text = w.builder.BuildSystemPrompt(req.SystemPrompt[0].Text, req.Tools)
+	} else if len(req.Tools) > 0 {
+		// Edge case: caller passed Tools but no SystemPrompt. Synthesize one
+		// so PromptModeBuilder has somewhere to put tool descriptions.
+		req.SystemPrompt = []provider.SystemPromptBlock{{
+			Text: w.builder.BuildSystemPrompt("", req.Tools),
+		}}
+	}
+	// PrepareRequest: PromptMode clears req.Tools so vLLM doesn't reject.
+	w.builder.PrepareRequest(req)
+}
+
 // Chat converts new Request to old ChatRequest, calls inner, converts Response back.
+// v1.2.0: PromptBuilder hooks run before/after the conversion so prompt-mode
+// LLMs see tool descriptions in the system prompt and parsed tool_calls
+// flow back to the engine.
 func (w *LegacyProviderWrapper) Chat(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+	w.applyPromptBuilder(req)
 	oldReq := toOldRequest(req)
 	oldResp, err := w.inner.Chat(ctx, oldReq)
 	if err != nil {
 		return nil, err
 	}
-	return fromOldResponse(oldResp), nil
+	resp := fromOldResponse(oldResp)
+	if w.builder != nil {
+		resp = w.builder.PostProcessResponse(resp)
+	}
+	return resp, nil
 }
 
-// ChatStream converts and delegates to the old provider.
+// ChatStream converts and delegates to the old provider. v1.2.1: when the
+// active PromptBuilder is PromptModeBuilder, wrap the resulting stream
+// with promptStreamAdapter so chunks get routed through StreamingParser
+// (Format A buffers + parses to ToolCalls; Format B passes through).
+//
+// Native FC mode: legacyStreamWrapper as before, zero overhead.
 func (w *LegacyProviderWrapper) ChatStream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+	w.applyPromptBuilder(req)
 	oldReq := toOldRequest(req)
 	oldStream, err := w.inner.ChatStream(ctx, oldReq)
 	if err != nil {
 		return nil, err
 	}
-	return &legacyStreamWrapper{inner: oldStream}, nil
+	legacy := &legacyStreamWrapper{inner: oldStream}
+	// Only wrap with StreamingParser when running prompt mode. Native FC
+	// streams emit structured ToolCalls already; we'd add latency for
+	// nothing.
+	if w.builder != nil && w.builder.Mode() == "prompt" {
+		return newPromptStreamAdapter(legacy, w.toolNamesFromReq(req)), nil
+	}
+	return legacy, nil
+}
+
+// toolNamesFromReq extracts the list of tool names from req.Tools so the
+// StreamingParser can do Levenshtein correction on tool names mid-stream.
+// Empty list if no tools were declared (uncommon in prompt mode but safe
+// to handle).
+func (w *LegacyProviderWrapper) toolNamesFromReq(req *provider.Request) []string {
+	if len(req.Tools) == 0 {
+		return nil
+	}
+	names := make([]string, len(req.Tools))
+	for i, t := range req.Tools {
+		names[i] = t.Name
+	}
+	return names
 }
 
 // ── Conversion helpers ──

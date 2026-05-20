@@ -253,3 +253,49 @@ func TestQualifyTableName(t *testing.T) {
 		})
 	}
 }
+
+// TestDetectUnsupportedStatement: og statement_history contains a lot of
+// DDL / utility SQL (CREATE INDEX, ANALYZE, SET, SHOW); EXPLAIN'ing them
+// returns opaque "syntax error at or near INDEX". v1.1.50 detects these
+// up-front so the caller can surface a clear "skipped — not a plannable
+// statement" instead.
+func TestDetectUnsupportedStatement(t *testing.T) {
+	cases := []struct {
+		name string
+		sql  string
+		want string // empty = should be allowed; non-empty = expected Kind
+	}{
+		{"plain SELECT", "SELECT 1", ""},
+		{"WITH CTE", "WITH a AS (SELECT 1) SELECT * FROM a", ""},
+		{"INSERT (DML allowed)", "INSERT INTO t VALUES (1)", ""},
+		{"UPDATE (DML allowed)", "UPDATE t SET x=1", ""},
+		{"DELETE (DML allowed)", "DELETE FROM t", ""},
+		{"CREATE INDEX", "CREATE INDEX IF NOT EXISTS i ON t(c)", "CREATE"},
+		{"CREATE TABLE", "create table foo(id int)", "CREATE"},
+		{"DROP TABLE", "DROP TABLE foo", "DROP"},
+		{"ALTER TABLE", "ALTER TABLE t ADD COLUMN c int", "ALTER"},
+		{"ANALYZE", "ANALYZE bench_orders;", "ANALYZE"},
+		{"SET", "SET work_mem = '64MB'", "SET"},
+		{"SHOW", "SHOW enable_wdr_snapshot", "SHOW"},
+		{"VACUUM", "VACUUM ANALYZE t", "VACUUM"},
+		{"GRANT", "GRANT SELECT ON t TO u", "GRANT"},
+		{"with leading comment", "-- explain this\nCREATE INDEX i ON t(c)", "CREATE"},
+		{"with block comment", "/* hint */ DROP TABLE foo", "DROP"},
+		{"whitespace only", "   ", ""},
+		{"empty", "", ""},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := detectUnsupportedStatement(tt.sql)
+			if tt.want == "" && got != nil {
+				t.Errorf("expected supported, got Kind=%s", got.Kind)
+			}
+			if tt.want != "" && got == nil {
+				t.Errorf("expected Kind=%s, got nil (allowed)", tt.want)
+			}
+			if tt.want != "" && got != nil && got.Kind != tt.want {
+				t.Errorf("Kind: got %s, want %s", got.Kind, tt.want)
+			}
+		})
+	}
+}

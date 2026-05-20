@@ -34,30 +34,27 @@ func buildConversation(n int) []Message {
 	return msgs
 }
 
-func TestMaybeCompress_MessageCountTrigger(t *testing.T) {
+// v1.1.48: MessageCountTrigger no longer triggers compression. Test now
+// verifies that long sessions are NOT auto-compressed (only token-based
+// thresholds trigger). Reason: proactive count-based collapse destroyed
+// new user messages by folding them into summary turns, causing LLM to
+// keep answering OLD turns[0] task. Same philosophy as v1.1.47 drift
+// removal — heuristic context management hurts more than it helps.
+func TestMaybeCompress_MessageCountTrigger_DoesNotFire(t *testing.T) {
 	m := NewManager(100000, zeroCounter{})
 
-	// 14 messages (7 turns) → over trigger but CollapseTurns can actually fold
-	// We want to verify BELOW-trigger behavior, so use 10 messages (5 turns).
-	short := buildConversation(5) // 10 messages, 5 turns
-	if len(short) >= MessageCountTrigger {
-		t.Fatalf("test setup wrong: short has %d messages, want < %d", len(short), MessageCountTrigger)
-	}
-	_, compressed := m.MaybeCompress(short)
-	if compressed {
-		t.Errorf("%d messages should not trigger compression", len(short))
-	}
-
-	// 20 messages (10 turns) → over trigger, and enough turns (>4) for CollapseTurns
-	long := buildConversation(10) // 20 messages, 10 turns
+	// 20 messages (10 turns) WAS triggering CollapseTurns pre-v1.1.48.
+	// Now with zero token count, MaybeCompress should be a no-op even at
+	// 20+ messages. Users wanting clean context use /clear (v1.1.47).
+	long := buildConversation(10) // 20 messages
 	if len(long) < MessageCountTrigger {
 		t.Fatalf("test setup wrong: long has %d messages, want >= %d", len(long), MessageCountTrigger)
 	}
 	result, compressed := m.MaybeCompress(long)
-	if !compressed {
-		t.Errorf("%d messages should trigger proactive compression", len(long))
+	if compressed {
+		t.Errorf("v1.1.48: %d messages should NOT trigger compression (count-based trigger removed)", len(long))
 	}
-	if len(result) >= len(long) {
-		t.Errorf("compressed result should be shorter: got %d, want < %d", len(result), len(long))
+	if len(result) != len(long) {
+		t.Errorf("messages should be unchanged when no compression fires: got %d, want %d", len(result), len(long))
 	}
 }

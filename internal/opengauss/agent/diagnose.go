@@ -28,7 +28,9 @@ import (
 	"github.com/sqlrush/opendb/internal/engine/memory"
 	"github.com/sqlrush/opendb/internal/engine/policy"
 	"github.com/sqlrush/opendb/internal/engine/profile"
+	engprovider "github.com/sqlrush/opendb/internal/engine/provider"
 	"github.com/sqlrush/opendb/internal/engine/session"
+	engtool "github.com/sqlrush/opendb/internal/engine/tool"
 	"github.com/sqlrush/opendb/internal/llm"
 	"github.com/sqlrush/opendb/internal/opengauss/sentinel"
 	"github.com/sqlrush/opendb/internal/skill"
@@ -58,6 +60,7 @@ type Diagnoser struct {
 	policyLoader *policy.Loader
 	sessionID    session.SessionID
 	capability   string // "small" / "large" — drives prompt variant selection
+	toolMode     string // "" / "native" / "prompt" — v1.2.0 PromptToolAdapter selector
 }
 
 func NewDiagnoser(provider llm.Provider, executor *skill.Executor, registry *skill.Registry) *Diagnoser {
@@ -71,6 +74,41 @@ func (d *Diagnoser) SetOnStream(fn OnStreamFunc)      { d.onStream = fn }
 // SetCapability records the model capability so it gets propagated into
 // EngineInput → context builder → universal prompt variant selection.
 func (d *Diagnoser) SetCapability(cap string) { d.capability = cap }
+
+// SetToolMode records the active model's tool_mode for v1.2.0
+// PromptToolAdapter selection. "" / "native" → use the provider's native
+// FC API; "prompt" → wrap with PromptModeBuilder.
+func (d *Diagnoser) SetToolMode(mode string) { d.toolMode = mode }
+
+// promptBuilderOptions returns the bridge.WrapOption list to apply when
+// constructing the provider adapter. For native mode this is empty (no-op
+// NativeFCBuilder is the default). For prompt mode, builds a fully-wired
+// PromptModeBuilder with SceneBasedFilter + tool serializer + known tool
+// names for fuzzy correction.
+func (d *Diagnoser) promptBuilderOptions(userInput string) []bridge.WrapOption {
+	if d.toolMode != "prompt" {
+		return nil
+	}
+	allToolNames := make([]string, 0)
+	if d.registry != nil {
+		for _, s := range d.registry.All() {
+			allToolNames = append(allToolNames, s.Name())
+		}
+	}
+	filter := engtool.NewSceneBasedFilter(engtool.DefaultScenes(), engtool.DefaultAlwaysAvailable())
+	builder := engprovider.NewPromptModeBuilder(
+		allToolNames,
+		engprovider.WithToolFilter(filter.Filter),
+		engprovider.WithToolSerializer(engtool.SerializeToolsCompact),
+	)
+	// Initial turn context. Engine doesn't currently re-set this between
+	// rounds; v1.2.1 will plumb LastToolCalls through OnRound.
+	builder.SetTurnContext(engprovider.FilterContext{
+		UserMessage: userInput,
+		Database:    "opengauss",
+	})
+	return []bridge.WrapOption{bridge.WithPromptBuilder(builder)}
+}
 
 // SetContextStores injects the session, memory, and policy stores.
 func (d *Diagnoser) SetContextStores(baseDir, instance string) {
@@ -113,7 +151,7 @@ func (d *Diagnoser) DiagnoseOnDemand(ctx context.Context, userInput string) (Dia
 }
 
 func (d *Diagnoser) runEngine(ctx context.Context, mode DiagnoseMode, userInput, compressed string) (DiagnoseResult, error) {
-	adapter := bridge.WrapLegacyProvider(d.provider)
+	adapter := bridge.WrapLegacyProvider(d.provider, d.promptBuilderOptions(userInput)...)
 	skillBridge := bridge.NewSkillBridge(d.executor, d.registry)
 	opts := []engine.Option{}
 	if d.sessionStore != nil {

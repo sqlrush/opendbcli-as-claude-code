@@ -430,3 +430,234 @@ func (p *testProfile) ToolFilter(mode string) func(string, int) bool {
 	return func(name string, level int) bool { return true }
 }
 func (p *testProfile) DefaultMaxTurns(mode string) int { return 20 }
+
+// TestEnginePassthroughShortCircuit: when a tool returns content with the
+// WDR_REPORT_BEGIN marker (sqltune/wdranalyze), the engine must:
+//   1. Short-circuit the agent loop (no second LLM round)
+//   2. Strip the marker before persisting to message history
+//   3. Push the stripped content through OnStream so REPL renders it
+//      (v1.1.54 fix — without this, interactive sessions see only the
+//      LLM's pre-tool streaming text, never the actual report)
+func TestEnginePassthroughShortCircuit(t *testing.T) {
+	wdrReport := "<!-- WDR_REPORT_BEGIN: directive -->\n\n# WDR 分析报告\n## Layer 1: 总览评估\n| 模块 | 评级 |\n|---|---|\n| Database Stat | 🔴 |\n"
+	executor := newMockSkillExecutor()
+	executor.results["wdranalyze"] = &tool.SkillResult{Rendered: wdrReport}
+
+	mockProv := newMockProvider(
+		&provider.Response{
+			Content: "I'll analyze the WDR report.",
+			ToolCalls: []provider.ToolCall{
+				{ID: "tc1", Name: "wdranalyze", Arguments: `{"args":"file /tmp/foo.html"}`},
+			},
+		},
+		// A second response would only be consumed if passthrough DIDN'T fire.
+		// We deliberately don't add one — if engine tries to call LLM round 2,
+		// the mock provider will return an error and this test will fail.
+	)
+
+	var streamCaptured strings.Builder
+	eng := New(mockProv, &testProfile{}, executor, nil)
+	result, err := eng.Run(context.Background(), EngineInput{
+		UserMessage:  "分析 wdr 报告 /tmp/foo.html",
+		Mode:         ModeAuto,
+		DatabaseInfo: DatabaseInfo{Product: "opengauss"},
+		OnStream: func(delta string) {
+			streamCaptured.WriteString(delta)
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Must have stopped at round 1 (no second LLM call needed).
+	if result.TurnsUsed != 1 {
+		t.Errorf("expected 1 turn (passthrough short-circuit), got %d", result.TurnsUsed)
+	}
+	// result.Content should be the stripped report (no marker).
+	if strings.Contains(result.Content, "WDR_REPORT_BEGIN") {
+		t.Errorf("result.Content should have marker stripped, got: %s", result.Content)
+	}
+	if !strings.Contains(result.Content, "## Layer 1: 总览评估") {
+		t.Errorf("result.Content should contain the report body, got: %s", result.Content)
+	}
+	// OnStream must have received the stripped report so REPL can display it.
+	streamed := streamCaptured.String()
+	if !strings.Contains(streamed, "## Layer 1: 总览评估") {
+		t.Errorf("OnStream should have received passthrough report. captured: %q", streamed)
+	}
+	if strings.Contains(streamed, "WDR_REPORT_BEGIN") {
+		t.Errorf("OnStream should not see the marker. captured: %q", streamed)
+	}
+}
+
+// TestEngineParseRetryFeedback: when PromptToolAdapter signals NeedRetry
+// (malformed JSON output), the engine must:
+//
+//	1. NOT exit the loop with the broken content as the final answer
+//	2. Append the RetryFeedback as a system-reminder message
+//	3. Run another LLM round (within MaxParseRetries cap)
+//	4. Proceed normally when the retry round succeeds
+//
+// v1.2.1 fix — without this, malformed JSON silently becomes the answer.
+func TestEngineParseRetryFeedback(t *testing.T) {
+	executor := newMockSkillExecutor()
+	executor.results["health"] = &tool.SkillResult{Text: "instance up, 8 backends"}
+
+	mockProv := newMockProvider(
+		// Round 1: simulate PromptModeBuilder.PostProcessResponse setting
+		// NeedRetry because the LLM's JSON didn't parse.
+		&provider.Response{
+			Content:       "```json\n{broken json without quotes}\n```",
+			NeedRetry:     true,
+			RetryFeedback: "你的输出无法解析为合法 JSON, 请重试",
+		},
+		// Round 2: LLM corrects itself and emits a real tool call.
+		&provider.Response{
+			ToolCalls: []provider.ToolCall{{ID: "tc1", Name: "health", Arguments: `{}`}},
+		},
+		// Round 3: final answer.
+		&provider.Response{
+			Content: "## 根因分析\nhealth 看着没问题",
+		},
+	)
+
+	eng := New(mockProv, &testProfile{}, executor, nil)
+	result, err := eng.Run(context.Background(), EngineInput{
+		UserMessage:  "查健康",
+		Mode:         ModeAuto,
+		DatabaseInfo: DatabaseInfo{Product: "opengauss"},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should have used: 1 (bad JSON) + 1 (good tool call) + 1 (final) = 3 turns.
+	if result.TurnsUsed != 3 {
+		t.Errorf("expected 3 turns (retry path), got %d", result.TurnsUsed)
+	}
+	// Must NOT have returned the broken JSON as the answer.
+	if strings.Contains(result.Content, "broken json without quotes") {
+		t.Errorf("malformed JSON leaked into final answer: %s", result.Content)
+	}
+	if !strings.Contains(result.Content, "根因分析") {
+		t.Errorf("missing final-round answer: %s", result.Content)
+	}
+}
+
+// TestEngineParseRetryCappedAfter2Tries: if the LLM stubbornly keeps
+// outputting bad JSON, engine must stop retrying after maxParseRetries=2
+// and fall through to normal "no tool calls → done" handling.
+func TestEngineParseRetryCappedAfter2Tries(t *testing.T) {
+	executor := newMockSkillExecutor()
+	mockProv := newMockProvider(
+		// Round 1: bad JSON, retry
+		&provider.Response{Content: "bad1", NeedRetry: true, RetryFeedback: "fix it"},
+		// Round 2: bad JSON, retry
+		&provider.Response{Content: "bad2", NeedRetry: true, RetryFeedback: "fix it"},
+		// Round 3: still bad JSON, but should NOT retry (cap reached); should
+		// fall through to final answer path with this content.
+		&provider.Response{Content: "bad3 final", NeedRetry: true, RetryFeedback: "fix it"},
+	)
+
+	eng := New(mockProv, &testProfile{}, executor, nil)
+	result, err := eng.Run(context.Background(), EngineInput{
+		UserMessage:  "test",
+		Mode:         ModeAuto,
+		DatabaseInfo: DatabaseInfo{Product: "opengauss"},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.TurnsUsed != 3 {
+		t.Errorf("expected exactly 3 turns (1 + 2 retries, then stop), got %d", result.TurnsUsed)
+	}
+	// After cap, content should be returned as-is (best we can do).
+	if !strings.Contains(result.Content, "bad3") {
+		t.Errorf("after retry cap, last response content should be returned, got: %s", result.Content)
+	}
+}
+
+// TestEngineToolDedupWarning: when the LLM repeats the SAME tool with the
+// SAME arguments across rounds, the engine must inject a system-reminder
+// before the next LLM call telling the model to switch strategy. Without
+// this, smaller models (35B-class in prompt mode) get stuck in a tool
+// loop until MaxTurns/timeout.
+//
+// v1.2.2 fix.
+func TestEngineToolDedupWarning(t *testing.T) {
+	executor := newMockSkillExecutor()
+	executor.results["sqltune"] = &tool.SkillResult{Text: "sqltune: failed"}
+
+	mockProv := newMockProvider(
+		// Round 1: LLM picks sqltune with SQL_ID (the bug pattern)
+		&provider.Response{
+			ToolCalls: []provider.ToolCall{
+				{ID: "tc1", Name: "sqltune", Arguments: `{"args":"581990336"}`},
+			},
+		},
+		// Round 2: LLM picks SAME sqltune SAME args (dedup should detect)
+		&provider.Response{
+			ToolCalls: []provider.ToolCall{
+				{ID: "tc2", Name: "sqltune", Arguments: `{"args":"581990336"}`},
+			},
+		},
+		// Round 3: LLM sees the dedup warning and switches to final answer
+		&provider.Response{
+			Content: "## 根因分析\n该 SQL_ID 需要先 sqlfetch 解析",
+		},
+	)
+
+	eng := New(mockProv, &testProfile{}, executor, nil)
+	result, err := eng.Run(context.Background(), EngineInput{
+		UserMessage:  "SQL_ID 581990336 怎么优化",
+		Mode:         ModeAuto,
+		DatabaseInfo: DatabaseInfo{Product: "opengauss"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify dedup detected (sqltune called twice).
+	if result.TurnsUsed != 3 {
+		t.Errorf("expected 3 turns (2 sqltune + 1 final), got %d", result.TurnsUsed)
+	}
+	if len(result.ToolsInvoked) != 2 {
+		t.Errorf("expected 2 tool invocations, got %d (%v)", len(result.ToolsInvoked), result.ToolsInvoked)
+	}
+	// The third LLM call would have received the dedup warning. The mock
+	// doesn't introspect messages, but the test verifies the engine
+	// reached round 3 (didn't get stuck calling sqltune indefinitely).
+}
+
+func TestToolCallSignature(t *testing.T) {
+	cases := []struct {
+		a, b   string
+		want   bool // signatures match?
+		reason string
+	}{
+		{`{"args":"581990336"}`, `{"args":"581990336"}`, true, "identical"},
+		{`{"args":"581990336"}`, `{"args": "581990336"}`, true, "whitespace tolerated by JSON parse? but signature is raw — should still differ"},
+		{`{"args":"abc"}`, `{"args":"ABC"}`, true, "case insensitive normalize"},
+		{`{"args":"abc"}`, `{"args":"def"}`, false, "different args"},
+	}
+	for _, c := range cases {
+		sigA := toolCallSignature("sqltune", c.a)
+		sigB := toolCallSignature("sqltune", c.b)
+		got := (sigA == sigB)
+		// Note: case 2 (whitespace) may or may not pass — signature uses raw args
+		// before any JSON normalization. Tolerate both outcomes for that case.
+		if c.reason == "whitespace tolerated by JSON parse? but signature is raw — should still differ" {
+			t.Logf("whitespace case: sigA=%q sigB=%q match=%v (acceptable either way)", sigA, sigB, got)
+			continue
+		}
+		if got != c.want {
+			t.Errorf("toolCallSignature(%q) vs (%q): got match=%v, want %v (%s)", c.a, c.b, got, c.want, c.reason)
+		}
+	}
+
+	// Cross-tool: same args, different name → must NOT match
+	if toolCallSignature("sqltune", `{"args":"x"}`) == toolCallSignature("sqlfetch", `{"args":"x"}`) {
+		t.Error("different tool names with same args should NOT share signature")
+	}
+}

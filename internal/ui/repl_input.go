@@ -21,6 +21,8 @@ package ui
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/sqlrush/opendb/internal/config"
@@ -28,6 +30,45 @@ import (
 	"github.com/sqlrush/opendb/internal/format"
 	"github.com/sqlrush/opendb/internal/skill"
 )
+
+// clearLLMSessions deletes all engine session files for the currently
+// active instance under ~/.opendb/sessions/<instance>/. Returns number
+// of .jsonl files removed and any error encountered.
+//
+// Implements /clear semantics matching Claude Code: dropping LLM history
+// is now an EXPLICIT user action (replacing the removed Jaccard-based
+// topic-drift heuristic that misfired in multiple scenarios — see
+// CHANGELOG v1.1.47).
+func (r *REPL) clearLLMSessions() (int, error) {
+	instance := r.connMgr.CurrentName()
+	if instance == "" {
+		return 0, nil // not connected — nothing to clear
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return 0, fmt.Errorf("locate home dir: %w", err)
+	}
+	dir := filepath.Join(home, ".opendb", "sessions", instance)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil // no session dir yet
+		}
+		return 0, fmt.Errorf("read sessions dir: %w", err)
+	}
+	count := 0
+	for _, e := range entries {
+		if e.IsDir() || filepath.Ext(e.Name()) != ".jsonl" {
+			continue
+		}
+		path := filepath.Join(dir, e.Name())
+		if err := os.Remove(path); err != nil {
+			return count, fmt.Errorf("remove %s: %w", e.Name(), err)
+		}
+		count++
+	}
+	return count, nil
+}
 
 // ── Input Handling ────────────────────────────────────────────
 
@@ -195,7 +236,16 @@ func (r *REPL) handleEnter(input string) {
 	}
 
 	if input == "/clear" {
+		// v1.1.47 enhancement: /clear now ALSO drops persisted LLM session
+		// (not just screen). Mirrors Claude Code semantics — user explicitly
+		// starts fresh context. Replaces removed Jaccard topic-drift heuristic.
+		clearedCount, clearErr := r.clearLLMSessions()
 		r.resetScreen()
+		if clearErr == nil && clearedCount > 0 {
+			r.writeOutputLine(dimStyle.Render(fmt.Sprintf("  ✓ 已清空 %d 个 LLM session 文件 (后续问题从空 history 开始)", clearedCount)))
+		} else if clearErr != nil {
+			r.writeOutputLine(dimStyle.Render("  ⚠️ 清屏成功但 LLM session 文件清理失败: " + clearErr.Error()))
+		}
 		return
 	}
 

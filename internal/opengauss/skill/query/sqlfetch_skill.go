@@ -198,6 +198,59 @@ func (s *SQLFetchSkill) Execute(ctx context.Context, params skill.Params) (*skil
 	}, nil
 }
 
+// ResolvedSQL is the structured output of programmatic SQL resolution.
+// Used by /wdranalyze and other internal callers that need raw access
+// without going through the skill.Result formatting layer.
+type ResolvedSQL struct {
+	SQL          string // post-substitute, ready for /sqltune
+	OriginalSQL  string // pre-substitute (if substitution applied)
+	Schema       string // schema_name from dbe_perf.statement_history
+	Source       string // "statement_history" / "statement"
+	HasLiterals  bool   // true if SQL is ready to EXPLAIN (no ? / $N)
+	Substituted  bool   // true if auto-substitute filled in literals
+	Placeholders int
+	Notes        []string
+}
+
+// Resolve is the programmatic entry point for /sqlfetch's core logic.
+// Returns nil result + nil error if the SQL_ID is not found (not an
+// error — caller should check for nil). Designed for wdranalyze.Drill
+// to use without going through the skill.Result layer.
+func (s *SQLFetchSkill) Resolve(ctx context.Context, sqlID int64) (*ResolvedSQL, error) {
+	res, err := s.lookup(ctx, sqlID)
+	if err != nil {
+		return nil, err
+	}
+	if res == nil {
+		return nil, nil
+	}
+
+	// Apply auto-substitute (v1.1.30): hand off normalized SQL to substituter
+	// so /sqltune downstream gets ready-for-EXPLAIN text. Same logic as in
+	// Execute() but without the skill.Result wrapping.
+	if res.Placeholders > 0 {
+		substituter := sqltuner.NewPlaceholderSubstituter(s.driver)
+		newSQL, subs, sErr := substituter.Substitute(ctx, res.SQL, res.Schema)
+		if sErr == nil && len(subs) > 0 {
+			res.OriginalSQL = res.SQL
+			res.SQL = newSQL
+			res.Substituted = true
+			res.HasLiterals = true
+		}
+	}
+
+	return &ResolvedSQL{
+		SQL:          res.SQL,
+		OriginalSQL:  res.OriginalSQL,
+		Schema:       res.Schema,
+		Source:       res.Source,
+		HasLiterals:  res.HasLiterals,
+		Substituted:  res.Substituted,
+		Placeholders: res.Placeholders,
+		Notes:        res.Notes,
+	}, nil
+}
+
 // lookup runs the two-stage resolution: statement_history (preferred) →
 // statement (fallback). Returns nil if both miss.
 func (s *SQLFetchSkill) lookup(ctx context.Context, id int64) (*fetchResult, error) {

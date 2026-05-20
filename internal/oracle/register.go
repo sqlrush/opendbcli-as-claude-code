@@ -73,6 +73,10 @@ func RegisterSkills(
 	reg(query.NewORASkill(driver))
 	// /sqlfetch: 按 SQL_ID 拉 SQL 全文（V$SQL.SQL_FULLTEXT 通常带字面量）
 	reg(query.NewSQLFetchSkill(driver))
+
+	// /sqltune (M5.1): Oracle EXPLAIN PLAN + 10053 CBO trace MVP.
+	// memStore=nil — memory injection optional, same as og/mysql/pg.
+	reg(query.NewSQLTuneSkill(driver, modelMgr, nil))
 	// 暂时关闭 /sqladvisor 注册 — 现有规则引擎版本被新的 /sqltune (规则+LLM 混合)
 	// 取代, 不再向用户展示. 代码保留供 v0.2 anti-pattern 规则层复用.
 	// reg(query.NewSQLAdvisorSkill(driver))

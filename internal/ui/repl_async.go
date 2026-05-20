@@ -158,6 +158,16 @@ func (r *REPL) processCmdQueue() {
 		r.startDiagAsync(cmd)
 		return
 	}
+	// Natural language → route to /llm async if LLM is configured.
+	// Bug fix: previously natural language queued commands fell through to
+	// startSkillAsync (2-min hardcoded timeout), causing /sqltune-like long
+	// operations to fail with misleading "请检查数据库连接状态". Mirror the
+	// non-queued path from repl_input.go.
+	if r.isNaturalLanguageWithLLM(cmd) {
+		r.writeOutputLine(r.buildPrompt() + cmd)
+		r.startDiagAsync("/llm " + cmd)
+		return
+	}
 	if !isSyncCommand(cmd) {
 		r.writeOutputLine(r.buildPrompt() + cmd)
 		r.startSkillAsync(cmd)

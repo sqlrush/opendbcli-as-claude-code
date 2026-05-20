@@ -26,6 +26,7 @@ import (
 	"github.com/sqlrush/opendb/internal/db"
 	"github.com/sqlrush/opendb/internal/engine/memory"
 	"github.com/sqlrush/opendb/internal/llm"
+	"github.com/sqlrush/opendb/internal/sqltune"
 )
 
 // Tuner is the main /sqltune entry point.
@@ -40,29 +41,34 @@ type Tuner struct {
 	provider llm.Provider
 	memStore *memory.Store
 
-	planCol    *PlanCollector
-	schemaCol  *SchemaCollector
-	dialectCol *DialectCollector
-	runtimeCol *RuntimeCollector
-	viewExp    *ViewExpander
-	memQuery   *MemoryQuery
-	verifier   *EquivVerifier
+	// planner is the DialectPlanner driving Phase A data collection.
+	// M1.4: previously 5 separate *Collector fields, now one interface
+	// to let MySQL/PG/Oracle/GaussDB plug in their own implementations.
+	planner sqltune.DialectPlanner
+
+	memQuery *MemoryQuery // memory access not in DialectPlanner (cross-cutting)
+	// M6.5 deleted: verifier *EquivVerifier — now uses sqltune.EquivVerifier
+	// type-assertion on t.planner.
 }
 
-// NewTuner constructs a Tuner with all sub-modules wired.
-// memStore may be nil — tuner gracefully skips M6.
+// NewTuner constructs a Tuner with all sub-modules wired. Driver is
+// assumed to be openGauss/GaussDB — for other dialects use
+// NewTunerFromPlanner. memStore may be nil — tuner gracefully skips M6.
 func NewTuner(driver db.Driver, provider llm.Provider, memStore *memory.Store) *Tuner {
+	return NewTunerFromPlanner(driver, NewPlanner(driver), provider, memStore)
+}
+
+// NewTunerFromPlanner accepts any DialectPlanner. driver is still
+// retained for legacy / non-planner queries; M6.5 moved equivalence
+// verification onto the planner via sqltune.EquivVerifier optional
+// interface, so we no longer need a separate verifier instance.
+func NewTunerFromPlanner(driver db.Driver, planner sqltune.DialectPlanner, provider llm.Provider, memStore *memory.Store) *Tuner {
 	return &Tuner{
-		driver:     driver,
-		provider:   provider,
-		memStore:   memStore,
-		planCol:    NewPlanCollector(driver),
-		schemaCol:  NewSchemaCollector(driver),
-		dialectCol: NewDialectCollector(driver),
-		runtimeCol: NewRuntimeCollector(driver),
-		viewExp:    NewViewExpander(driver),
-		memQuery:   NewMemoryQuery(memStore),
-		verifier:   NewEquivVerifier(driver),
+		driver:   driver,
+		provider: provider,
+		memStore: memStore,
+		planner:  planner,
+		memQuery: NewMemoryQuery(memStore),
 	}
 }
 
@@ -83,8 +89,9 @@ func (t *Tuner) Tune(ctx context.Context, opts TuneOptions) (*FinalReport, error
 		return nil, fmt.Errorf("phase A: %w", err)
 	}
 
-	// G7 token compression for large SQL/plan/schema
-	compStats := CompressContext(cc)
+	// G7 token compression for large SQL/plan/schema (M8.1: delegated
+	// to neutral sqltune.Compress so og and GenericTuner share logic).
+	compStats := sqltune.Compress(cc)
 	if compStats.TriggerReason != "" {
 		stats.CompressionTriggered = true
 		stats.CompressionReason = compStats.TriggerReason
@@ -93,7 +100,21 @@ func (t *Tuner) Tune(ctx context.Context, opts TuneOptions) (*FinalReport, error
 	// ── Round 1: LLM mega-analysis ──
 	round1, err := t.runRound1(ctx, cc)
 	if err != nil {
-		return nil, fmt.Errorf("round 1: %w", err)
+		// Round 1 LLM failure (truncated JSON / connection / timeout) —
+		// don't hard-fail. Return a degraded report with Phase A data
+		// (plan tree + schema + dialect) + the error note. LLM agent
+		// then surfaces something useful to the user instead of treating
+		// this as "sqltune failed, try something else" and chasing red
+		// herrings (e.g., calling /explain or /sql for a basic version
+		// check). Observed in real session: 35B / opus both early-stop
+		// on hard error.
+		stats.TotalDuration = time.Since(start)
+		degradedMD := "# /sqltune 部分结果（Round 1 LLM 失败）\n\n" +
+			"> ⚠️ Round 1 综合分析失败: " + err.Error() + "\n" +
+			"> 以下为 Phase A 采集到的 EXPLAIN + schema + dialect 原始数据.\n" +
+			"> 可作为参考供 DBA 手动分析, 或重试 /sqltune.\n\n" +
+			renderFallbackReport(cc, &Round1Output{}, nil)
+		return &FinalReport{Markdown: degradedMD, Stats: stats}, nil
 	}
 	stats.CandidateCount = len(round1.Candidates)
 	stats.Rounds = 1
@@ -204,11 +225,41 @@ func (t *Tuner) collectPhaseA(ctx context.Context, opts TuneOptions) (*Collected
 		cc.Notes = append(cc.Notes, s)
 	}
 
+	// Map TuneOptions → ExplainOptions tri-state for planner.ExplainPlan.
+	explainOpts := sqltune.ExplainOptions{Analyze: sqltune.AnalyzeAuto, Buffers: true, FormatJSON: true}
+	switch {
+	case opts.ForceAnalyze:
+		explainOpts.Analyze = sqltune.AnalyzeForce
+	case opts.NoAnalyze:
+		explainOpts.Analyze = sqltune.AnalyzeSkip
+	}
+
+	// 0. EXPLAIN PERFORMANCE (M4a) — optional capability.
+	// Type-assert to PerformancePlanner: og + GaussDB implement it,
+	// others fall through silently. Runs in parallel with JSON EXPLAIN
+	// since it's a separate query (and may be skipped for DML).
+	if pp, ok := t.planner.(sqltune.PerformancePlanner); ok && !opts.Simple {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			td, err := pp.ExplainPerformance(ctx, opts.SQL)
+			if err != nil {
+				addNote("explain_performance 警告: " + err.Error())
+				return
+			}
+			if td != nil {
+				mu.Lock()
+				cc.Trace = td
+				mu.Unlock()
+			}
+		}()
+	}
+
 	// 1. Plan
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		plan, err := t.planCol.Collect(ctx, opts.SQL, opts)
+		plan, err := t.planner.ExplainPlan(ctx, opts.SQL, explainOpts)
 		mu.Lock()
 		cc.Plan = plan
 		if err != nil {
@@ -224,7 +275,7 @@ func (t *Tuner) collectPhaseA(ctx context.Context, opts TuneOptions) (*Collected
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		schema, tables, err := t.schemaCol.Collect(ctx, opts.SQL)
+		schema, tables, err := t.planner.CollectSchema(ctx, opts.SQL)
 		mu.Lock()
 		cc.Schema = schema
 		cc.InvolvedTables = tables
@@ -238,7 +289,7 @@ func (t *Tuner) collectPhaseA(ctx context.Context, opts TuneOptions) (*Collected
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dialect, err := t.dialectCol.Snapshot(ctx)
+		dialect, err := t.planner.SnapshotDialect(ctx)
 		mu.Lock()
 		cc.Dialect = dialect
 		mu.Unlock()
@@ -252,11 +303,11 @@ func (t *Tuner) collectPhaseA(ctx context.Context, opts TuneOptions) (*Collected
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			expanded, views, err := t.viewExp.Expand(ctx, opts.SQL)
-			if err == nil && len(views) > 0 {
+			expanded, err := t.planner.ExpandViews(ctx, opts.SQL)
+			if err == nil && expanded != "" && expanded != opts.SQL {
 				mu.Lock()
 				cc.ExpandedSQL = expanded
-				cc.Notes = append(cc.Notes, fmt.Sprintf("展开了 %d 个视图: %v", len(views), views))
+				cc.Notes = append(cc.Notes, "view expansion applied")
 				mu.Unlock()
 			}
 		}()
@@ -270,7 +321,7 @@ func (t *Tuner) collectPhaseA(ctx context.Context, opts TuneOptions) (*Collected
 		wg2.Add(1)
 		go func() {
 			defer wg2.Done()
-			rt, _ := t.runtimeCol.Snapshot(ctx, cc.InvolvedTables)
+			rt, _ := t.planner.SnapshotRuntime(ctx, cc.InvolvedTables)
 			mu.Lock()
 			cc.Runtime = rt
 			mu.Unlock()
@@ -356,7 +407,7 @@ func (t *Tuner) verifyCandidates(ctx context.Context, origSQL string, cands []Ca
 	}
 
 	// Get original cost once
-	origCost, origErr := t.planCol.QuickPlanCost(ctx, origSQL)
+	origCost, origErr := t.planner.QuickPlanCost(ctx, origSQL)
 	if origErr != nil {
 		origCost = 0
 	}
@@ -386,7 +437,7 @@ func (t *Tuner) verifyOne(ctx context.Context, origSQL string, origCost float64,
 	case "rewrite", "hint":
 		// Can directly EXPLAIN the candidate SQL
 		r.Verifiable = true
-		newCost, err := t.planCol.QuickPlanCost(ctx, c.SQL)
+		newCost, err := t.planner.QuickPlanCost(ctx, c.SQL)
 		if err != nil {
 			r.Error = err.Error()
 			return r
@@ -395,11 +446,16 @@ func (t *Tuner) verifyOne(ctx context.Context, origSQL string, origCost float64,
 		if newCost > 0 && origCost > 0 {
 			r.Speedup = origCost / newCost
 		}
-		// Equivalence check (rewrite only; hint preserves semantics by definition)
+		// Equivalence check (rewrite only; hint preserves semantics by definition).
+		// M6.5: type-assert to sqltune.EquivVerifier — works across all
+		// dialects that implement the optional interface; dialects without
+		// equiv support naturally skip (EquivOK stays nil = Unknown).
 		if doEquiv && c.Type == "rewrite" {
-			ok, err := t.verifier.Verify(ctx, origSQL, c.SQL)
-			if err == nil {
-				r.EquivOK = &ok
+			if ev, ok := t.planner.(sqltune.EquivVerifier); ok {
+				equiv, err := ev.VerifyEquivalence(ctx, origSQL, c.SQL, 1000)
+				if err == nil {
+					r.EquivOK = &equiv
+				}
 			}
 		}
 	case "index", "schema", "stats":

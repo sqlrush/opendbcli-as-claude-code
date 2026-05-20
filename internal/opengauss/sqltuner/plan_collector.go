@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/sqlrush/opendb/internal/db"
+	"github.com/sqlrush/opendb/internal/sqltune"
 )
 
 // PlanCollector executes EXPLAIN [ANALYZE] and parses JSON output into PlanNode tree.
@@ -61,6 +62,75 @@ func (e *PlaceholderSQLError) Error() string {
 	return fmt.Sprintf("SQL contains %d unbound placeholder(s)%s — likely fetched from dbe_perf.statement (normalized form). Provide literal values or pull from dbe_perf.statement_history.", e.Count, sample)
 }
 
+// UnsupportedStatementError is returned when the input SQL is a DDL or
+// utility statement that EXPLAIN can't plan (CREATE/DROP/ALTER/ANALYZE/SET/
+// SHOW/...). Surfaced so the caller renders a clear "skipped" instead of
+// the opaque "syntax error at or near INDEX" the database returns.
+type UnsupportedStatementError struct {
+	Kind    string // "DDL", "SET", "ANALYZE", etc.
+	Snippet string // first ~80 chars of the SQL for context
+}
+
+func (e *UnsupportedStatementError) Error() string {
+	return fmt.Sprintf("statement type %s not supported by EXPLAIN tuning (snippet: %s)", e.Kind, e.Snippet)
+}
+
+// detectUnsupportedStatement returns a typed error if the SQL begins with a
+// keyword that EXPLAIN can't handle. Looks at the first non-whitespace,
+// non-comment word.
+func detectUnsupportedStatement(sql string) *UnsupportedStatementError {
+	s := strings.TrimSpace(sql)
+	// Strip leading SQL comments (-- and /* */) for the keyword check
+	for {
+		switch {
+		case strings.HasPrefix(s, "--"):
+			if idx := strings.Index(s, "\n"); idx >= 0 {
+				s = strings.TrimSpace(s[idx+1:])
+			} else {
+				return nil
+			}
+		case strings.HasPrefix(s, "/*"):
+			if idx := strings.Index(s, "*/"); idx >= 0 {
+				s = strings.TrimSpace(s[idx+2:])
+			} else {
+				return nil
+			}
+		default:
+			goto done
+		}
+	}
+done:
+	if s == "" {
+		return nil
+	}
+	upper := strings.ToUpper(s)
+	// Match leading keyword (word ending in space or EOL)
+	for _, kw := range unsupportedLeadingKeywords {
+		if strings.HasPrefix(upper, kw+" ") || upper == kw {
+			snippet := s
+			if len(snippet) > 80 {
+				snippet = snippet[:80] + "..."
+			}
+			return &UnsupportedStatementError{Kind: kw, Snippet: snippet}
+		}
+	}
+	return nil
+}
+
+// unsupportedLeadingKeywords lists statement types that EXPLAIN refuses.
+// DML (INSERT/UPDATE/DELETE) is intentionally allowed — EXPLAIN can plan
+// them (just won't execute without ANALYZE).
+var unsupportedLeadingKeywords = []string{
+	"CREATE", "DROP", "ALTER", "TRUNCATE", "RENAME",
+	"ANALYZE", "VACUUM", "REINDEX", "CLUSTER",
+	"SET", "RESET", "SHOW", "GRANT", "REVOKE",
+	"BEGIN", "COMMIT", "ROLLBACK", "SAVEPOINT",
+	"CALL", "DO",
+	"COPY", "LOCK", "CHECKPOINT", "LOAD",
+	"START", "PREPARE", "DEALLOCATE", "EXECUTE",
+	"DECLARE", "CLOSE", "FETCH", "MOVE",
+}
+
 // Collect runs EXPLAIN and returns PlanInfo.
 //
 // Returns:
@@ -75,6 +145,16 @@ func (c *PlanCollector) Collect(ctx context.Context, sql string, opts TuneOption
 	// targeted error to act on.
 	if perr := detectPlaceholders(sql); perr != nil {
 		return nil, perr
+	}
+
+	// v1.1.50: Reject DDL / utility statements before EXPLAIN. og's
+	// dbe_perf.statement_history contains a lot of CREATE INDEX / ANALYZE /
+	// SET / SHOW / ALTER — none can be EXPLAIN'd, and the resulting
+	// "syntax error at or near 'INDEX'" / "'SET'" was confusing the LLM
+	// and adding noise. Surface a typed error so caller can render it
+	// clearly.
+	if uerr := detectUnsupportedStatement(sql); uerr != nil {
+		return nil, uerr
 	}
 
 	useAnalyze, timeout := c.decideAnalyze(sql, opts)
@@ -353,7 +433,9 @@ func (c *PlanCollector) runExplain(ctx context.Context, sql string, analyze bool
 		return nil, fmt.Errorf("EXPLAIN JSON missing 'Plan' key")
 	}
 
-	root := parsePlanNode(planMap)
+	// M3.0: delegate to neutral parser. og + pg share the format, so
+	// keeping the parser in the neutral package avoids drift.
+	root := sqltune.ParsePGStylePlanNode(planMap)
 
 	info := &PlanInfo{
 		Root:       root,
@@ -369,77 +451,9 @@ func (c *PlanCollector) runExplain(ctx context.Context, sql string, analyze bool
 	return info, nil
 }
 
-// parsePlanNode recursively converts EXPLAIN JSON map → PlanNode struct.
-func parsePlanNode(m map[string]any) *PlanNode {
-	n := &PlanNode{
-		Operator:       getStr(m, "Node Type"),
-		RelationName:   getStr(m, "Relation Name"),
-		Alias:          getStr(m, "Alias"),
-		StartupCost:    getFloat(m, "Startup Cost"),
-		TotalCost:      getFloat(m, "Total Cost"),
-		PlanRows:       getInt(m, "Plan Rows"),
-		PlanWidth:      int(getInt(m, "Plan Width")),
-		ActualStartup:  getFloat(m, "Actual Startup Time"),
-		ActualTotal:    getFloat(m, "Actual Total Time"),
-		ActualRows:     getInt(m, "Actual Rows"),
-		ActualLoops:    getInt(m, "Actual Loops"),
-		SharedHit:      getInt(m, "Shared Hit Blocks"),
-		SharedRead:     getInt(m, "Shared Read Blocks"),
-		Filter:         getStr(m, "Filter"),
-		JoinFilter:     getStr(m, "Join Filter"),
-		HashCondition:  getStr(m, "Hash Cond"),
-		IndexCondition: getStr(m, "Index Cond"),
-		SortMethod:     getStr(m, "Sort Method"),
-		SortSpaceType:  getStr(m, "Sort Space Type"),
-		SortSpaceUsed:  getInt(m, "Sort Space Used"),
-	}
-	if sk, ok := m["Sort Key"].([]any); ok {
-		for _, s := range sk {
-			if str, ok := s.(string); ok {
-				n.SortKey = append(n.SortKey, str)
-			}
-		}
-	}
-	if children, ok := m["Plans"].([]any); ok {
-		for _, c := range children {
-			if cm, ok := c.(map[string]any); ok {
-				n.Children = append(n.Children, parsePlanNode(cm))
-			}
-		}
-	}
-	return n
-}
-
-func getStr(m map[string]any, key string) string {
-	if v, ok := m[key].(string); ok {
-		return v
-	}
-	return ""
-}
-
-func getFloat(m map[string]any, key string) float64 {
-	switch v := m[key].(type) {
-	case float64:
-		return v
-	case int64:
-		return float64(v)
-	case int:
-		return float64(v)
-	}
-	return 0
-}
-
-func getInt(m map[string]any, key string) int64 {
-	switch v := m[key].(type) {
-	case float64:
-		return int64(v)
-	case int64:
-		return v
-	case int:
-		return int64(v)
-	}
-	return 0
-}
+// parsePlanNode / getStr / getFloat / getInt: removed in M3.0 — moved
+// to internal/sqltune/plan_parser.go (ParsePGStylePlanNode) so og + pg
+// share one parser and can't drift.
 
 // QuickPlanCost returns just the total cost of a candidate SQL via EXPLAIN (no ANALYZE).
 // Used by Round 2 batch verification (faster than full Collect).

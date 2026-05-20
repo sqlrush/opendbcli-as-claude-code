@@ -62,6 +62,11 @@ type ModelConfig struct {
 	APIKey      string `yaml:"api_key,omitempty"`
 	StripThink  bool   `yaml:"strip_think,omitempty"`
 	Description string `yaml:"description,omitempty"`
+	// ToolMode (v1.2.0): "" / "native" / "prompt".
+	// Native (default) uses provider FC API; prompt injects tool descriptions
+	// into the system prompt and parses JSON from the response (for LLMs/
+	// deployments that don't expose function calling).
+	ToolMode    string `yaml:"tool_mode,omitempty"`
 }
 
 // ============================================================================

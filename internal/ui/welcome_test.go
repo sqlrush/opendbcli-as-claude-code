@@ -70,6 +70,36 @@ func TestWelcomeLineWidths_EastAsian(t *testing.T) {
 	}
 }
 
+// TestWelcomeNoPanic_TinyTerminal: when r.cols is 0 (PTY default, CI runner,
+// some terminal multiplexer edge cases) or very small, buildWelcomeLines
+// used to panic with `strings: negative Repeat count` because groupIndent
+// computed from (leftW - groupMaxW) / 2 could be negative when the cat
+// logo width exceeds the available left column width.
+//
+// v1.2.1 fix: clamp groupIndent / lPadLeft / lPadRight to ≥ 0. Test ensures
+// no panic at cols=0, 1, 10, 40 (below the buildWelcomeLines internal floor
+// of 60).
+func TestWelcomeNoPanic_TinyTerminal(t *testing.T) {
+	for _, cols := range []int{0, 1, 10, 40, 59, 60} {
+		t.Run(fmt.Sprintf("cols=%d", cols), func(t *testing.T) {
+			r := &REPL{
+				cols:    cols,
+				rows:    30,
+				connMgr: stubConnMgr(t),
+			}
+			defer func() {
+				if rec := recover(); rec != nil {
+					t.Fatalf("buildWelcomeLines panicked at cols=%d: %v", cols, rec)
+				}
+			}()
+			lines := r.buildWelcomeLines()
+			if len(lines) == 0 {
+				t.Errorf("cols=%d: expected non-empty welcome lines", cols)
+			}
+		})
+	}
+}
+
 func truncStr(s string, max int) string {
 	runes := []rune(s)
 	if len(runes) > max {
