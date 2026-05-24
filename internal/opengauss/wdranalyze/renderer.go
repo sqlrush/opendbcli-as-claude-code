@@ -27,12 +27,12 @@ import (
 // Render produces the final markdown report from an Analysis.
 //
 // Layout order (M3/M4 complete):
-//   1. Header (window / instance / DB Time)
-//   2. Workload Summary (CPU / Wait %, hard parse)
-//   3. LLM Synthesis (M4 — risk overview + bottlenecks + config + summary)
-//      OR Fallback Findings section (when LLM is unavailable)
-//   4. Top SQL List + Top SQL Tunes (M3 — sqltune optimizations)
-//   5. Footer
+//  1. Header (window / instance / DB Time)
+//  2. Workload Summary (CPU / Wait %, hard parse)
+//  3. LLM Synthesis (M4 — risk overview + bottlenecks + config + summary)
+//     OR Fallback Findings section (when LLM is unavailable)
+//  4. Top SQL List + Top SQL Tunes (M3 — sqltune optimizations)
+//  5. Footer
 //
 // LLM synthesis (when present) replaces the standalone "Findings" section
 // because the LLM is instructed to include all fallback findings in its
@@ -41,7 +41,9 @@ import (
 func Render(a *Analysis) string {
 	var b strings.Builder
 	renderHeader(&b, a)
+	renderDiagnosticBoundary(&b, a)
 	renderWorkloadSummary(&b, a)
+	renderEvidenceSection(&b, a)
 	if a.LLMSynthesis != "" {
 		renderLLMSection(&b, a)
 	} else {
@@ -55,6 +57,18 @@ func Render(a *Analysis) string {
 	}
 	renderFooter(&b, a)
 	return b.String()
+}
+
+func renderEvidenceSection(b *strings.Builder, a *Analysis) {
+	if a == nil || a.Report == nil {
+		return
+	}
+	evidence := BuildEvidenceBundle(a.Report, a.Findings, a.SQLTunes)
+	text := RenderEvidenceMarkdown(evidence)
+	if strings.TrimSpace(text) == "## 结构化证据" {
+		return
+	}
+	b.WriteString(text)
 }
 
 func renderHeader(b *strings.Builder, a *Analysis) {
@@ -246,10 +260,70 @@ func renderLLMSection(b *strings.Builder, a *Analysis) {
 	b.WriteString("\n\n")
 }
 
+func renderDiagnosticBoundary(b *strings.Builder, a *Analysis) {
+	if a == nil || a.Report == nil {
+		return
+	}
+	confidence, reason := evidenceConfidence(a)
+	b.WriteString("## 诊断边界\n\n")
+	b.WriteString("- WDR 是历史窗口报告，用于分析该时间段内的负载与风险；不能单独证明当前在线故障。\n")
+	b.WriteString("- 如需确认当前是否仍有故障，应结合 `health`、`waits`、`activesessions`、`blocktree` 的当前快照复核。\n")
+	b.WriteString(fmt.Sprintf("- 证据置信度: %s（%s）。\n\n", confidence, reason))
+}
+
+func evidenceConfidence(a *Analysis) (string, string) {
+	if a == nil || a.Report == nil {
+		return "低", "未解析到 WDR 报告"
+	}
+	r := a.Report
+	score := 0
+	var parts []string
+	if !r.Header.WindowStart.IsZero() && !r.Header.WindowEnd.IsZero() {
+		score += 2
+		parts = append(parts, "有时间窗口")
+	}
+	if len(r.SectionScores) > 0 {
+		score += 3
+		parts = append(parts, fmt.Sprintf("%d 个评分模块", len(r.SectionScores)))
+	}
+	if len(r.RawSections) > 0 {
+		score += 2
+		parts = append(parts, fmt.Sprintf("%d 个原始数据节", len(r.RawSections)))
+	}
+	if len(r.TopSQLs) > 0 {
+		score++
+		parts = append(parts, fmt.Sprintf("%d 条 Top SQL", len(r.TopSQLs)))
+	}
+	if len(a.Findings) > 0 {
+		score++
+		parts = append(parts, fmt.Sprintf("%d 个规则发现", len(a.Findings)))
+	}
+	if len(parts) == 0 {
+		parts = append(parts, "结构化字段不足")
+	}
+	switch {
+	case score >= 7:
+		return "高", strings.Join(parts, "、")
+	case score >= 4:
+		return "中", strings.Join(parts, "、")
+	default:
+		return "低", strings.Join(parts, "、")
+	}
+}
+
 func renderFooter(b *strings.Builder, a *Analysis) {
 	b.WriteString("---\n\n")
-	b.WriteString(fmt.Sprintf("_报告生成于 %s · /wdranalyze v1_\n",
-		a.GeneratedAt.Format("2006-01-02 15:04:05")))
+	b.WriteString("## 报告元信息\n\n")
+	generatedAt := "未知"
+	if a != nil && !a.GeneratedAt.IsZero() {
+		generatedAt = a.GeneratedAt.Format("2006-01-02 15:04:05")
+	}
+	b.WriteString("- 生成时间: " + generatedAt + "\n")
+	b.WriteString("- 分析工具: /wdranalyze\n")
+	b.WriteString("- 报告格式: wdranalyze-report/v1\n")
+	if a != nil && strings.TrimSpace(a.ReportPath) != "" {
+		b.WriteString("- 报告文件: `" + a.ReportPath + "`\n")
+	}
 }
 
 // ── format helpers ──

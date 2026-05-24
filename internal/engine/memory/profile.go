@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -62,11 +63,21 @@ func ProfileTemplate(instance, product string) string {
 	switch product {
 	case "opengauss":
 		return openGaussProfileTemplate(instance)
+	case "gaussdb":
+		return gaussDBProfileTemplate(instance)
 	case "postgres":
 		return postgresProfileTemplate(instance)
 	default:
 		return genericProfileTemplate(instance)
 	}
+}
+
+func gaussDBProfileTemplate(instance string) string {
+	tpl := openGaussProfileTemplate(instance)
+	tpl = strings.Replace(tpl, "(openGauss)", "(GaussDB)", 1)
+	tpl = strings.Replace(tpl, "**openGauss 版本**", "**GaussDB 版本**", 1)
+	tpl = strings.ReplaceAll(tpl, "openGauss", "GaussDB/openGauss")
+	return tpl
 }
 
 func genericProfileTemplate(instance string) string {

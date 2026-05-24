@@ -239,6 +239,7 @@ func (m *ConfigureModel) saveIfNeeded() {
 		found := false
 		for i, mod := range cfg.Models {
 			if mod.Name == newModel.Name {
+				newModel.ToolMode = mod.ToolMode
 				cfg.Models[i] = newModel
 				found = true
 				break

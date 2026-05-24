@@ -24,11 +24,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sqlrush/opendb/internal/diagtrace"
 	"github.com/sqlrush/opendb/internal/engine/memory"
 	"github.com/sqlrush/opendb/internal/engine/policy"
 	"github.com/sqlrush/opendb/internal/engine/session"
 	"github.com/sqlrush/opendb/internal/model"
 	"github.com/sqlrush/opendb/internal/opengauss/agent"
+	ogintent "github.com/sqlrush/opendb/internal/opengauss/intent"
 	"github.com/sqlrush/opendb/internal/opengauss/ruleengine"
 	"github.com/sqlrush/opendb/internal/opengauss/sentinel"
 	"github.com/sqlrush/opendb/internal/skill"
@@ -133,9 +135,9 @@ func (s *DiagnoseSkill) ToolDef() skill.ToolDef {
 
 func (s *DiagnoseSkill) CLIDef() skill.CLIDef {
 	return skill.CLIDef{
-		Command: "llm",
-		Aliases: []string{},
-		Usage:   "/llm",
+		Command:  "llm",
+		Aliases:  []string{},
+		Usage:    "/llm",
 		Examples: []string{"/llm"},
 	}
 }
@@ -299,6 +301,7 @@ func (s *DiagnoseSkill) executeDiagnose(ctx context.Context, params skill.Params
 		}
 		diagnoser.SetCapability(s.modelMgr.Capability())
 		diagnoser.SetToolMode(s.modelMgr.ToolMode())
+		diagnoser.SetModelName(s.modelMgr.ActiveName())
 		diagnoser.SetOnRound(onRound)
 		diagnoser.SetOnStream(onStream)
 		llmResult, err = diagnoser.Diagnose(ctx, mode, report, question)
@@ -306,11 +309,16 @@ func (s *DiagnoseSkill) executeDiagnose(ctx context.Context, params skill.Params
 		capability := agent.ModelCapability(s.modelMgr.Capability())
 		s.emitProgress("ai_start", fmt.Sprintf("AI 分析 (auto, 最多%d轮)...", agent.ModeAuto.MaxRounds()), 0, nil, nil)
 		strategy := agent.SelectStrategy(capability, provider, s.executor, s.registry)
+		applyStrategyToolMode(strategy, s.modelMgr.ToolMode())
+		applyStrategyModelName(strategy, s.modelMgr.ActiveName())
 		// A throwaway diagnoser carries the stores we want to propagate.
 		var src *agent.Diagnoser
 		if s.sessionStore != nil {
 			src = agent.NewDiagnoser(provider, s.executor, s.registry)
 			src.SetContextStoresFrom(s.sessionStore, s.memoryStore, s.policyLoader, s.sessionID)
+			src.SetCapability(s.modelMgr.Capability())
+			src.SetToolMode(s.modelMgr.ToolMode())
+			src.SetModelName(s.modelMgr.ActiveName())
 		}
 		if as, ok := strategy.(*agent.AutonomousStrategy); ok {
 			if src != nil {
@@ -351,16 +359,73 @@ func (s *DiagnoseSkill) executeDiagnose(ctx context.Context, params skill.Params
 
 // executeOnDemand runs AI diagnosis without a Sentinel report.
 func (s *DiagnoseSkill) executeOnDemand(ctx context.Context, params skill.Params) (*skill.Result, error) {
-	provider := s.modelMgr.Provider()
-	if provider == nil {
-		// No LLM: fallback to rule engine with live data.
-		return s.fallbackRuleLive(ctx)
-	}
-
 	question := strings.TrimSpace(params.StringOr("args", ""))
 	userProvided := question != ""
 	if question == "" {
 		question = "请分析当前 OpenGauss 数据库状态, 检查是否有性能问题"
+	}
+
+	decision := ogintent.Classify(question)
+	traceEvent := diagtrace.Event{
+		Input:         question,
+		Intent:        decision.Intent,
+		Mode:          string(decision.Mode),
+		Skill:         decision.Skill,
+		Params:        decision.Params,
+		Reason:        decision.Reason,
+		Confidence:    decision.Confidence,
+		LLMUsed:       decision.UseLLM,
+		Model:         s.modelMgr.ActiveName(),
+		PromptSummary: summarizeTracePrompt(question),
+		StartedAt:     time.Now(),
+	}
+
+	if userProvided && s.executor != nil && decision.Skill != "" &&
+		(decision.Mode == ogintent.ModeDirectSkill || decision.Mode == ogintent.ModeEvidence) {
+		s.emitProgress("start", routeProgressMessage(decision), 0, nil, nil)
+		toolStart := time.Now()
+		result, err := s.executor.Execute(ctx, decision.Skill, skill.ParamsFromMap(decision.Params))
+		traceEvent.ToolCalls = append(traceEvent.ToolCalls, diagtrace.ToolCall{
+			Name:      decision.Skill,
+			Params:    decision.Params,
+			Elapsed:   time.Since(toolStart),
+			StartedAt: toolStart,
+		})
+		traceEvent.EndedAt = time.Now()
+		if err != nil {
+			traceEvent.Status = "error"
+			traceEvent.Error = err.Error()
+			traceEvent.ToolCalls[len(traceEvent.ToolCalls)-1].Status = "error"
+			traceEvent.ToolCalls[len(traceEvent.ToolCalls)-1].Error = err.Error()
+			diagtrace.SetLast(traceEvent)
+			result := &skill.Result{
+				Type:     skill.ResultText,
+				Rendered: routeFailurePrefix(decision) + err.Error(),
+				Summary:  decision.Intent + " failed",
+			}
+			s.emitProgress("error", "", 0, result, err)
+			return result, nil
+		}
+		traceEvent.Status = "ok"
+		traceEvent.ToolCalls[len(traceEvent.ToolCalls)-1].Status = "ok"
+		if result != nil {
+			out := result.Rendered
+			if strings.TrimSpace(out) == "" {
+				out = result.Summary
+			}
+			traceEvent.ToolCalls[len(traceEvent.ToolCalls)-1].OutputBytes = len([]byte(out))
+			traceEvent.ToolCalls[len(traceEvent.ToolCalls)-1].OutputHash = diagtrace.HashText(out)
+			traceEvent.ToolCalls[len(traceEvent.ToolCalls)-1].OutputSummary = diagtrace.SummarizeText(out, 220)
+		}
+		diagtrace.SetLast(traceEvent)
+		s.emitProgress("done", "", 0, result, nil)
+		return result, nil
+	}
+
+	provider := s.modelMgr.Provider()
+	if provider == nil {
+		// No LLM: fallback to rule engine with live data.
+		return s.fallbackRuleLive(ctx)
 	}
 
 	s.emitProgress("start", "主动诊断: 查询当前数据库状态...", 0, nil, nil)
@@ -371,8 +436,11 @@ func (s *DiagnoseSkill) executeOnDemand(ctx context.Context, params skill.Params
 	roundStart2 := time.Now()
 	onRound := func(info agent.RoundInfo) {
 		elapsed := time.Since(roundStart2)
+		summary := fmt.Sprintf("第%d轮: %s", info.Round, info.Summary)
+		traceEvent.Rounds = append(traceEvent.Rounds, summary)
+		traceEvent.RoundDetails = append(traceEvent.RoundDetails, diagtrace.RoundDetail{Round: info.Round, Summary: info.Summary, Elapsed: elapsed})
 		s.emitProgress("ai_round",
-			fmt.Sprintf("第%d轮: %s", info.Round, info.Summary),
+			summary,
 			elapsed, nil, nil)
 		roundStart2 = time.Now()
 	}
@@ -382,10 +450,12 @@ func (s *DiagnoseSkill) executeOnDemand(ctx context.Context, params skill.Params
 
 	var prompt string
 	if userProvided {
+		// v1.2.6: 措辞避开 shouldForceCurrentDBEvidence 的 trigger words
+		// （之前用"等待事件"/"告警/异常"会让 SQL_ID 调优类问题误触发 force-evidence）
 		prompt = fmt.Sprintf(`用户问题: %s
 
-请直接回答用户的问题。可以调用工具查询数据库获取所需信息。
-不要偏离用户的问题去分析其他告警或等待事件。`, question)
+请直接回答用户提的具体问题。可以调用工具查询数据库获取所需信息。
+不要跑题，专注解决用户提出的具体诉求。`, question)
 	} else {
 		var sentinelPart string
 		if s.sentinelSkill != nil && s.sentinelSkill.ReportCount() > 0 {
@@ -404,14 +474,21 @@ func (s *DiagnoseSkill) executeOnDemand(ctx context.Context, params skill.Params
 请主动查询数据库状态来判断是否存在问题。`, question, sentinelPart)
 	}
 
+	traceEvent.PromptSummary = diagtrace.SummarizeText(prompt, 240)
+	traceEvent.PromptBytes = len([]byte(prompt))
+	traceEvent.PromptHash = diagtrace.HashText(prompt)
+
 	// Strategy + fallback (mirrors Oracle).
 	strategy := agent.SelectStrategy(capability, provider, s.executor, s.registry)
+	applyStrategyToolMode(strategy, s.modelMgr.ToolMode())
+	applyStrategyModelName(strategy, s.modelMgr.ActiveName())
 	var src *agent.Diagnoser
 	if s.sessionStore != nil {
 		src = agent.NewDiagnoser(provider, s.executor, s.registry)
 		src.SetContextStoresFrom(s.sessionStore, s.memoryStore, s.policyLoader, s.sessionID)
 		src.SetCapability(s.modelMgr.Capability())
 		src.SetToolMode(s.modelMgr.ToolMode())
+		src.SetModelName(s.modelMgr.ActiveName())
 	}
 	if as, ok := strategy.(*agent.AutonomousStrategy); ok {
 		if src != nil {
@@ -428,6 +505,11 @@ func (s *DiagnoseSkill) executeOnDemand(ctx context.Context, params skill.Params
 	}
 	llmResult, err := strategy.Diagnose(ctx, nil, prompt)
 	if err != nil {
+		traceEvent.LLMUsed = true
+		traceEvent.Status = "error"
+		traceEvent.Error = err.Error()
+		traceEvent.EndedAt = time.Now()
+		diagtrace.SetLast(traceEvent)
 		result := &skill.Result{
 			Type:     skill.ResultText,
 			Rendered: "AI 诊断失败: " + err.Error(),
@@ -437,6 +519,13 @@ func (s *DiagnoseSkill) executeOnDemand(ctx context.Context, params skill.Params
 		return result, nil
 	}
 
+	traceEvent.LLMUsed = true
+	traceEvent.InputTokens = llmResult.TokensUsed.InputTokens
+	traceEvent.OutputTokens = llmResult.TokensUsed.OutputTokens
+	traceEvent.Status = "ok"
+	traceEvent.EndedAt = time.Now()
+	diagtrace.SetLast(traceEvent)
+
 	output := agent.FormatDiagnoseResult(llmResult)
 	result := &skill.Result{
 		Type:     skill.ResultText,
@@ -445,6 +534,66 @@ func (s *DiagnoseSkill) executeOnDemand(ctx context.Context, params skill.Params
 	}
 	s.emitProgress("done", "", 0, result, nil)
 	return result, nil
+}
+
+func summarizeTracePrompt(s string) string {
+	s = strings.TrimSpace(strings.Join(strings.Fields(s), " "))
+	if len([]rune(s)) <= 160 {
+		return s
+	}
+	r := []rune(s)
+	return string(r[:160]) + "..."
+}
+
+func shouldDirectWDRAnalyze(question string) (string, bool) {
+	decision := ogintent.Classify(question)
+	if decision.Intent != ogintent.IntentWDRAnalyze {
+		return "", false
+	}
+	args, _ := decision.Params["args"].(string)
+	return args, true
+}
+
+func shouldDirectWDRList(question string) bool {
+	return ogintent.Classify(question).Intent == ogintent.IntentWDRList
+}
+
+func routeProgressMessage(decision ogintent.Decision) string {
+	switch decision.Intent {
+	case ogintent.IntentWDRList:
+		return "WDR 快照列表: 调用 wdr..."
+	case ogintent.IntentWDRAnalyze:
+		return fmt.Sprintf("WDR 报告分析: 调用 wdranalyze %v...", decision.Params["args"])
+	case ogintent.IntentSQLTune:
+		return fmt.Sprintf("SQL 调优: 调用 sqltune %v...", decision.Params["args"])
+	default:
+		return fmt.Sprintf("诊断路由: 调用 %s...", decision.Skill)
+	}
+}
+
+func routeFailurePrefix(decision ogintent.Decision) string {
+	if decision.Skill == "" {
+		return "诊断失败: "
+	}
+	return fmt.Sprintf("%s 调用失败: ", decision.Skill)
+}
+
+func applyStrategyToolMode(strategy agent.DiagnoseStrategy, toolMode string) {
+	switch s := strategy.(type) {
+	case *agent.AutonomousStrategy:
+		s.SetToolMode(toolMode)
+	case *agent.GuidedStrategy:
+		s.SetToolMode(toolMode)
+	}
+}
+
+func applyStrategyModelName(strategy agent.DiagnoseStrategy, modelName string) {
+	switch s := strategy.(type) {
+	case *agent.AutonomousStrategy:
+		s.SetModelName(modelName)
+	case *agent.GuidedStrategy:
+		s.SetModelName(modelName)
+	}
 }
 
 // fallbackRuleEngine runs the rule engine on a sentinel report when LLM is unavailable.

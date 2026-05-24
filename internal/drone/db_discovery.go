@@ -28,12 +28,12 @@ import (
 
 // DBTopology holds discovered database-level topology information.
 type DBTopology struct {
-	DBType       string `json:"db_type"`
-	Version      string `json:"version"`
-	InstanceName string `json:"instance_name"`
-	Role         string `json:"role"`          // "primary", "standby", "read-replica", "standalone"
-	ClusterName  string `json:"cluster_name"`  // RAC cluster name, replication group, etc.
-	PeerNodes    []string `json:"peer_nodes"`  // other nodes in the cluster/replication group
+	DBType       string   `json:"db_type"`
+	Version      string   `json:"version"`
+	InstanceName string   `json:"instance_name"`
+	Role         string   `json:"role"`         // "primary", "standby", "read-replica", "standalone"
+	ClusterName  string   `json:"cluster_name"` // RAC cluster name, replication group, etc.
+	PeerNodes    []string `json:"peer_nodes"`   // other nodes in the cluster/replication group
 }
 
 // DiscoverDBTopology queries the database for its replication role and cluster info.
@@ -58,7 +58,7 @@ func DiscoverDBTopology(ctx context.Context, driver db.Driver, dbType string) DB
 		topo = discoverOracleTopology(ctx, driver, topo)
 	case "mysql":
 		topo = discoverMySQLTopology(ctx, driver, topo)
-	case "postgres", "opengauss":
+	case "postgres", "opengauss", "gaussdb":
 		topo = discoverPGTopology(ctx, driver, topo)
 	}
 

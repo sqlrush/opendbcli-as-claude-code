@@ -17,8 +17,6 @@
  */
 package profile
 
-
-
 // PromptProfile provides DB-specific configuration to the Engine.
 // Engine doesn't know Oracle from MySQL — it gets everything through this interface.
 type PromptProfile interface {
@@ -50,6 +48,8 @@ func NewProfile(product string) PromptProfile {
 		return &PostgresProfile{}
 	case "opengauss":
 		return &OpenGaussProfile{}
+	case "gaussdb":
+		return &GaussDBProfile{}
 	case "dm":
 		return &DMProfile{}
 	default:

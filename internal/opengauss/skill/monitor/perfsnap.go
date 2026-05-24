@@ -60,12 +60,12 @@ LIMIT 10`
 
 // OGPerfSnapshot is a point-in-time OpenGauss performance snapshot.
 type OGPerfSnapshot struct {
-	ID        int               `json:"id"`
-	Timestamp time.Time         `json:"timestamp"`
-	DBStat    *OGDBStat         `json:"db_stat"`
-	BGWriter  *OGBGWriterStat   `json:"bgwriter"`
-	TopSQL    []OGSQLStat       `json:"top_sql,omitempty"`
-	Baseline  bool              `json:"baseline,omitempty"`
+	ID        int             `json:"id"`
+	Timestamp time.Time       `json:"timestamp"`
+	DBStat    *OGDBStat       `json:"db_stat"`
+	BGWriter  *OGBGWriterStat `json:"bgwriter"`
+	TopSQL    []OGSQLStat     `json:"top_sql,omitempty"`
+	Baseline  bool            `json:"baseline,omitempty"`
 }
 
 // OGDBStat holds pg_stat_database metrics.
@@ -98,38 +98,38 @@ type OGBGWriterStat struct {
 
 // OGSQLStat holds a top SQL entry from pg_stat_statements.
 type OGSQLStat struct {
-	QueryID      string  `json:"query_id"`
-	Calls        int64   `json:"calls"`
-	TotalTimeMs  float64 `json:"total_time_ms"`
-	MeanTimeMs   float64 `json:"mean_time_ms"`
-	Rows         int64   `json:"rows"`
-	SharedHit    int64   `json:"shared_hit"`
-	SharedRead   int64   `json:"shared_read"`
-	QueryText    string  `json:"query_text"`
+	QueryID     string  `json:"query_id"`
+	Calls       int64   `json:"calls"`
+	TotalTimeMs float64 `json:"total_time_ms"`
+	MeanTimeMs  float64 `json:"mean_time_ms"`
+	Rows        int64   `json:"rows"`
+	SharedHit   int64   `json:"shared_hit"`
+	SharedRead  int64   `json:"shared_read"`
+	QueryText   string  `json:"query_text"`
 }
 
 // OGPerfDiff describes differences between two snapshots.
 type OGPerfDiff struct {
-	From            time.Time      `json:"from"`
-	To              time.Time      `json:"to"`
-	TPSDelta        float64        `json:"tps_delta"`
-	CacheHitOld     float64        `json:"cache_hit_old"`
-	CacheHitNew     float64        `json:"cache_hit_new"`
-	TempBytesOld    int64          `json:"temp_bytes_old"`
-	TempBytesNew    int64          `json:"temp_bytes_new"`
-	DeadlocksOld    int64          `json:"deadlocks_old"`
-	DeadlocksNew    int64          `json:"deadlocks_new"`
-	CheckpointsOld  int64          `json:"checkpoints_old"`
-	CheckpointsNew  int64          `json:"checkpoints_new"`
-	NewHotSQL       []OGSQLStat    `json:"new_hot_sql,omitempty"`
-	SQLTimeChanges  []ogSQLChange  `json:"sql_time_changes,omitempty"`
+	From           time.Time     `json:"from"`
+	To             time.Time     `json:"to"`
+	TPSDelta       float64       `json:"tps_delta"`
+	CacheHitOld    float64       `json:"cache_hit_old"`
+	CacheHitNew    float64       `json:"cache_hit_new"`
+	TempBytesOld   int64         `json:"temp_bytes_old"`
+	TempBytesNew   int64         `json:"temp_bytes_new"`
+	DeadlocksOld   int64         `json:"deadlocks_old"`
+	DeadlocksNew   int64         `json:"deadlocks_new"`
+	CheckpointsOld int64         `json:"checkpoints_old"`
+	CheckpointsNew int64         `json:"checkpoints_new"`
+	NewHotSQL      []OGSQLStat   `json:"new_hot_sql,omitempty"`
+	SQLTimeChanges []ogSQLChange `json:"sql_time_changes,omitempty"`
 }
 
 type ogSQLChange struct {
-	QueryID     string  `json:"query_id"`
-	OldTotalMs  float64 `json:"old_total_ms"`
-	NewTotalMs  float64 `json:"new_total_ms"`
-	DeltaMs     float64 `json:"delta_ms"`
+	QueryID    string  `json:"query_id"`
+	OldTotalMs float64 `json:"old_total_ms"`
+	NewTotalMs float64 `json:"new_total_ms"`
+	DeltaMs    float64 `json:"delta_ms"`
 }
 
 // ── Snapshot Store ──
@@ -248,8 +248,10 @@ func NewOGPerfSnapSkill(driver db.Driver, dataDir string) *OGPerfSnapSkill {
 	}
 }
 
-func (s *OGPerfSnapSkill) Name() string                       { return "perfsnap" }
-func (s *OGPerfSnapSkill) Description() string                { return "Performance snapshot -- capture and diff (OpenGauss)" }
+func (s *OGPerfSnapSkill) Name() string { return "perfsnap" }
+func (s *OGPerfSnapSkill) Description() string {
+	return "Performance snapshot -- capture and diff (OpenGauss)"
+}
 func (s *OGPerfSnapSkill) SecurityLevel() skill.SecurityLevel { return skill.LevelReadOnly }
 
 func (s *OGPerfSnapSkill) ToolDef() skill.ToolDef {
@@ -620,6 +622,11 @@ func ogRenderSnap(snap OGPerfSnapshot, diff *OGPerfDiff) string {
 		b.WriteString(format.FormatTableOpts(qr, format.TableOptions{MaxRows: 10, TermWidth: 120}))
 	}
 
+	if diff != nil {
+		b.WriteString("\n")
+		b.WriteString(ogRenderPerfEvidence(snap, diff))
+	}
+
 	// Diff section
 	if diff != nil && ogHasDiffContent(*diff) {
 		b.WriteString("\n-- vs Previous Snapshot --\n")
@@ -639,8 +646,154 @@ func ogRenderDiff(d OGPerfDiff) string {
 		return b.String()
 	}
 
+	b.WriteString(ogRenderPerfEvidence(OGPerfSnapshot{Timestamp: d.To}, &d))
+	b.WriteString("\n")
 	b.WriteString(ogRenderDiffBrief(d))
 	return b.String()
+}
+
+func ogRenderPerfEvidence(snap OGPerfSnapshot, diff *OGPerfDiff) string {
+	var b strings.Builder
+	b.WriteString("-- perfsnap 结构化证据 --\n")
+	if diff != nil && !diff.From.IsZero() && !diff.To.IsZero() {
+		b.WriteString(fmt.Sprintf("  时间窗口: %s -> %s (%s)\n", diff.From.Format("15:04:05"), diff.To.Format("15:04:05"), diff.To.Sub(diff.From).Round(time.Second)))
+	} else {
+		b.WriteString(fmt.Sprintf("  快照时间: %s\n", snap.Timestamp.Format("15:04:05")))
+	}
+	if diff != nil {
+		b.WriteString("  负载变化:\n")
+		b.WriteString(fmt.Sprintf("    - TPS: %.1f/s\n", diff.TPSDelta))
+		b.WriteString(fmt.Sprintf("    - Cache Hit: %.1f%% -> %.1f%% (%s)\n", diff.CacheHitOld, diff.CacheHitNew, ogClassifyCacheHit(diff.CacheHitNew)))
+		if diff.TempBytesNew != diff.TempBytesOld {
+			b.WriteString(fmt.Sprintf("    - Temp Bytes: %s -> %s (%s)\n", ogFormatBytes(diff.TempBytesOld), ogFormatBytes(diff.TempBytesNew), ogClassifyTempBytes(diff.TempBytesNew-diff.TempBytesOld)))
+		}
+		if diff.DeadlocksNew != diff.DeadlocksOld {
+			b.WriteString(fmt.Sprintf("    - Deadlocks: %d -> %d (%s)\n", diff.DeadlocksOld, diff.DeadlocksNew, ogClassifyDeadlocks(diff.DeadlocksNew-diff.DeadlocksOld)))
+		}
+		if diff.CheckpointsNew != diff.CheckpointsOld {
+			b.WriteString(fmt.Sprintf("    - Checkpoints: %d -> %d (%s)\n", diff.CheckpointsOld, diff.CheckpointsNew, ogClassifyCheckpoint(diff.CheckpointsNew-diff.CheckpointsOld)))
+		}
+		if len(diff.SQLTimeChanges) > 0 || len(diff.NewHotSQL) > 0 {
+			b.WriteString("  Top SQL 变化:\n")
+			for i, c := range diff.SQLTimeChanges {
+				if i >= 5 {
+					break
+				}
+				b.WriteString(fmt.Sprintf("    - %s: %+0.fms (%s)\n", c.QueryID, c.DeltaMs, ogClassifySQLDelta(c.DeltaMs)))
+			}
+			for i, sql := range diff.NewHotSQL {
+				if i >= 5 {
+					break
+				}
+				b.WriteString(fmt.Sprintf("    - new %s: %.0fms (%s)\n", sql.QueryID, sql.TotalTimeMs, ogClassifyTopSQL(sql)))
+			}
+		}
+		b.WriteString("  建议动作:\n")
+		for _, action := range ogPerfEvidenceActions(*diff) {
+			b.WriteString("    - " + action + "\n")
+		}
+	}
+	return b.String()
+}
+
+func ogPerfEvidenceActions(d OGPerfDiff) []string {
+	var actions []string
+	if d.DeadlocksNew > d.DeadlocksOld {
+		actions = append(actions, "P0: 立即查看死锁日志，定位对象和事务加锁顺序")
+	}
+	if d.TempBytesNew > d.TempBytesOld {
+		actions = append(actions, "P1: 排查产生临时文件的 Top SQL，优化排序/HASH 或按会话提升 work_mem")
+	}
+	if d.CacheHitNew > 0 && d.CacheHitNew < 90 {
+		actions = append(actions, "P1: 核对 shared_buffers 与热数据集，优先处理大表扫描 SQL")
+	}
+	if d.CheckpointsNew > d.CheckpointsOld {
+		actions = append(actions, "P1: 检查 checkpoint 请求增长，确认是否存在写入峰值或 WAL 压力")
+	}
+	if sqlID := ogPerfPrimarySQLID(d); sqlID != "" {
+		actions = append(actions, "P1: 对新增或耗时上升 SQL 执行 /sqltune "+sqlID)
+	}
+	if len(actions) == 0 {
+		actions = append(actions, "P2: 当前快照未发现明显恶化，继续观察后续 perfsnap diff")
+	}
+	return actions
+}
+
+func ogPerfPrimarySQLID(d OGPerfDiff) string {
+	for _, c := range d.SQLTimeChanges {
+		if strings.TrimSpace(c.QueryID) != "" {
+			return strings.TrimSpace(c.QueryID)
+		}
+	}
+	for _, sql := range d.NewHotSQL {
+		if strings.TrimSpace(sql.QueryID) != "" {
+			return strings.TrimSpace(sql.QueryID)
+		}
+	}
+	return ""
+}
+
+func ogClassifyCacheHit(v float64) string {
+	switch {
+	case v == 0:
+		return "unknown"
+	case v < 80:
+		return "IO风险"
+	case v < 90:
+		return "IO警告"
+	default:
+		return "正常"
+	}
+}
+
+func ogClassifyTempBytes(delta int64) string {
+	if delta >= 1024*1024*1024 {
+		return "temp spill 高风险"
+	}
+	if delta > 0 {
+		return "temp spill 增长"
+	}
+	return "无增长"
+}
+
+func ogClassifyDeadlocks(delta int64) string {
+	if delta > 0 {
+		return "Lock P0"
+	}
+	return "无新增"
+}
+
+func ogClassifyCheckpoint(delta int64) string {
+	if delta > 10 {
+		return "WAL/Checkpoint 风险"
+	}
+	if delta > 0 {
+		return "Checkpoint 增长"
+	}
+	return "无增长"
+}
+
+func ogClassifySQLDelta(delta float64) string {
+	if delta > 10000 {
+		return "明显恶化"
+	}
+	if delta > 1000 {
+		return "上升"
+	}
+	if delta < -1000 {
+		return "改善"
+	}
+	return "轻微变化"
+}
+
+func ogClassifyTopSQL(sql OGSQLStat) string {
+	if sql.SharedRead > sql.SharedHit {
+		return "IO SQL"
+	}
+	if sql.Calls > 10000 {
+		return "高频 SQL"
+	}
+	return "耗时 SQL"
 }
 
 func ogRenderDiffBrief(d OGPerfDiff) string {

@@ -42,15 +42,16 @@ const (
 type RootCauseType string
 
 const (
-	CauseSlowQuery        RootCauseType = "slow_query"
-	CauseLockContention   RootCauseType = "lock_contention"
-	CauseVacuumLag        RootCauseType = "vacuum_lag"
-	CauseXIDWraparound    RootCauseType = "xid_wraparound"
-	CauseWALBottleneck    RootCauseType = "wal_bottleneck"
-	CauseConnectionStorm  RootCauseType = "connection_storm"
-	CauseReplicationLag   RootCauseType = "replication_lag"
-	CauseCheckpointStorm  RootCauseType = "checkpoint_storm"
-	CauseUnknown          RootCauseType = "unknown"
+	CauseSlowQuery       RootCauseType = "slow_query"
+	CauseLockContention  RootCauseType = "lock_contention"
+	CauseVacuumLag       RootCauseType = "vacuum_lag"
+	CauseXIDWraparound   RootCauseType = "xid_wraparound"
+	CauseWALBottleneck   RootCauseType = "wal_bottleneck"
+	CauseIOBottleneck    RootCauseType = "io_bottleneck"
+	CauseConnectionStorm RootCauseType = "connection_storm"
+	CauseReplicationLag  RootCauseType = "replication_lag"
+	CauseCheckpointStorm RootCauseType = "checkpoint_storm"
+	CauseUnknown         RootCauseType = "unknown"
 )
 
 // String returns the Chinese display name for the root cause type.
@@ -66,6 +67,8 @@ func (r RootCauseType) String() string {
 		return "XID回卷风险"
 	case CauseWALBottleneck:
 		return "WAL冲高"
+	case CauseIOBottleneck:
+		return "IO瓶颈"
 	case CauseConnectionStorm:
 		return "连接数冲高"
 	case CauseReplicationLag:
@@ -81,7 +84,7 @@ func (r RootCauseType) String() string {
 func (r RootCauseType) IsValid() bool {
 	switch r {
 	case CauseSlowQuery, CauseLockContention, CauseVacuumLag,
-		CauseXIDWraparound, CauseWALBottleneck, CauseConnectionStorm,
+		CauseXIDWraparound, CauseWALBottleneck, CauseIOBottleneck, CauseConnectionStorm,
 		CauseReplicationLag, CauseCheckpointStorm, CauseUnknown:
 		return true
 	default:
@@ -112,12 +115,12 @@ type Baseline struct {
 
 // TriggerEvent is emitted when an anomaly exceeds the 3-sigma threshold.
 type TriggerEvent struct {
-	Timestamp  time.Time  `json:"timestamp"`
-	Metric     string     `json:"metric"`
-	Baseline   float64    `json:"baseline"`
-	Current    float64    `json:"current"`
-	Threshold  float64    `json:"threshold"`
-	Multiplier float64    `json:"multiplier"`
+	Timestamp  time.Time `json:"timestamp"`
+	Metric     string    `json:"metric"`
+	Baseline   float64   `json:"baseline"`
+	Current    float64   `json:"current"`
+	Threshold  float64   `json:"threshold"`
+	Multiplier float64   `json:"multiplier"`
 }
 
 // SQLProfile represents a top SQL from pg_stat_activity.
@@ -185,7 +188,7 @@ type Config struct {
 	PollInterval   time.Duration `json:"poll_interval"`
 	BaselineWindow int           `json:"baseline_window"`
 	MinSamples     int           `json:"min_samples"`
-	SigmaThreshold float64      `json:"sigma_threshold"`
+	SigmaThreshold float64       `json:"sigma_threshold"`
 	SustainedCount int           `json:"sustained_count"`
 	BurstDuration  time.Duration `json:"burst_duration"`
 	CooldownPeriod time.Duration `json:"cooldown_period"`

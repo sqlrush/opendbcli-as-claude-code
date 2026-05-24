@@ -97,53 +97,5 @@ func FormatReportSummaryLine(idx int, report BurstReport) string {
 
 // FormatRuleDiagnosis renders a BurstReport into human-readable text.
 func FormatRuleDiagnosis(report BurstReport) string {
-	var b strings.Builder
-
-	// Trigger info.
-	b.WriteString("  OG Sentinel 异常报告\n\n")
-	if report.TriggerEvent.Metric != "" {
-		label := MetricLabel(MetricName(report.TriggerEvent.Metric))
-		if report.TriggerEvent.Baseline > 0 {
-			b.WriteString(fmt.Sprintf("  触发: %s  %.1f -> %.1f\n",
-				label, report.TriggerEvent.Baseline, report.TriggerEvent.Current))
-		} else {
-			b.WriteString(fmt.Sprintf("  当前: %s = %.0f\n",
-				label, report.TriggerEvent.Current))
-		}
-	}
-	if report.DurationSec > 0 {
-		b.WriteString(fmt.Sprintf("  持续: %.1fs\n", report.DurationSec))
-	}
-
-	// Classification.
-	c := report.Classification
-	if c.Cause != "" && c.Cause != CauseUnknown {
-		b.WriteString(fmt.Sprintf("\n  根因分类: %s (置信度 %.0f%%)\n",
-			c.Cause.String(), c.Confidence*100))
-		for _, ev := range c.Evidence {
-			b.WriteString(fmt.Sprintf("    - %s\n", ev))
-		}
-	}
-
-	// Metric summary.
-	if len(report.Metrics) > 0 {
-		b.WriteString("\n  指标摘要:\n")
-		order := []MetricName{
-			MetricActiveSessions, MetricIdleInTransaction, MetricLockWaits,
-			MetricLongQueries, MetricXactCommitRate, MetricCacheHitPct,
-			MetricDeadTupleRatio, MetricXIDAgeRatio, MetricConnectionsPct,
-			MetricReplicationLag, MetricWALBytesRate, MetricCheckpointsReq,
-		}
-		for _, m := range order {
-			ms, ok := report.Metrics[string(m)]
-			if !ok {
-				continue
-			}
-			label := MetricLabel(m)
-			b.WriteString(fmt.Sprintf("    %s: avg=%.1f max=%.1f\n",
-				label, ms.Avg, ms.Max))
-		}
-	}
-
-	return b.String()
+	return FormatEvidenceDiagnosis(report)
 }

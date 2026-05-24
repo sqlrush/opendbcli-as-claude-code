@@ -189,6 +189,12 @@ CBO 不走索引的常见原因:
 
 至少 4 个 candidate, 5 维度尽量覆盖。type 必须是 rewrite|index|hint|schema|stats 之一。
 
+硬约束:
+- 如果某个方案不能给出完整、可执行 SQL/DDL, 不要输出 candidate; 写入 uncertainty_notes。
+- 禁止在 candidate.sql 中使用省略号、模板占位符、原 SQL 不变、SELECT ... 等占位或草案。
+- 引擎会自动合并确定性 index/stats/rewrite 基线候选; 你只需要补充你能完整写出的高质量候选。
+- 所有候选都会经过 EXPLAIN/等价性/质量门禁; 草案会被拒绝并降低报告质量。
+
 ---
 
 `)

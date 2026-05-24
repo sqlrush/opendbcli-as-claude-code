@@ -111,3 +111,25 @@ func TestRenderCodeBlock_WithHighlight(t *testing.T) {
 
 	t.Logf("rendered code block:\n%s", output)
 }
+
+func TestRenderCodeBlock_WrapsLongSQLWithoutEllipsis(t *testing.T) {
+	f := newDiagStreamFormatter(92)
+	f.codeLang = "sql"
+	f.codeLines = []string{
+		"CREATE TABLE bench_customers_region_vip (LIKE bench_customers) PARTITION BY LIST (region); INSERT INTO bench_customers_region_vip SELECT * FROM bench_customers;",
+	}
+
+	var b strings.Builder
+	f.renderCodeBlock(&b)
+	output := b.String()
+	plain := stripAnsi(output)
+
+	if strings.Contains(plain, "..") || strings.Contains(plain, "…") {
+		t.Fatalf("long SQL should wrap, not truncate with ellipsis:\n%s", output)
+	}
+	for _, want := range []string{"CREATE TABLE bench_customers_region_vip", "INSERT INTO", "SELECT * FROM bench_customers"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("wrapped SQL missing %q:\n%s", want, plain)
+		}
+	}
+}

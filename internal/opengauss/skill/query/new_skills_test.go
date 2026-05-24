@@ -18,8 +18,11 @@
 package query
 
 import (
+	"context"
+	"strings"
 	"testing"
 
+	"github.com/sqlrush/opendb/internal/db"
 	"github.com/sqlrush/opendb/internal/db/mock"
 	"github.com/sqlrush/opendb/internal/skill"
 )
@@ -78,5 +81,27 @@ func TestWDRWithNoArgs(t *testing.T) {
 	_, err := s.Execute(nil, skill.Params{})
 	if err != nil {
 		t.Fatalf("Execute unexpected Go error: %v", err)
+	}
+}
+
+func TestWDRRenderedIncludesSnapshotTable(t *testing.T) {
+	drv := mock.NewMockDriver()
+	drv.QueryFunc = func(ctx context.Context, sql string, args ...any) (*db.QueryResult, error) {
+		return &db.QueryResult{
+			Columns: []string{"snapshot_id", "start_ts", "end_ts", "window_sec"},
+			Rows: [][]any{
+				{78, "2026-05-23 10:00:00", "2026-05-23 10:30:00", 1800},
+			},
+		}, nil
+	}
+	s := NewWDRSkill(drv)
+	res, err := s.Execute(context.Background(), skill.Params{})
+	if err != nil {
+		t.Fatalf("Execute unexpected Go error: %v", err)
+	}
+	for _, want := range []string{"WDR 快照", "snapshot_id", "78", "/wdranalyze <begin_snap> <end_snap>"} {
+		if !strings.Contains(res.Rendered, want) {
+			t.Fatalf("Rendered output missing %q:\n%s", want, res.Rendered)
+		}
 	}
 }

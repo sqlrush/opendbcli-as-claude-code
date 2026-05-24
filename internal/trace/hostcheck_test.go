@@ -45,7 +45,7 @@ func TestFindDBProcess_UnknownType(t *testing.T) {
 }
 
 func TestProcessPatterns(t *testing.T) {
-	for _, dbType := range []string{"mysql", "postgres", "oracle", "opengauss"} {
+	for _, dbType := range []string{"mysql", "postgres", "oracle", "opengauss", "gaussdb"} {
 		pat, ok := processPatterns[dbType]
 		if !ok || len(pat) == 0 {
 			t.Errorf("no process pattern defined for %s", dbType)

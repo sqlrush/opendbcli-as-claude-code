@@ -30,7 +30,6 @@ import (
 	"github.com/sqlrush/opendb/internal/connection"
 	"github.com/sqlrush/opendb/internal/db"
 	gaussdriver "github.com/sqlrush/opendb/internal/gaussdb/driver"
-	gaussdbquery "github.com/sqlrush/opendb/internal/gaussdb/skill/query"
 	"github.com/sqlrush/opendb/internal/model"
 	"github.com/sqlrush/opendb/internal/opengauss/skill/admin"
 	"github.com/sqlrush/opendb/internal/opengauss/skill/ai"
@@ -81,7 +80,8 @@ func RegisterSkills(
 
 	// Monitor — wait / waits / trace
 	reg(monitor.NewWaitsSkill(driver))
-	reg(monitor.NewTraceSkill(connMgr.CurrentHost(), &cfg.Trace))
+	reg(monitor.NewTraceSkillForDB(DBType, "GaussDB", connMgr.CurrentHost(), &cfg.Trace))
+	reg(monitor.NewDiagTraceSkill())
 
 	// Monitor — memory / buffers
 	reg(monitor.NewGSMemSkill(driver))
@@ -127,10 +127,17 @@ func RegisterSkills(
 	reg(query.NewOGErrSkill())
 	reg(query.NewWDRSkill(driver))
 	reg(query.NewPlanHistorySkill(driver))
-	// /sqltune: GaussDB-specific skill that routes through DialectGaussDB
-	// → gaussdbPlanner (decorates og planner + GS_PLAN_TRACE). Cannot
-	// reuse og's NewSQLTuneSkill because it hard-codes DialectOpenGauss.
-	reg(gaussdbquery.NewSQLTuneSkill(driver, modelMgr, nil))
+	// /sqltune: reuse og's skill directly. GaussDB shares 99% of og's
+	// system catalog (dbe_perf.statement_history, EXPLAIN PERFORMANCE,
+	// pg_stats), and the dropped capability (GS_PLAN_TRACE — CBO decision
+	// dump) is not in current customer scope. Going through og keeps a
+	// single source of truth and inherits og's SQL_ID branch
+	// (looksLikeSQLID + fetchLiteralSQLByID) so /sqltune <numeric_id>
+	// works on GaussDB the same way it does on og.
+	reg(query.NewSQLTuneSkill(driver, modelMgr, nil))
+	sqlfetchSkill := query.NewSQLFetchSkill(driver)
+	reg(sqlfetchSkill)
+	reg(query.NewWDRAnalyzeSkill(driver, sqlfetchSkill, modelMgr, nil))
 
 	// Admin
 	reg(admin.NewKillSkill(driver))

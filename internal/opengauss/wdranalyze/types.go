@@ -49,11 +49,11 @@ func (s Severity) String() string {
 
 // ReportHeader is the meta-info at the top of every WDR.
 type ReportHeader struct {
-	InstanceHost    string    // e.g. "82.4.89.165:5432"
-	InstanceID      string    // e.g. "instance_id=1"
-	DBVersion       string    // e.g. "openGauss-lite 5.0.3"
-	SnapshotIDStart int64     // -1 if unknown (file mode)
-	SnapshotIDEnd   int64     // -1 if unknown
+	InstanceHost    string // e.g. "82.4.89.165:5432"
+	InstanceID      string // e.g. "instance_id=1"
+	DBVersion       string // e.g. "openGauss-lite 5.0.3"
+	SnapshotIDStart int64  // -1 if unknown (file mode)
+	SnapshotIDEnd   int64  // -1 if unknown
 	WindowStart     time.Time
 	WindowEnd       time.Time
 }
@@ -84,12 +84,12 @@ func (t *TimeModelStats) HardParseRatio() float64 {
 
 // WaitEvent is one row in the Top Waits section.
 type WaitEvent struct {
-	Name         string  // e.g. "lock_wait_acquire"
-	Category     string  // "Lock" / "IO" / "Network" / "CPU" / ...
-	WaitCount    int64
-	WaitTimeMS   float64
-	AvgWaitMS    float64
-	PctOfDBTime  float64 // percentage of total DB Time
+	Name        string // e.g. "lock_wait_acquire"
+	Category    string // "Lock" / "IO" / "Network" / "CPU" / ...
+	WaitCount   int64
+	WaitTimeMS  float64
+	AvgWaitMS   float64
+	PctOfDBTime float64 // percentage of total DB Time
 }
 
 // TopSQLEntry is one row aggregated from the various Top SQL sections in WDR
@@ -120,11 +120,11 @@ func (e *TopSQLEntry) PctOfDBTime(dbTimeSec float64) float64 {
 
 // IOStats summarizes block reads/writes and buffer hit ratios.
 type IOStats struct {
-	BlocksRead         int64
-	BlocksHit          int64
-	WALWritesMB        float64 // total WAL written in window
-	TempFilesMB        float64 // sort/hash spill
-	ReadWriteIOPSAvg   float64
+	BlocksRead       int64
+	BlocksHit        int64
+	WALWritesMB      float64 // total WAL written in window
+	TempFilesMB      float64 // sort/hash spill
+	ReadWriteIOPSAvg float64
 }
 
 // BufferHitRatio returns hits / (hits + reads). 0 if no IO.
@@ -138,11 +138,11 @@ func (i *IOStats) BufferHitRatio() float64 {
 
 // MemoryStats summarizes gs_total_memory and session memory.
 type MemoryStats struct {
-	TotalMemoryMB     int64 // max_process_memory in MB
-	UsedMemoryMB      int64
-	DynamicUsedMB     int64
-	SharedBuffersMB   int64
-	WorkMemMB         int64
+	TotalMemoryMB   int64 // max_process_memory in MB
+	UsedMemoryMB    int64
+	DynamicUsedMB   int64
+	SharedBuffersMB int64
+	WorkMemMB       int64
 }
 
 // UsageRatio returns used / total. 0 if total is 0.
@@ -173,7 +173,7 @@ type ReplicationStats struct {
 type WDRReport struct {
 	Header      ReportHeader
 	TimeModel   TimeModelStats
-	Waits       []WaitEvent // sorted by PctOfDBTime desc
+	Waits       []WaitEvent   // sorted by PctOfDBTime desc
 	TopSQLs     []TopSQLEntry // deduplicated across views, sorted by TotalTimeMS desc
 	IO          IOStats
 	Memory      MemoryStats
@@ -221,27 +221,27 @@ func (l SectionLevel) Icon() string {
 // SectionRule is one triggered rule on a section. The evaluator records all
 // triggered rules; the section's Level is max(rule.Level) across them.
 type SectionRule struct {
-	ID       string       // "soft_parse_low"
-	Level    SectionLevel // this rule's severity contribution
-	Metric   string       // "Soft Parse %"
-	Observed string       // "11"     (raw value as displayed)
-	Threshold string      // "< 30"   (what the rule fires on)
-	Reason   string       // one-line explanation for prompt context
+	ID        string       // "soft_parse_low"
+	Level     SectionLevel // this rule's severity contribution
+	Metric    string       // "Soft Parse %"
+	Observed  string       // "11"     (raw value as displayed)
+	Threshold string       // "< 30"   (what the rule fires on)
+	Reason    string       // one-line explanation for prompt context
 }
 
 // SectionScore is the rule-engine evaluation of one WDR section. Used by
 // synthesizer to build a Layer-1 scorecard the LLM is asked to honor.
 type SectionScore struct {
-	Name        string            // "Database Stat"
-	Level       SectionLevel      // max(Rules.Level), or Good if no triggers
-	KeyMetrics  map[string]string // small map of headline values for the scorecard
-	Rules       []SectionRule     // every triggered rule
-	Summary     string            // one-line risk preview (e.g. "R1: 临时空间溢出")
+	Name       string            // "Database Stat"
+	Level      SectionLevel      // max(Rules.Level), or Good if no triggers
+	KeyMetrics map[string]string // small map of headline values for the scorecard
+	Rules      []SectionRule     // every triggered rule
+	Summary    string            // one-line risk preview (e.g. "R1: 临时空间溢出")
 }
 
 // Finding is one issue identified by the rule engine.
 type Finding struct {
-	ID         string   // stable rule ID, e.g. "buffer_hit_low"
+	ID         string // stable rule ID, e.g. "buffer_hit_low"
 	Severity   Severity
 	Category   string   // "buffer" / "wait" / "sql" / "config" / "lock" / "memory" / "io" / "replication" / "general"
 	Title      string   // human-readable one-liner
@@ -256,8 +256,8 @@ type Finding struct {
 // calling /sqlfetch + /sqltune. May be nil if sqltune failed for that SQL.
 type SQLTuneResult struct {
 	SQLID        string
-	FullSQL      string  // from sqlfetch (post-substitute)
-	Schema       string  // from sqlfetch
+	FullSQL      string // from sqlfetch (post-substitute)
+	Schema       string // from sqlfetch
 	HasLiterals  bool
 	OriginalCost float64
 	BestNewCost  float64
@@ -288,22 +288,23 @@ type TuneCandidate struct {
 
 // Analysis is the final assembled output of /wdranalyze.
 type Analysis struct {
-	Report       *WDRReport
-	Findings     []Finding       // sorted by severity desc
-	SQLTunes     []SQLTuneResult // for top N entries (default 5)
-	LLMSynthesis string          // optional LLM-generated prose; "" if disabled/failed
-	GeneratedAt  time.Time
-	Duration     time.Duration
+	Report         *WDRReport
+	Findings       []Finding       // sorted by severity desc
+	SQLTunes       []SQLTuneResult // for top N entries (default 5)
+	LLMSynthesis   string          // optional LLM-generated prose; "" if disabled/failed
+	GeneratedAt    time.Time
+	Duration       time.Duration
+	ReportPath     string        // persisted markdown path, shown in report metadata when known
 	HistoryCompare *HistoryDelta // optional: comparison with previous wdranalyze
 }
 
 // HistoryDelta tracks change since the previous wdranalyze in the same window.
 type HistoryDelta struct {
-	PreviousFile    string // path to previous report markdown
-	PreviousAt      time.Time
-	SeverityCounts  map[Severity]int // delta: current - previous
-	NewFindingIDs   []string         // findings present now but not before
-	GoneFindingIDs  []string         // resolved since last run
+	PreviousFile   string // path to previous report markdown
+	PreviousAt     time.Time
+	SeverityCounts map[Severity]int // delta: current - previous
+	NewFindingIDs  []string         // findings present now but not before
+	GoneFindingIDs []string         // resolved since last run
 }
 
 // Options control /wdranalyze execution.
@@ -312,11 +313,11 @@ type Options struct {
 	SnapshotA   int64  // for "snapshot" mode
 	SnapshotB   int64
 	Window      time.Duration // for "timerange" mode
-	FilePath    string // for "file" mode
-	TopN        int    // # of TopSQL to drill-down (default 5)
-	SkipSQLTune bool   // skip Phase 4 entirely
-	SkipLLM     bool   // skip Phase 5 entirely
-	OutputDir   string // override default ~/.opendb/wdr_reports
+	FilePath    string        // for "file" mode
+	TopN        int           // # of TopSQL to drill-down (default 5)
+	SkipSQLTune bool          // skip Phase 4 entirely
+	SkipLLM     bool          // skip Phase 5 entirely
+	OutputDir   string        // override default ~/.opendb/wdr_reports
 }
 
 // CountBySeverity returns a map of severity → count for the findings.

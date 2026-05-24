@@ -1,26 +1,23 @@
-# Build outputs
+bin/
+dist/
+software/
 /opendb
-/opendb-*
+/opendb-linux
 /dbaa
-/linkdb
-/dist/
-/release/
-*.test
+/dbaa-linux
+/e2etest
+/e2e_sentinel
+/opus-forwarder
+/skilltest-linux
+/loadtest-bin
+/loadtest-linux
+/viewtest-linux
+docs/.DS_Store
+*.pptx
+generate_ppt_*.py
 
-# OS / IDE
-.DS_Store
-.vscode/
-.idea/
-
-# Credentials / secrets — never commit
-*.bin
-*.env
-.env.*
-
-# Logs and run-time
-*.log
-*.pid
-
-# Temporary build artifacts
-/tmp_*
-*.tmp
+# Release binaries — too large for git; distribute via GitHub Releases.
+# Keep release/*/USAGE.md and release/*/SHA256SUMS.txt in tree for reference.
+release/*/dbaa/dbaa-*
+release/*/linkdb/linkdb-*
+release/*/opendb/opendb-*

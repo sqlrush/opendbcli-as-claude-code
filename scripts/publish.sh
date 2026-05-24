@@ -209,14 +209,22 @@ build_probe() {
 # ── SSH / SCP wrappers ───────────────────────────────
 ssh_cmd() {
     if [[ -n "${OPENDB_RELEASE_PASS:-}" ]]; then
-        sshpass -p "$OPENDB_RELEASE_PASS" ssh -p "$PORT" -o StrictHostKeyChecking=accept-new "$USER@$HOST" "$@"
+        sshpass -p "$OPENDB_RELEASE_PASS" ssh -p "$PORT" \
+            -o StrictHostKeyChecking=accept-new \
+            -o PreferredAuthentications=password \
+            -o PubkeyAuthentication=no \
+            "$USER@$HOST" "$@"
     else
         ssh -p "$PORT" "$USER@$HOST" "$@"
     fi
 }
 scp_cmd() {
     if [[ -n "${OPENDB_RELEASE_PASS:-}" ]]; then
-        sshpass -p "$OPENDB_RELEASE_PASS" scp -P "$PORT" -o StrictHostKeyChecking=accept-new "$@"
+        sshpass -p "$OPENDB_RELEASE_PASS" scp -P "$PORT" \
+            -o StrictHostKeyChecking=accept-new \
+            -o PreferredAuthentications=password \
+            -o PubkeyAuthentication=no \
+            "$@"
     else
         scp -P "$PORT" "$@"
     fi

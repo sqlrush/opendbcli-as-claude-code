@@ -38,8 +38,8 @@ import (
 // 支持单文件模式：connections 和 models 直接内联到 config.yaml
 type Config struct {
 	ConnectionsDir string          `yaml:"connections_dir,omitempty"` // 连接目录 (向后兼容，优先用 Connections)
-	ModelsDir      string          `yaml:"models_dir,omitempty"`     // 模型目录 (向后兼容，优先用 Models)
-	ActiveModel    string          `yaml:"active_model,omitempty"`   // 当前激活的模型名
+	ModelsDir      string          `yaml:"models_dir,omitempty"`      // 模型目录 (向后兼容，优先用 Models)
+	ActiveModel    string          `yaml:"active_model,omitempty"`    // 当前激活的模型名
 	Security       SecurityConfig  `yaml:"security"`
 	Output         OutputConfig    `yaml:"output"`
 	LLM            LLMConfig       `yaml:"llm"`
@@ -48,17 +48,17 @@ type Config struct {
 	Trace          TraceConfig     `yaml:"trace"`
 	Scheduler      SchedulerConfig `yaml:"scheduler"`
 	Connections    []Connection    `yaml:"connections,omitempty"` // 内联连接配置 (单文件模式)
-	Models         []ModelConfig   `yaml:"models,omitempty"`     // 内联模型配置 (单文件模式)
+	Models         []ModelConfig   `yaml:"models,omitempty"`      // 内联模型配置 (单文件模式)
 }
 
 // ModelConfig defines an LLM model endpoint in config.yaml.
 type ModelConfig struct {
 	Name        string `yaml:"name"`
-	Provider    string `yaml:"provider"`              // "ollama" | "openai"
-	Vendor      string `yaml:"vendor,omitempty"`      // "MiniMax" | "Moonshot" etc.
+	Provider    string `yaml:"provider"`         // "ollama" | "openai"
+	Vendor      string `yaml:"vendor,omitempty"` // "MiniMax" | "Moonshot" etc.
 	BaseURL     string `yaml:"base_url"`
 	Model       string `yaml:"model"`
-	Capability  string `yaml:"capability,omitempty"`   // "small" | "large"
+	Capability  string `yaml:"capability,omitempty"` // "small" | "large"
 	APIKey      string `yaml:"api_key,omitempty"`
 	StripThink  bool   `yaml:"strip_think,omitempty"`
 	Description string `yaml:"description,omitempty"`
@@ -66,7 +66,7 @@ type ModelConfig struct {
 	// Native (default) uses provider FC API; prompt injects tool descriptions
 	// into the system prompt and parses JSON from the response (for LLMs/
 	// deployments that don't expose function calling).
-	ToolMode    string `yaml:"tool_mode,omitempty"`
+	ToolMode string `yaml:"tool_mode,omitempty"`
 }
 
 // ============================================================================
@@ -121,7 +121,7 @@ type SessionConfig struct {
 // SchedulerConfig controls the background scheduled task engine.
 type SchedulerConfig struct {
 	AutoStart bool               `yaml:"auto_start"` // 登录后自动启动 (默认 true)
-	Tasks     []SchedulerTaskDef `yaml:"tasks"`       // 巡检任务列表
+	Tasks     []SchedulerTaskDef `yaml:"tasks"`      // 巡检任务列表
 }
 
 // SchedulerTaskDef defines a scheduled task in config.yaml.
@@ -141,17 +141,17 @@ type SchedulerTaskDef struct {
 // SentinelConfig controls the background anomaly detection engine.
 type SentinelConfig struct {
 	// ── 基本行为 ──
-	AutoStart           bool          `yaml:"auto_start"`            // 登录后自动启动 (默认 true)
-	ProbeInterval       time.Duration `yaml:"probe_interval"`        // 轻探针间隔 (默认 1s)
-	BaselineWindow      int           `yaml:"baseline_window"`       // 基线滑动窗口大小 (默认 60 样本)
-	MinSamples          int           `yaml:"min_samples"`           // 最少样本数才开始检测 (默认 10)
+	AutoStart           bool          `yaml:"auto_start"`             // 登录后自动启动 (默认 true)
+	ProbeInterval       time.Duration `yaml:"probe_interval"`         // 轻探针间隔 (默认 1s)
+	BaselineWindow      int           `yaml:"baseline_window"`        // 基线滑动窗口大小 (默认 60 样本)
+	MinSamples          int           `yaml:"min_samples"`            // 最少样本数才开始检测 (默认 10)
 	LongSQLThresholdSec int           `yaml:"long_sql_threshold_sec"` // 慢SQL判定阈值秒数 (默认 30)
 
 	// ── 触发模式 ──
 	// "adaptive": 自适应 3σ，根据基线均值+标准差自动算阈值 (默认)
 	// "fixed":    固定阈值，使用下方各指标的倍数/绝对值
 	TriggerMode    string  `yaml:"trigger_mode"`    // "adaptive" | "fixed"
-	Sigma          float64 `yaml:"sigma"`            // adaptive 模式的 σ 倍数 (默认 3.0)
+	Sigma          float64 `yaml:"sigma"`           // adaptive 模式的 σ 倍数 (默认 3.0)
 	SustainedCount int     `yaml:"sustained_count"` // 连续 N 个采样点超标才触发 (默认 3)
 
 	// ── 固定模式阈值 (trigger_mode: fixed 时生效) ──
@@ -171,11 +171,11 @@ type SentinelConfig struct {
 // 设为 0 或不设表示不启用该指标的固定阈值检测。
 type ThresholdConfig struct {
 	// ── 会话类指标 ──
-	ActiveMultiplier  float64 `yaml:"active_multiplier"`  // 活跃会话超过基线 N 倍触发 (默认 2.0)
-	CPUMultiplier     float64 `yaml:"cpu_multiplier"`     // CPU 会话超过基线 N 倍触发 (默认 2.0)
-	IOMultiplier      float64 `yaml:"io_multiplier"`      // I/O 等待会话超过基线 N 倍触发 (默认 3.0)
-	LockAbsolute      float64 `yaml:"lock_absolute"`      // 锁等待会话 ≥ N 个触发 (默认 5)
-	LongSQLAbsolute   float64 `yaml:"long_sql_absolute"`  // 慢SQL(>10s) ≥ N 个触发 (默认 3)
+	ActiveMultiplier float64 `yaml:"active_multiplier"` // 活跃会话超过基线 N 倍触发 (默认 2.0)
+	CPUMultiplier    float64 `yaml:"cpu_multiplier"`    // CPU 会话超过基线 N 倍触发 (默认 2.0)
+	IOMultiplier     float64 `yaml:"io_multiplier"`     // I/O 等待会话超过基线 N 倍触发 (默认 3.0)
+	LockAbsolute     float64 `yaml:"lock_absolute"`     // 锁等待会话 ≥ N 个触发 (默认 5)
+	LongSQLAbsolute  float64 `yaml:"long_sql_absolute"` // 慢SQL(>10s) ≥ N 个触发 (默认 3)
 
 	// ── 吞吐类指标 ──
 	RedoMultiplier      float64 `yaml:"redo_multiplier"`       // Redo 速率超过基线 N 倍触发 (默认 5.0)
@@ -188,12 +188,12 @@ type ThresholdConfig struct {
 
 // TraceConfig controls the OS-level stack trace and flame graph feature.
 type TraceConfig struct {
-	Auto     bool              `yaml:"auto"`                  // Sentinel 联动自动采集 (默认 false)
-	Duration int               `yaml:"duration,omitempty"`    // 默认采集秒数 (默认 3, 范围 1-10)
-	TopN     int               `yaml:"top_n,omitempty"`       // 热点函数数量 (默认 20)
-	OutDir   string            `yaml:"output_dir,omitempty"`  // SVG 输出目录 (默认 ~/.opendb/trace/)
-	Source   TraceSourceConfig `yaml:"source,omitempty"`      // 全局源码配置 (兜底)
-	Sources  map[string]TraceSourceConfig `yaml:"sources,omitempty"` // 按数据库类型配置: mysql/postgres/oracle
+	Auto     bool                         `yaml:"auto"`                 // Sentinel 联动自动采集 (默认 false)
+	Duration int                          `yaml:"duration,omitempty"`   // 默认采集秒数 (默认 3, 范围 1-10)
+	TopN     int                          `yaml:"top_n,omitempty"`      // 热点函数数量 (默认 20)
+	OutDir   string                       `yaml:"output_dir,omitempty"` // SVG 输出目录 (默认 ~/.opendb/trace/)
+	Source   TraceSourceConfig            `yaml:"source,omitempty"`     // 全局源码配置 (兜底)
+	Sources  map[string]TraceSourceConfig `yaml:"sources,omitempty"`    // 按数据库类型配置: mysql/postgres/oracle
 }
 
 // SourceFor returns the source config for a given database type.
@@ -284,9 +284,9 @@ func Default() Config {
 			BaselineWindow:      60,
 			MinSamples:          10,
 			LongSQLThresholdSec: 30,
-			TriggerMode:      "adaptive",
-			Sigma:            3.0,
-			SustainedCount:   3,
+			TriggerMode:         "adaptive",
+			Sigma:               3.0,
+			SustainedCount:      3,
 			Thresholds: ThresholdConfig{
 				ActiveMultiplier:    2.0,
 				CPUMultiplier:       2.0,

@@ -132,6 +132,27 @@ func TestExecuteNoRetryOn413(t *testing.T) {
 	}
 }
 
+func TestExecuteNoRetryOnOpenAICompatContextTooLongString(t *testing.T) {
+	p := NewPolicy(Config{MaxRetries: 3, BaseDelay: 10 * time.Millisecond}, &provider.RateLimitCapability{})
+
+	calls := 0
+	_, err := p.Execute(context.Background(), func(ctx context.Context) (*provider.Response, error) {
+		calls++
+		return nil, errors.New(`openai: HTTP 400: {"error":{"message":"request (67791 tokens) exceeds the available context size (65536 tokens)","type":"exceed_context_size_error"}}`)
+	})
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if calls != 1 {
+		t.Errorf("expected 1 call (context-too-long 400 should not retry), got %d", calls)
+	}
+	info := p.ClassifyError(err)
+	if !info.IsContextTooLong {
+		t.Error("expected context-too-long classification")
+	}
+}
+
 func TestExecuteMaxRetriesExceeded(t *testing.T) {
 	p := NewPolicy(
 		Config{MaxRetries: 2, BaseDelay: 10 * time.Millisecond, MaxDelay: 20 * time.Millisecond},

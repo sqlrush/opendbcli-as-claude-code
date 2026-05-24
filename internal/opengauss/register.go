@@ -65,7 +65,8 @@ func RegisterSkills(
 
 	// Monitor — wait / waits / trace
 	reg(monitor.NewWaitsSkill(driver))
-	reg(monitor.NewTraceSkill(connMgr.CurrentHost(), &cfg.Trace)) // NEW P0: OS stack / flamegraph (Linux)
+	reg(monitor.NewTraceSkillForDB("opengauss", "openGauss", connMgr.CurrentHost(), &cfg.Trace)) // NEW P0: OS stack / flamegraph (Linux)
+	reg(monitor.NewDiagTraceSkill())                                                             // DBAA diagnosis-chain trace
 
 	// Monitor — memory / buffers
 	reg(monitor.NewGSMemSkill(driver))
@@ -74,9 +75,9 @@ func RegisterSkills(
 
 	// Monitor — WAL / replication / backup
 	reg(monitor.NewWALSkill(driver))
-	reg(monitor.NewWALSummarySkill(driver))  // NEW P2: archiver detail
-	reg(monitor.NewCheckpointSkill(driver))  // NEW P1: checkpoint frequency + WAL amplification
-	reg(monitor.NewBgWorkerSkill(driver))    // NEW P1: background processes
+	reg(monitor.NewWALSummarySkill(driver)) // NEW P2: archiver detail
+	reg(monitor.NewCheckpointSkill(driver)) // NEW P1: checkpoint frequency + WAL amplification
+	reg(monitor.NewBgWorkerSkill(driver))   // NEW P1: background processes
 	reg(monitor.NewReplicationSkill(driver))
 	reg(monitor.NewSlotsSkill(driver))
 	reg(monitor.NewLogicalSlotsSkill(driver)) // NEW P1: logical slots (retained WAL)

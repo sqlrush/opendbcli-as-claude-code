@@ -79,6 +79,18 @@ type ParseResult struct {
 // Parse runs the full extraction pipeline on a single LLM response string.
 // Always returns a non-nil result; callers should check Calls first, then
 // fall back to FallbackContent.
+// rawToolCall 同时承载两种 LLM 输出形态（simple + OpenAI native FC nested）。
+type rawToolCall struct {
+	Name     string          `json:"name"`
+	Args     json.RawMessage `json:"args"`
+	Function struct {
+		Name      string          `json:"name"`
+		Arguments json.RawMessage `json:"arguments"`
+	} `json:"function"`
+	// 某些模型把 arguments 放顶层 alongside name
+	Arguments json.RawMessage `json:"arguments"`
+}
+
 func (p *JSONToolCallParser) Parse(content string) ParseResult {
 	if strings.TrimSpace(content) == "" {
 		return ParseResult{FallbackContent: content}
@@ -95,20 +107,19 @@ func (p *JSONToolCallParser) Parse(content string) ParseResult {
 	fixed := tolerantFix(payload)
 
 	// Step 3: unmarshal.
+	// v1.2.6: 同时支持两种 LLM 输出格式
+	//   1. simple form (PromptToolAdapter 约定): {"name":"X","args":{...}}
+	//   2. OpenAI native FC form: {"function":{"name":"X","arguments":{...}}}
+	// Qwen3 / GLM 等模型即使在 prompt mode 也常常输出 OpenAI 嵌套形式，
+	// 不识别会让 engine 把整段 JSON 当成 final content 输出给用户。
 	var raw struct {
-		ToolCalls []struct {
-			Name string          `json:"name"`
-			Args json.RawMessage `json:"args"`
-		} `json:"tool_calls"`
+		ToolCalls []rawToolCall `json:"tool_calls"`
 	}
 	if err := json.Unmarshal([]byte(fixed), &raw); err != nil {
 		// Try one more recovery: maybe LLM gave a single tool object
 		// without the wrapping {tool_calls: [...]} envelope.
 		if single, recovered := tryUnwrapSingleCall(fixed); recovered {
-			raw.ToolCalls = []struct {
-				Name string          `json:"name"`
-				Args json.RawMessage `json:"args"`
-			}{single}
+			raw.ToolCalls = []rawToolCall{{Name: single.Name, Args: single.Args}}
 		} else {
 			// Hard parse failure — return as fallback with error for retry.
 			return ParseResult{
@@ -122,10 +133,7 @@ func (p *JSONToolCallParser) Parse(content string) ParseResult {
 	// Try the single-call unwrap as a salvage path.
 	if len(raw.ToolCalls) == 0 {
 		if single, recovered := tryUnwrapSingleCall(fixed); recovered {
-			raw.ToolCalls = []struct {
-				Name string          `json:"name"`
-				Args json.RawMessage `json:"args"`
-			}{single}
+			raw.ToolCalls = []rawToolCall{{Name: single.Name, Args: single.Args}}
 		} else {
 			return ParseResult{FallbackContent: content}
 		}
@@ -135,7 +143,11 @@ func (p *JSONToolCallParser) Parse(content string) ParseResult {
 	out := make([]ToolCall, 0, len(raw.ToolCalls))
 	corrected := 0
 	for i, tc := range raw.ToolCalls {
+		// 优先取 simple form 字段，fallback 到 OpenAI 嵌套形式
 		name := strings.TrimSpace(tc.Name)
+		if name == "" {
+			name = strings.TrimSpace(tc.Function.Name)
+		}
 		if name == "" {
 			continue // skip malformed entries
 		}
@@ -146,6 +158,12 @@ func (p *JSONToolCallParser) Parse(content string) ParseResult {
 			}
 		}
 		args := string(tc.Args)
+		if args == "" || args == "null" {
+			args = string(tc.Function.Arguments)
+		}
+		if args == "" || args == "null" {
+			args = string(tc.Arguments)
+		}
 		if args == "" || args == "null" {
 			args = "{}"
 		}

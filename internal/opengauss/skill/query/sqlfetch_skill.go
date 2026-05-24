@@ -58,8 +58,10 @@ func NewSQLFetchSkill(driver db.Driver) *SQLFetchSkill {
 	return &SQLFetchSkill{driver: driver}
 }
 
-func (s *SQLFetchSkill) Name() string                       { return "sqlfetch" }
-func (s *SQLFetchSkill) Description() string                { return "按 SQL_ID 拉取可 EXPLAIN 的完整 SQL（带字面量+schema），喂给 /sqltune 用" }
+func (s *SQLFetchSkill) Name() string { return "sqlfetch" }
+func (s *SQLFetchSkill) Description() string {
+	return "按 SQL_ID 拉取可 EXPLAIN 的完整 SQL（带字面量+schema），喂给 /sqltune 用"
+}
 func (s *SQLFetchSkill) SecurityLevel() skill.SecurityLevel { return skill.LevelReadOnly }
 
 func (s *SQLFetchSkill) ToolDef() skill.ToolDef {
@@ -68,7 +70,8 @@ func (s *SQLFetchSkill) ToolDef() skill.ToolDef {
 		Description: "Resolve an og SQL_ID (from /slowsql or /topsql output) to the actual executable SQL text. " +
 			"Looks up dbe_perf.statement_history (literals + schema preserved) first, falls back to " +
 			"dbe_perf.statement (normalized) with warnings. Output is ready to feed into /sqltune. " +
-			"Use this BEFORE /sqltune when the user gives only a SQL_ID — saves 18+ rounds of raw sql calls.",
+			"For SQL_ID tuning, prefer calling sqltune directly with the numeric ID; sqltune uses this resolver internally. " +
+			"Use sqlfetch only when the user explicitly asks to inspect the SQL text.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -90,7 +93,7 @@ func (s *SQLFetchSkill) CLIDef() skill.CLIDef {
 		Description: "按 SQL_ID 拉取可 EXPLAIN 的完整 SQL（带字面量+schema）",
 		Examples: []string{
 			"/sqlfetch 33402943",
-			"/sqlfetch 33402943   # 拿到完整 SQL 后, /sqltune <返回的 SQL>",
+			"/sqlfetch 33402943   # 只查看 SQL 文本；调优可直接 /sqltune 33402943",
 		},
 	}
 }
@@ -110,16 +113,16 @@ func (s *SQLFetchSkill) Validate(params skill.Params) error {
 // metadata helps the LLM (and the user) understand whether the result is
 // directly usable or whether they should still expect EXPLAIN issues.
 type fetchResult struct {
-	SQL          string                   // original (or substituted) SQL ready for sqltune
-	OriginalSQL  string                   // (v1.1.30) raw SQL before auto-substitute, if applied
+	SQL          string // original (or substituted) SQL ready for sqltune
+	OriginalSQL  string // (v1.1.30) raw SQL before auto-substitute, if applied
 	Schema       string
 	Source       string // "statement_history" | "statement" | "none"
 	StartTime    string
 	HasLiterals  bool
 	Placeholders int
 	Notes        []string
-	Substituted  bool                     // (v1.1.30) auto-substitute was applied
-	Subs         []sqltuner.Substitution  // (v1.1.30) details of substitutions
+	Substituted  bool                    // (v1.1.30) auto-substitute was applied
+	Subs         []sqltuner.Substitution // (v1.1.30) details of substitutions
 }
 
 func (s *SQLFetchSkill) Execute(ctx context.Context, params skill.Params) (*skill.Result, error) {
@@ -357,23 +360,91 @@ func parseSQLID(s string) (int64, error) {
 // invoked by /sqltune when this SQL is later piped into it.
 func countPlaceholders(sql string) int {
 	count := 0
-	inStr := false
+	inSingle, inDouble, inLineComment, inBlockComment := false, false, false, false
 	for i := 0; i < len(sql); i++ {
 		c := sql[i]
+
+		if inLineComment {
+			if c == '\n' || c == '\r' {
+				inLineComment = false
+			}
+			continue
+		}
+		if inBlockComment {
+			if c == '*' && i+1 < len(sql) && sql[i+1] == '/' {
+				i++
+				inBlockComment = false
+			}
+			continue
+		}
+
+		if inSingle {
+			if c == '\'' {
+				if i+1 < len(sql) && sql[i+1] == '\'' {
+					i++
+					continue
+				}
+				inSingle = false
+			}
+			continue
+		}
+		if inDouble {
+			if c == '"' {
+				if i+1 < len(sql) && sql[i+1] == '"' {
+					i++
+					continue
+				}
+				inDouble = false
+			}
+			continue
+		}
+
+		if c == '-' && i+1 < len(sql) && sql[i+1] == '-' {
+			i++
+			inLineComment = true
+			continue
+		}
+		if c == '/' && i+1 < len(sql) && sql[i+1] == '*' {
+			i++
+			inBlockComment = true
+			continue
+		}
 		if c == '\'' {
-			// Toggle, but handle '' as escape.
-			if inStr && i+1 < len(sql) && sql[i+1] == '\'' {
+			inSingle = true
+			continue
+		}
+		if c == '"' {
+			inDouble = true
+			continue
+		}
+
+		switch {
+		case c == '?':
+			count++
+		case c == '$' && i+1 < len(sql) && sql[i+1] >= '0' && sql[i+1] <= '9':
+			count++
+			for i+1 < len(sql) && sql[i+1] >= '0' && sql[i+1] <= '9' {
+				i++
+			}
+		case c == ':' && i+1 < len(sql):
+			next := sql[i+1]
+			if next == ':' {
 				i++
 				continue
 			}
-			inStr = !inStr
-			continue
-		}
-		if inStr {
-			continue
-		}
-		if c == '?' {
-			count++
+			if (next >= '0' && next <= '9') || (next >= 'A' && next <= 'Z') ||
+				(next >= 'a' && next <= 'z') || next == '_' {
+				count++
+				for i+1 < len(sql) {
+					n := sql[i+1]
+					if (n >= '0' && n <= '9') || (n >= 'A' && n <= 'Z') ||
+						(n >= 'a' && n <= 'z') || n == '_' {
+						i++
+						continue
+					}
+					break
+				}
+			}
 		}
 	}
 	return count

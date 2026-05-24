@@ -53,6 +53,8 @@ func (g *GuidedStrategy) Name() string { return "guided" }
 
 func (g *GuidedStrategy) SetOnRound(fn OnRoundFunc)   { g.diagnoser.SetOnRound(fn) }
 func (g *GuidedStrategy) SetOnStream(fn OnStreamFunc) { g.diagnoser.SetOnStream(fn) }
+func (g *GuidedStrategy) SetToolMode(mode string)     { g.diagnoser.SetToolMode(mode) }
+func (g *GuidedStrategy) SetModelName(name string)    { g.diagnoser.SetModelName(name) }
 
 // SetContextStoresFrom propagates context stores from a source diagnoser.
 // v1.2.0: also propagates capability + toolMode for PromptToolAdapter.
@@ -63,6 +65,7 @@ func (g *GuidedStrategy) SetContextStoresFrom(src *Diagnoser) {
 	g.diagnoser.sessionID = src.sessionID
 	g.diagnoser.capability = src.capability
 	g.diagnoser.toolMode = src.toolMode
+	g.diagnoser.modelName = src.modelName
 }
 
 func (g *GuidedStrategy) Diagnose(ctx context.Context, report *sentinel.BurstReport, userInput string) (DiagnoseResult, error) {
@@ -87,6 +90,16 @@ func NewAutonomousStrategy(diagnoser *Diagnoser, fallback *GuidedStrategy) *Auto
 
 func (a *AutonomousStrategy) Name() string { return "autonomous" }
 
+func (a *AutonomousStrategy) SetToolMode(mode string) {
+	a.diagnoser.SetToolMode(mode)
+	a.fallback.diagnoser.SetToolMode(mode)
+}
+
+func (a *AutonomousStrategy) SetModelName(name string) {
+	a.diagnoser.SetModelName(name)
+	a.fallback.diagnoser.SetModelName(name)
+}
+
 func (a *AutonomousStrategy) SetOnRound(fn OnRoundFunc) {
 	a.diagnoser.SetOnRound(fn)
 	a.fallback.SetOnRound(fn)
@@ -108,12 +121,14 @@ func (a *AutonomousStrategy) SetContextStoresFrom(d *Diagnoser) {
 	a.diagnoser.sessionID = d.sessionID
 	a.diagnoser.capability = d.capability
 	a.diagnoser.toolMode = d.toolMode
+	a.diagnoser.modelName = d.modelName
 	a.fallback.diagnoser.sessionStore = d.sessionStore
 	a.fallback.diagnoser.memoryStore = d.memoryStore
 	a.fallback.diagnoser.policyLoader = d.policyLoader
 	a.fallback.diagnoser.sessionID = d.sessionID
 	a.fallback.diagnoser.capability = d.capability
 	a.fallback.diagnoser.toolMode = d.toolMode
+	a.fallback.diagnoser.modelName = d.modelName
 }
 
 func (a *AutonomousStrategy) Diagnose(ctx context.Context, report *sentinel.BurstReport, userInput string) (DiagnoseResult, error) {

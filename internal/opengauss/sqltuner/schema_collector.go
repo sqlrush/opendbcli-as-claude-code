@@ -168,13 +168,12 @@ SELECT t.relname AS table_name,
        i.relname AS idx_name,
        ix.indisunique AS is_unique,
        ix.indisprimary AS is_primary,
-       array_agg(att.attname ORDER BY ord) AS columns,
+       array_agg(att.attname ORDER BY att.attnum) AS columns,
        pg_get_indexdef(ix.indexrelid) AS def
 FROM pg_class t
 JOIN pg_index ix ON t.oid = ix.indrelid
 JOIN pg_class i ON i.oid = ix.indexrelid
-JOIN unnest(ix.indkey) WITH ORDINALITY k(attnum, ord) ON true
-JOIN pg_attribute att ON att.attrelid = t.oid AND att.attnum = k.attnum
+JOIN pg_attribute att ON att.attrelid = t.oid AND att.attnum = ANY(ix.indkey)
 WHERE t.relname IN (%s)
 GROUP BY t.relname, i.relname, ix.indisunique, ix.indisprimary, ix.indexrelid`, sqlInList(tables))
 

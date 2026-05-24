@@ -74,10 +74,11 @@ func (c *Collector) fetchFromFile(path string) (string, int64, int64, error) {
 	return string(data), -1, -1, nil
 }
 
-// fetchFromSnapshots calls dbe_perf.generate_wdr_report(snapshot_a, b, format,
-// type) to produce a fresh report. og returns text rows; we join them. Tries
-// 'all' detail level first, falls back to 'summary' if all fails (some og
-// builds restrict detail-all to admin role only).
+// fetchFromSnapshots calls generate_wdr_report to produce a fresh report.
+// GaussDB/openGauss builds differ here: some expose pg_catalog.generate_wdr_report
+// with bigint/cstring arguments, while older builds expose dbe_perf.generate_wdr_report
+// with a numeric report level. Try the concrete signatures in a controlled order
+// before surfacing an error to the user.
 func (c *Collector) fetchFromSnapshots(ctx context.Context, snapA, snapB int64) (string, int64, int64, error) {
 	if c.driver == nil {
 		return "", 0, 0, fmt.Errorf("snapshot mode requires DB connection")
@@ -90,43 +91,49 @@ func (c *Collector) fetchFromSnapshots(ctx context.Context, snapA, snapB int64) 
 		snapA, snapB = snapB, snapA
 	}
 
-	// Try summary level first (works for most users), then detail-all.
+	var lastErr error
+	// Try summary first for lower payload, then detail-all.
 	for _, detail := range []string{"summary", "all"} {
-		query := fmt.Sprintf(
-			`SELECT dbe_perf.generate_wdr_report(%d, %d, %d, '%s', 'cluster')`,
-			snapA, snapB, defaultReportLevelMin, detail,
-		)
-		cctx, cancel := contextWithTimeout(ctx, 90*time.Second)
-		res, err := c.driver.Query(cctx, query)
-		cancel()
-		if err != nil {
-			// Permission denied / level not supported → try next detail level
-			if isRetryableErr(err) {
+		for _, query := range wdrReportQueries(snapA, snapB, detail) {
+			cctx, cancel := contextWithTimeout(ctx, 90*time.Second)
+			res, err := c.driver.Query(cctx, query)
+			cancel()
+			if err != nil {
+				lastErr = fmt.Errorf("generate_wdr_report(%d, %d, %s): %w", snapA, snapB, detail, err)
 				continue
 			}
-			return "", 0, 0, fmt.Errorf("generate_wdr_report(%d, %d, %s): %w", snapA, snapB, detail, err)
-		}
-		if res == nil || len(res.Rows) == 0 {
-			continue
-		}
-		// Concatenate all rows
-		var sb strings.Builder
-		for _, row := range res.Rows {
-			if len(row) > 0 {
-				switch v := row[0].(type) {
-				case string:
-					sb.WriteString(v)
-				case []byte:
-					sb.Write(v)
+			if res == nil || len(res.Rows) == 0 {
+				continue
+			}
+			var sb strings.Builder
+			for _, row := range res.Rows {
+				if len(row) > 0 {
+					switch v := row[0].(type) {
+					case string:
+						sb.WriteString(v)
+					case []byte:
+						sb.Write(v)
+					}
+					sb.WriteString("\n")
 				}
-				sb.WriteString("\n")
+			}
+			if sb.Len() > 0 {
+				return sb.String(), snapA, snapB, nil
 			}
 		}
-		if sb.Len() > 0 {
-			return sb.String(), snapA, snapB, nil
-		}
+	}
+	if lastErr != nil {
+		return "", snapA, snapB, lastErr
 	}
 	return "", snapA, snapB, fmt.Errorf("generate_wdr_report returned no content (snap %d → %d)", snapA, snapB)
+}
+
+func wdrReportQueries(snapA, snapB int64, detail string) []string {
+	return []string{
+		fmt.Sprintf(`SELECT pg_catalog.generate_wdr_report(%d::bigint, %d::bigint, '%s', 'cluster', '')`, snapA, snapB, detail),
+		fmt.Sprintf(`SELECT generate_wdr_report(%d::bigint, %d::bigint, '%s', 'cluster', '')`, snapA, snapB, detail),
+		fmt.Sprintf(`SELECT dbe_perf.generate_wdr_report(%d, %d, %d, '%s', 'cluster')`, snapA, snapB, defaultReportLevelMin, detail),
+	}
 }
 
 // resolveLatestPair finds the two most recent snapshots so we can diff them.

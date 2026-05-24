@@ -26,6 +26,7 @@
 package uitest
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -60,6 +61,7 @@ type TestTerminal struct {
 	mu     sync.Mutex
 	closed bool
 	done   chan struct{} // closed when PTY read goroutine exits
+	raw    bytes.Buffer  // full raw PTY transcript for progress/dedupe assertions
 
 	waitOnce sync.Once
 	waitErr  error
@@ -114,6 +116,7 @@ func NewTestTerminal(t *testing.T, rows, cols int, args ...string) *TestTerminal
 			n, err := ptmx.Read(buf)
 			if n > 0 {
 				tt.mu.Lock()
+				tt.raw.Write(buf[:n])
 				term.Write(buf[:n]) //nolint:errcheck
 				tt.mu.Unlock()
 			}
@@ -162,6 +165,15 @@ func (tt *TestTerminal) WaitFor(pattern string, timeout time.Duration) error {
 		time.Sleep(100 * time.Millisecond)
 	}
 	return fmt.Errorf("timeout waiting for %q after %v\n--- screen ---\n%s", pattern, timeout, tt.Screen())
+}
+
+// RawOutput returns the full PTY byte stream captured so far. Unlike Screen,
+// this includes content that has scrolled off-screen and is useful for
+// asserting progress messages and duplicate tail rendering regressions.
+func (tt *TestTerminal) RawOutput() string {
+	tt.mu.Lock()
+	defer tt.mu.Unlock()
+	return tt.raw.String()
 }
 
 // Screen returns the full terminal screen as a string (rows joined by \n).

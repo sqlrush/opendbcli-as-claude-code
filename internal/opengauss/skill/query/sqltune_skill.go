@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/sqlrush/opendb/internal/db"
@@ -48,8 +49,10 @@ func NewSQLTuneSkill(driver db.Driver, modelMgr *model.Manager, memStore *memory
 	}
 }
 
-func (s *SQLTuneSkill) Name() string                       { return "sqltune" }
-func (s *SQLTuneSkill) Description() string                { return "复杂 SQL 性能调优 (LLM + 真实数据 + 验证闭环)" }
+func (s *SQLTuneSkill) Name() string { return "sqltune" }
+func (s *SQLTuneSkill) Description() string {
+	return "复杂 SQL 性能调优 (LLM + 真实数据 + 验证闭环)"
+}
 func (s *SQLTuneSkill) SecurityLevel() skill.SecurityLevel { return skill.LevelReadOnly }
 
 func (s *SQLTuneSkill) ToolDef() skill.ToolDef {
@@ -104,6 +107,7 @@ func (s *SQLTuneSkill) Execute(ctx context.Context, params skill.Params) (*skill
 	sqltextArg := strings.TrimSpace(params.StringOr("args", ""))
 	sqlText := sqltextArg
 	sqlIDForReport := "" // set when input was a SQL_ID (for status banner)
+	var resolvedSQL *ResolvedSQL
 	if sqlText == "" {
 		return &skill.Result{
 			Type:     skill.ResultText,
@@ -119,40 +123,35 @@ func (s *SQLTuneSkill) Execute(ctx context.Context, params skill.Params) (*skill
 		}, nil
 	}
 
-	// SQL_ID 模式: 用户传纯数字 ID (来自 /slowsql / /topsql) → 自动从
-	// dbe_perf.statement_history 拉 SQL 文本. 避免 35B/小模型在 agent
-	// 模式拿到归一化 SQL 后撞 PlaceholderError 然后早停.
-	//
-	// 注意 og 5.0.3 默认 statement_history 也归一化 (`?` 代替字面量),
-	// 仅 track_stmt_parameter=on (部分版本) 才会保留绑定值. 检测到归一化
-	// 时给 og-specific 清晰恢复指引而非通用 PlaceholderError.
-	if looksLikeSQLID(sqlText) {
-		fetched, err := fetchLiteralSQLByID(ctx, s.driver, sqlText)
+	// SQL_ID 模式: 用户传纯数字 ID，或 LLM 传 "SQL ID 581990336 如何优化"
+	// 这类混合文本时，复用 /sqlfetch 的单一解析路径。不要在 /sqltune 内
+	// 再维护一套弱版 statement_history 查询 / 占位符替换逻辑。
+	if sqlID, ok := parseSQLTuneIDArg(sqlText); ok {
+		resolved, err := NewSQLFetchSkill(s.driver).Resolve(ctx, sqlID)
 		if err != nil {
 			return &skill.Result{
 				Type: skill.ResultError,
 				Rendered: fmt.Sprintf(
-					"  ⚠️ /sqltune SQL_ID=%s 在 dbe_perf.statement_history 找不到\n"+
-						"     可能: ① track_stmt_stat_level=L0 ② SQL 已被 ring buffer 覆盖 ③ ID 错\n"+
+					"  ⚠️ /sqltune SQL_ID=%d 解析失败: %s\n"+
 						"     恢复: 直接传完整 SQL 文本 → /sqltune <SELECT ...>",
-					sqlText),
+					sqlID, err.Error()),
 				Summary: err.Error(),
 			}, nil
 		}
-
-		// statement_history 找到 SQL → 兜底替换剩余 `?` 为 NULL 后进 engine.
-		//
-		// og 5.0.3 默认 statement_history.query 也归一化 (`?` 代替字面量).
-		// engine 内 PlaceholderSubstituter 按上下文 (interval/IN/比较运算)
-		// 填合理默认值, 但少数极端 ? 上下文 (如 LIMIT?/OFFSET?/复杂表达式)
-		// 它填不掉. 让 LLM agent 重试是 35B 早停的根源.
-		//
-		// 兜底策略: 对剩余 `?` 全部替换成 NULL (类型最宽松, 大部分运算符
-		// 都接受) → EXPLAIN 一定能跑出 plan → 5 候选 → LLM 综合分析. 用户
-		// 在 Round 1 prompt 里能看到原归一化 SQL, 知道这是 synthetic
-		// substitution 不是真实 bind 值.
-		sqlText = blindNullSubstitute(fetched)
-		sqlIDForReport = sqltextArg
+		if resolved == nil || strings.TrimSpace(resolved.SQL) == "" {
+			return &skill.Result{
+				Type: skill.ResultError,
+				Rendered: fmt.Sprintf(
+					"  ⚠️ /sqltune SQL_ID=%d 在 dbe_perf.statement_history / dbe_perf.statement 都找不到\n"+
+						"     可能: ① track_stmt_stat_level=L0 且 unique SQL 已过期 ② SQL 已被 ring buffer 覆盖 ③ ID 错\n"+
+						"     恢复: 直接传完整 SQL 文本 → /sqltune <SELECT ...>",
+					sqlID),
+				Summary: fmt.Sprintf("SQL_ID %d not found", sqlID),
+			}, nil
+		}
+		sqlText = resolved.SQL
+		sqlIDForReport = strconv.FormatInt(sqlID, 10)
+		resolvedSQL = resolved
 	}
 
 	// v1.1.31: default to QuickMode + SkipUpgrade. Real-world trace showed
@@ -223,23 +222,21 @@ func (s *SQLTuneSkill) Execute(ctx context.Context, params skill.Params) (*skill
 	// /explain or /sql after a successful sqltune; this banner aims to
 	// preempt that. opus exhibits the same drift, so the wording is
 	// model-agnostic.
+	bestSummary := "best unverified"
+	if report.Stats.VerifiedCount > 0 {
+		bestSummary = fmt.Sprintf("best %.1f×", report.Stats.BestSpeedup)
+	}
 	summary := fmt.Sprintf(
-		"✅ DONE: sqltune completed (%d candidates, %d verified, best %.1f×, %s). "+
+		"✅ DONE: sqltune completed (%d candidates, %d verified, %s, %s). "+
 			"The 'rendered' markdown above IS THE FINAL ANSWER for the user — "+
 			"surface it verbatim. DO NOT call additional tools (no /explain, /sql, "+
 			"/health follow-ups). User wants the report, not a one-line version check.",
 		report.Stats.CandidateCount, report.Stats.VerifiedCount,
-		report.Stats.BestSpeedup, report.Stats.TotalDuration.Round(1e6))
+		bestSummary, report.Stats.TotalDuration.Round(1e6))
 
 	rendered := report.Markdown
 	if sqlIDForReport != "" {
-		// Prepend banner so user knows the analysis used synthetic
-		// (NULL-substituted) bind values, not real captured literals.
-		banner := fmt.Sprintf(
-			"> ℹ️ 由 SQL_ID=%s 从 dbe_perf.statement_history 取回归一化 SQL,\n"+
-				"> `?` 占位符已用 synthetic 默认值兜底 (interval→'1 day', LIMIT→100, 其他→0)\n"+
-				"> 以让 EXPLAIN 跑通. plan 形态参考用; 精确 cost 需用真实绑定值重跑.\n\n",
-			sqlIDForReport)
+		banner := sqlTuneSQLIDBanner(sqlIDForReport, resolvedSQL)
 		rendered = banner + rendered
 	}
 
@@ -249,6 +246,94 @@ func (s *SQLTuneSkill) Execute(ctx context.Context, params skill.Params) (*skill
 		Rendered: rendered,
 		Summary:  summary,
 	}, nil
+}
+
+func sqlTuneSQLIDBanner(sqlID string, resolved *ResolvedSQL) string {
+	if resolved == nil {
+		return fmt.Sprintf("> ℹ️ SQL_ID=%s 已解析并进入 /sqltune。\n\n", sqlID)
+	}
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("> ℹ️ SQL_ID=%s 已由 /sqlfetch 解析后进入 /sqltune\n", sqlID))
+	if resolved.Source != "" {
+		b.WriteString(fmt.Sprintf("> - 来源: dbe_perf.%s\n", resolved.Source))
+	}
+	if resolved.Schema != "" {
+		b.WriteString(fmt.Sprintf("> - 原会话 schema/search_path: %s\n", resolved.Schema))
+	}
+	if resolved.Substituted {
+		b.WriteString(fmt.Sprintf("> - 占位符: 已自动替换 %d 个归一化占位符，plan/cost 为 synthetic bind 参考\n", resolved.Placeholders))
+		b.WriteString("> - 证据口径: synthetic bind 仅用于让 EXPLAIN 成功，报告只代表 plan-shape；不要把替换后的字面量当作真实业务取值\n")
+	} else if resolved.Placeholders > 0 {
+		b.WriteString(fmt.Sprintf("> - 占位符: 仍检测到 %d 个占位符，若 EXPLAIN 失败请提供真实 SQL 文本\n", resolved.Placeholders))
+	}
+	for _, note := range resolved.Notes {
+		if strings.TrimSpace(note) != "" {
+			b.WriteString("> - " + strings.TrimSpace(note) + "\n")
+		}
+	}
+	b.WriteString("\n")
+	return b.String()
+}
+
+func parseSQLTuneIDArg(arg string) (int64, bool) {
+	s := strings.TrimSpace(arg)
+	if s == "" || startsWithSQLKeyword(s) {
+		return 0, false
+	}
+	id, err := parseSQLID(s)
+	if err != nil {
+		return 0, false
+	}
+	if looksLikeSQLID(s) {
+		return id, true
+	}
+	lower := strings.ToLower(s)
+	if strings.Contains(lower, "sql_id") || strings.Contains(lower, "sql id") || strings.Contains(lower, "sqlid") {
+		return id, true
+	}
+	if hasSingleDigitRun(s) && hasTuneIntent(lower) {
+		return id, true
+	}
+	return 0, false
+}
+
+func startsWithSQLKeyword(s string) bool {
+	lower := strings.ToLower(strings.TrimSpace(s))
+	fields := strings.Fields(lower)
+	if len(fields) == 0 {
+		return false
+	}
+	switch fields[0] {
+	case "select", "with", "insert", "update", "delete", "merge", "explain", "create", "alter", "drop", "truncate", "do", "call":
+		return true
+	default:
+		return false
+	}
+}
+
+func hasTuneIntent(lower string) bool {
+	for _, kw := range []string{"优化", "调优", "怎么改", "如何改", "tune", "tuning", "optimize", "执行计划", "慢"} {
+		if strings.Contains(lower, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSingleDigitRun(s string) bool {
+	runs := 0
+	inRun := false
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			if !inRun {
+				runs++
+				inRun = true
+			}
+			continue
+		}
+		inRun = false
+	}
+	return runs == 1
 }
 
 // looksLikeSQLID returns true when args is a bare numeric ID (no spaces,
@@ -269,9 +354,10 @@ func looksLikeSQLID(s string) bool {
 }
 
 // fetchLiteralSQLByID looks up dbe_perf.statement_history for a real
-// execution sample matching unique_query_id, returning the bound SQL
-// (literals included, not normalized `?`). Falls back to debug_query_id
-// if no statement_history row exists.
+// execution sample matching unique_query_id, returning the bound SQL when
+// available. Falls back to debug_query_id and then dbe_perf.statement's
+// normalized SQL so /topsql IDs remain tunable even after statement_history
+// expires.
 //
 // Why this exists: /sqltune <id> from /slowsql output is the common
 // agent-mode path. Without this fallback, og's /sqltune sees a SQL_ID
@@ -306,8 +392,24 @@ func fetchLiteralSQLByID(ctx context.Context, driver db.Driver, sqlID string) (s
 	if err != nil {
 		return "", fmt.Errorf("query statement_history (debug_query_id fallback): %w", err)
 	}
+	if len(res.Rows) > 0 {
+		return strings.TrimSpace(toString(res.Rows[0][0])), nil
+	}
+
+	// statement_history empty/expired — fall back to the normalized unique SQL
+	// source used by /topsql and /slowsql. Placeholders will be substituted by
+	// the caller's blindNullSubstitute path before the tuner runs.
+	q3 := `SELECT query FROM dbe_perf.statement
+	       WHERE unique_sql_id = :1
+	         AND query IS NOT NULL
+	         AND query <> ''
+	       LIMIT 1`
+	res, err = driver.Query(ctx, q3, sqlID)
+	if err != nil {
+		return "", fmt.Errorf("query statement fallback: %w", err)
+	}
 	if len(res.Rows) == 0 {
-		return "", fmt.Errorf("no statement_history row found for unique_query_id=%s; track_stmt_stat_level may be L0 or query expired from ring buffer", sqlID)
+		return "", fmt.Errorf("no statement_history/statement row found for sql_id=%s; track_stmt_stat_level may be L0 or query expired from ring buffer", sqlID)
 	}
 	return strings.TrimSpace(toString(res.Rows[0][0])), nil
 }
@@ -330,9 +432,9 @@ func toString(v any) string {
 //   - `interval ?`           → `interval '1 day'`  (NULL is rejected by og)
 //   - `LIMIT ?` / `OFFSET ?` → `LIMIT 100` / `OFFSET 0`
 //   - `IN (?, ?, ?)`         → `IN (0, 0, 0)`  (NULL list works but
-//                              integer is more representative)
+//     integer is more representative)
 //   - everywhere else        → `0`  (universally safe — works in equality,
-//                              comparison, expression contexts)
+//     comparison, expression contexts)
 //
 // String literals preserved — ? inside 'who?' or "what?" not replaced.
 //

@@ -30,19 +30,19 @@ import (
 // Manager manages model profiles and the active LLM provider.
 // Thread-safe for concurrent reads during diagnosis.
 type Manager struct {
-	mu           sync.RWMutex
-	profiles     map[string]ModelProfile
-	active       *ModelProfile // nil = no LLM
-	provider     llm.Provider  // nil = rule-only
-	modelsDir    string
-	inlineSnap   []InlineModel // snapshot of config.yaml `models:` for Reload merge
+	mu         sync.RWMutex
+	profiles   map[string]ModelProfile
+	active     *ModelProfile // nil = no LLM
+	provider   llm.Provider  // nil = rule-only
+	modelsDir  string
+	inlineSnap []InlineModel // snapshot of config.yaml `models:` for Reload merge
 }
 
 // NewManager loads all model profiles and activates activeName.
 //
 // Sources (merged, inline wins on name conflict):
-//   1. modelsDir (~/.opendb/models/*.yaml) — legacy / shared fleet config
-//   2. fallback.InlineModels (config.yaml `models:` block) — preferred
+//  1. modelsDir (~/.opendb/models/*.yaml) — legacy / shared fleet config
+//  2. fallback.InlineModels (config.yaml `models:` block) — preferred
 //
 // Previously this was either/or (inline > dir, dir ignored if any inline
 // existed) which surprised users: adding ~/.opendb/models/glm.yaml had no
@@ -87,6 +87,7 @@ func NewManager(modelsDir string, activeName string, fallback FallbackLLM) (*Man
 			APIKey:      im.APIKey,
 			StripThink:  im.StripThink,
 			Description: im.Description,
+			ToolMode:    im.ToolMode,
 			Group:       "(config)",
 		}
 	}
@@ -302,6 +303,7 @@ func (m *Manager) Reload() (int, error) {
 			APIKey:      im.APIKey,
 			StripThink:  im.StripThink,
 			Description: im.Description,
+			ToolMode:    im.ToolMode,
 			Group:       "(config)",
 		}
 	}

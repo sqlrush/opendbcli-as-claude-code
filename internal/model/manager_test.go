@@ -137,6 +137,60 @@ func TestNewManager_FallbackToDefault(t *testing.T) {
 	}
 }
 
+func TestNewManager_InlineToolMode(t *testing.T) {
+	dir := t.TempDir()
+
+	mgr, err := NewManager(dir, "qwen-prompt", FallbackLLM{
+		InlineModels: []InlineModel{{
+			Name:       "qwen-prompt",
+			Provider:   "openai",
+			BaseURL:    "http://localhost:8000/v1",
+			Model:      "qwen3.6",
+			Capability: "large",
+			ToolMode:   "prompt",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got := mgr.ToolMode(); got != "prompt" {
+		t.Fatalf("ToolMode() = %q, want prompt", got)
+	}
+	active := mgr.Active()
+	if active == nil {
+		t.Fatal("expected active model")
+	}
+	if active.ToolMode != "prompt" {
+		t.Fatalf("active.ToolMode = %q, want prompt", active.ToolMode)
+	}
+}
+
+func TestManager_ReloadPreservesInlineToolMode(t *testing.T) {
+	dir := t.TempDir()
+
+	mgr, err := NewManager(dir, "qwen-prompt", FallbackLLM{
+		InlineModels: []InlineModel{{
+			Name:       "qwen-prompt",
+			Provider:   "openai",
+			BaseURL:    "http://localhost:8000/v1",
+			Model:      "qwen3.6",
+			Capability: "large",
+			ToolMode:   "prompt",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := mgr.Reload(); err != nil {
+		t.Fatalf("Reload error: %v", err)
+	}
+	if got := mgr.ToolMode(); got != "prompt" {
+		t.Fatalf("ToolMode() after reload = %q, want prompt", got)
+	}
+}
+
 func TestNewManager_NoLLM(t *testing.T) {
 	dir := t.TempDir()
 

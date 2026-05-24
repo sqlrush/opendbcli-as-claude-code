@@ -23,10 +23,10 @@ import (
 )
 
 // rewriteBackslashCmd translates psql/gsql backslash commands to standard SQL.
-// Only applies to PostgreSQL and OpenGauss databases.
+// Only applies to PostgreSQL, openGauss, and GaussDB databases.
 // Returns the original input unchanged if no match or wrong database type.
 func rewriteBackslashCmd(input string, dbType string) string {
-	if dbType != "postgres" && dbType != "opengauss" {
+	if dbType != "postgres" && dbType != "opengauss" && dbType != "gaussdb" {
 		return input
 	}
 

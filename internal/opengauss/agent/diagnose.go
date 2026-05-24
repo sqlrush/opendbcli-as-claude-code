@@ -61,6 +61,7 @@ type Diagnoser struct {
 	sessionID    session.SessionID
 	capability   string // "small" / "large" — drives prompt variant selection
 	toolMode     string // "" / "native" / "prompt" — v1.2.0 PromptToolAdapter selector
+	modelName    string // active /model entry name; used for model-family routing only
 }
 
 func NewDiagnoser(provider llm.Provider, executor *skill.Executor, registry *skill.Registry) *Diagnoser {
@@ -69,7 +70,7 @@ func NewDiagnoser(provider llm.Provider, executor *skill.Executor, registry *ski
 
 func (d *Diagnoser) SetOnProgress(fn OnProgressFunc) { d.onProgress = fn }
 func (d *Diagnoser) SetOnRound(fn OnRoundFunc)       { d.onRound = fn }
-func (d *Diagnoser) SetOnStream(fn OnStreamFunc)      { d.onStream = fn }
+func (d *Diagnoser) SetOnStream(fn OnStreamFunc)     { d.onStream = fn }
 
 // SetCapability records the model capability so it gets propagated into
 // EngineInput → context builder → universal prompt variant selection.
@@ -79,6 +80,11 @@ func (d *Diagnoser) SetCapability(cap string) { d.capability = cap }
 // PromptToolAdapter selection. "" / "native" → use the provider's native
 // FC API; "prompt" → wrap with PromptModeBuilder.
 func (d *Diagnoser) SetToolMode(mode string) { d.toolMode = mode }
+
+// SetModelName records the active /model entry name. This is intentionally
+// separate from provider.Name(): multiple local/cloud models share the same
+// OpenAI-compatible provider but need different reliability paths.
+func (d *Diagnoser) SetModelName(name string) { d.modelName = name }
 
 // promptBuilderOptions returns the bridge.WrapOption list to apply when
 // constructing the provider adapter. For native mode this is empty (no-op
@@ -179,10 +185,27 @@ func (d *Diagnoser) runEngine(ctx context.Context, mode DiagnoseMode, userInput,
 		Mode:         engine.DiagnoseMode(mode),
 		SessionID:    d.sessionID,
 		Capability:   d.capability,
+		Metadata: map[string]string{
+			"active_model": d.modelName,
+			"tool_mode":    d.toolMode,
+		},
+	}
+	// SQL_ID tuning is a product-level deterministic route, not a model
+	// selection problem. Small prompt-mode models routinely invent example
+	// SQL after sqlfetch; pass the numeric ID to sqltune and let sqltune's
+	// own resolver fetch the real statement.
+	if sqlID, ok := shouldForceSQLTune(userInput); ok {
+		input.ForceInitialToolCalls = sqlTuneToolCalls(sqlID)
+		input.RequireToolEvidence = true
+	} else if shouldForceCurrentDBEvidence(userInput) {
+		input.ForceInitialToolCalls = currentDBEvidenceToolCalls()
+		input.RequireToolEvidence = true
+		input.ForceInitialEvidenceLLM = shouldUseCurrentDBManagedEvidenceLLM(d.capability, d.toolMode, d.modelName)
+		input.Metadata["expert_report"] = "currentdb"
 	}
 	if d.onRound != nil {
 		input.OnRound = func(turn int, toolNames []string) {
-			d.onRound(RoundInfo{Round: turn, Summary: fmt.Sprintf("调用 %s", strings.Join(toolNames, ", "))})
+			d.onRound(RoundInfo{Round: turn, Summary: formatEngineRoundSummary(toolNames)})
 		}
 	}
 	if d.onStream != nil {
@@ -217,6 +240,181 @@ func FormatDiagnoseResult(dr DiagnoseResult) string {
 		b.WriteString("\n")
 	}
 	return b.String()
+}
+
+func formatEngineRoundSummary(toolNames []string) string {
+	if len(toolNames) == 1 && toolNames[0] == "__llm_evidence_report__" {
+		return "基于已采集证据生成诊断报告"
+	}
+	if len(toolNames) == 0 {
+		return "继续分析"
+	}
+	return fmt.Sprintf("调用 %s", strings.Join(toolNames, ", "))
+}
+
+func shouldForceCurrentDBEvidence(userInput string) bool {
+	lower := strings.ToLower(userInput)
+	triggers := []string{
+		"当前数据库", "数据库当前", "有哪些问题", "有没有问题", "存在什么问题",
+		"当前状态", "健康", "异常", "性能问题", "数据库慢", "响应慢",
+		"连接数", "慢查询", "锁等待", "阻塞", "等待事件", "cpu", "内存", "i/o", "io等待", "io wait",
+		"database status", "current database", "health", "performance issue",
+	}
+	for _, trigger := range triggers {
+		if strings.Contains(lower, strings.ToLower(trigger)) {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldUseCurrentDBFastSummary(capability, toolMode string) bool {
+	capability = strings.ToLower(strings.TrimSpace(capability))
+	toolMode = strings.ToLower(strings.TrimSpace(toolMode))
+	if toolMode == "prompt" {
+		return true
+	}
+	return capability == "" || capability == string(CapabilitySmall) || capability == string(CapabilityMedium)
+}
+
+func shouldUseCurrentDBManagedEvidenceLLM(capability, toolMode, modelName string) bool {
+	capability = strings.ToLower(strings.TrimSpace(capability))
+	toolMode = strings.ToLower(strings.TrimSpace(toolMode))
+	modelName = strings.ToLower(strings.TrimSpace(modelName))
+	if isManagedQwenModel(modelName) {
+		return true
+	}
+	if modelName == "" {
+		return toolMode == "prompt" || capability == string(CapabilitySmall)
+	}
+	return false
+}
+
+func isManagedQwenModel(modelName string) bool {
+	modelName = strings.ToLower(strings.TrimSpace(modelName))
+	for _, marker := range []string{"qwen", "qwq"} {
+		if strings.Contains(modelName, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldForceSQLTune(userInput string) (string, bool) {
+	text := strings.TrimSpace(userInput)
+	if text == "" || startsWithSQLKeyword(text) {
+		return "", false
+	}
+	lower := strings.ToLower(text)
+	if !hasSQLTuneIntent(lower) {
+		return "", false
+	}
+	if hasSQLIDLabel(lower) {
+		if id, ok := firstDigitRun(text, 1, 25); ok {
+			return id, true
+		}
+		return "", false
+	}
+	runs := digitRuns(text, 6, 25)
+	if len(runs) == 1 {
+		return runs[0], true
+	}
+	return "", false
+}
+
+func sqlTuneToolCalls(sqlID string) []engprovider.ToolCall {
+	return []engprovider.ToolCall{{
+		ID:        "forced_sqltune_0_sqltune",
+		Name:      "sqltune",
+		Arguments: fmt.Sprintf(`{"args":"%s","mode":"quick"}`, sqlID),
+	}}
+}
+
+func hasSQLTuneIntent(lower string) bool {
+	for _, kw := range []string{
+		"优化", "调优", "如何改", "怎么改", "执行计划", "慢", "性能",
+		"tune", "tuning", "optimize", "explain", "plan",
+	} {
+		if strings.Contains(lower, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSQLIDLabel(lower string) bool {
+	for _, label := range []string{"sql_id", "sql id", "sqlid"} {
+		if strings.Contains(lower, label) {
+			return true
+		}
+	}
+	return false
+}
+
+func startsWithSQLKeyword(s string) bool {
+	fields := strings.Fields(strings.ToLower(strings.TrimSpace(s)))
+	if len(fields) == 0 {
+		return false
+	}
+	switch fields[0] {
+	case "select", "with", "insert", "update", "delete", "merge", "explain", "create", "alter", "drop", "truncate", "do", "call":
+		return true
+	default:
+		return false
+	}
+}
+
+func firstDigitRun(s string, minLen, maxLen int) (string, bool) {
+	runs := digitRuns(s, minLen, maxLen)
+	if len(runs) == 0 {
+		return "", false
+	}
+	return runs[0], true
+}
+
+func digitRuns(s string, minLen, maxLen int) []string {
+	var runs []string
+	start := -1
+	flush := func(end int) {
+		if start < 0 {
+			return
+		}
+		if n := end - start; n >= minLen && n <= maxLen {
+			runs = append(runs, s[start:end])
+		}
+		start = -1
+	}
+	for i, r := range s {
+		if r >= '0' && r <= '9' {
+			if start < 0 {
+				start = i
+			}
+			continue
+		}
+		flush(i)
+	}
+	flush(len(s))
+	return runs
+}
+
+func currentDBEvidenceToolCalls() []engprovider.ToolCall {
+	names := []string{"health", "activesessions", "waits", "topsql", "slowsql", "blocktree"}
+	calls := make([]engprovider.ToolCall, 0, len(names))
+	for i, name := range names {
+		args := "{}"
+		switch name {
+		case "topsql":
+			args = `{"args":"el"}`
+		case "slowsql":
+			args = `{"args":"1000"}`
+		}
+		calls = append(calls, engprovider.ToolCall{
+			ID:        fmt.Sprintf("forced_current_%d_%s", i, name),
+			Name:      name,
+			Arguments: args,
+		})
+	}
+	return calls
 }
 
 type ModelCapability string

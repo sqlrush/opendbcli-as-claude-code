@@ -139,14 +139,14 @@ func (b *PromptModeBuilder) PrepareRequest(req *Request) {
 // PostProcessResponse parses JSON tool_calls from resp.Content. Four
 // outcomes:
 //
-//	1. Format A (JSON found, parsed OK): populate resp.ToolCalls, clear
-//	   resp.Content. Engine sees structured tool calls.
-//	2. Format B (no JSON-like content): leave resp.Content alone. Engine
-//	   treats it as the final answer and exits the ReAct loop.
-//	3. Parse error WITH JSON-like content: set NeedRetry + RetryFeedback
-//	   so Engine appends a corrective system message and re-runs the LLM
-//	   (max 2 retries via MaxParseRetries).
-//	4. Pre-existing ToolCalls (hybrid backend): pass through untouched.
+//  1. Format A (JSON found, parsed OK): populate resp.ToolCalls, clear
+//     resp.Content. Engine sees structured tool calls.
+//  2. Format B (no JSON-like content): leave resp.Content alone. Engine
+//     treats it as the final answer and exits the ReAct loop.
+//  3. Parse error WITH JSON-like content: set NeedRetry + RetryFeedback
+//     so Engine appends a corrective system message and re-runs the LLM
+//     (max 2 retries via MaxParseRetries).
+//  4. Pre-existing ToolCalls (hybrid backend): pass through untouched.
 func (b *PromptModeBuilder) PostProcessResponse(resp *Response) *Response {
 	if resp == nil {
 		return resp
@@ -228,38 +228,29 @@ const formatRulesPrompt = `# 输出格式规则
 3. **工具名严格匹配**, 不要简写或意译 (e.g. health 不能写成 heath / health_check)
 4. **没必要的工具不要调**, 数据足够就直接给答案 (格式 B)
 5. **格式 B 内不要嵌入 ` + "```json" + ` 块**, 那会被解析器当成工具调用
-6. **SQL_ID 必须先 sqlfetch 再 sqltune**: 当用户提到 SQL_ID (一串数字, 如 581990336),
-   你**只能**先调 sqlfetch 拿到 SQL 文本, 之后才能调 sqltune. **绝对禁止**直接把 SQL_ID
-   作为 sqltune 的 args (那等于把数字当 SQL 文本传, sqltune 会失败或死循环).
+6. **SQL_ID 调优必须直接交给 sqltune**: 当用户提到 SQL_ID (一串数字, 如 581990336)
+   并询问优化/调优/执行计划时, 直接调用 sqltune, args 只传这个数字 ID.
+   sqltune 内部会走受控 sqlfetch 路径解析真实 SQL. **绝对禁止**根据 SQL_ID 自己编造、
+   仿写或改写 SQL 文本.
 7. **同一工具相同参数不要重复调用 >= 2 次**: 如果一个工具已经返回过结果 (成功或失败),
    重复调用大概率拿到同样结果. 该换策略或交付当前已有结论.`
 
 const fewShotPrompt = `# 示例
 
-## 示例 1: 单 SQL 调优 - SQL_ID 必须先 sqlfetch (格式 A, 关键示例)
+## 示例 1: 单 SQL 调优 - SQL_ID 直接交给 sqltune (格式 A, 关键示例)
 
 User: SQL_ID 4175761868 怎么优化
 Assistant:
 ` + "```json" + `
-{"tool_calls": [{"name": "sqlfetch", "args": {"args": "4175761868"}}]}
+{"tool_calls": [{"name": "sqltune", "args": {"args": "4175761868", "mode": "quick"}}]}
 ` + "```" + `
 
 **反例 (绝对不能这么干)**:
 ` + "```json" + `
-{"tool_calls": [{"name": "sqltune", "args": {"args": "4175761868"}}]}
+{"tool_calls": [{"name": "sqltune", "args": {"args": "SELECT * FROM <imagined_table> WHERE id = 4175761868"}}]}
 ` + "```" + `
-错在: 把 SQL_ID (数字) 当 SQL 文本传给 sqltune. sqltune 会因为
-"4175761868" 不是合法 SQL 语法而失败或死循环. 必须先 sqlfetch 把
-SQL_ID 解析成 SQL 文本, 再用解析出来的 SQL 文本调 sqltune.
-
-## 示例 1b: sqlfetch 返回后, 再调 sqltune (跨轮工具链)
-
-(上一轮: sqlfetch 返回了 SQL 文本 "SELECT * FROM users WHERE id = ?")
-User: (继续上一轮 SQL_ID 优化)
-Assistant:
-` + "```json" + `
-{"tool_calls": [{"name": "sqltune", "args": {"args": "SELECT * FROM users WHERE id = 1"}}]}
-` + "```" + `
+错在: SQL_ID 不是表名、不是主键值, 模型不能根据数字编造示例表或示例 SQL.
+正确做法是把数字 ID 原样传给 sqltune, 由 sqltune 查询 statement_history / statement.
 
 ## 示例 2: 聚类诊断起步 (格式 A, 多工具并发)
 

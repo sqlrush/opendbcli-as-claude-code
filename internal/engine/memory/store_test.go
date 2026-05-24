@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -294,3 +295,11 @@ func splitLines(s string) []string {
 	return lines
 }
 
+func TestProfileTemplateGaussDBUsesOpenGaussChecklist(t *testing.T) {
+	tpl := ProfileTemplate("gauss-prod", "gaussdb")
+	for _, want := range []string{"(GaussDB)", "GaussDB 版本", "WDR 快照", "MOT 内存引擎"} {
+		if !strings.Contains(tpl, want) {
+			t.Fatalf("GaussDB profile template missing %q:\n%s", want, tpl)
+		}
+	}
+}

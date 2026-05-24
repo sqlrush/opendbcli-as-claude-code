@@ -30,6 +30,7 @@ var processPatterns = map[string][]string{
 	"postgres":  {"postgres", "postmaster"},
 	"oracle":    {"ora_pmon"},
 	"opengauss": {"gaussdb"},
+	"gaussdb":   {"gaussdb"},
 }
 
 func IsLocal(ctx context.Context, dbType string, connHost string) (int, error) {

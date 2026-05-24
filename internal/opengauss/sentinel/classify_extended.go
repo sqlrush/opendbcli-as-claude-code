@@ -229,7 +229,7 @@ func classifyTempSpillHeavy(r BurstReport) Classification {
 	}
 
 	return Classification{
-		Cause:      CauseSlowQuery,
+		Cause:      CauseIOBottleneck,
 		Confidence: confidence,
 		Evidence: []string{
 			formatEvidence("临时空间写入速率 %.1f MB/s", tempRate/1024/1024),
@@ -393,7 +393,7 @@ func classifyIOWaitDominant(r BurstReport) Classification {
 	}
 
 	return Classification{
-		Cause:      CauseSlowQuery,
+		Cause:      CauseIOBottleneck,
 		Confidence: confidence,
 		Evidence: []string{
 			formatEvidence("IO 等待占比 %.1f%%", ioWaitPct),

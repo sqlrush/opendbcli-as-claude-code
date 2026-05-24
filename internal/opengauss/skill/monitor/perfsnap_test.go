@@ -20,6 +20,7 @@ package monitor
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -112,5 +113,33 @@ func TestOGSnapStore_PersistsAcrossReload(t *testing.T) {
 	reopened := NewOGSnapStore(dir)
 	if reopened.Count() != 2 {
 		t.Errorf("reloaded Count() = %d, want 2", reopened.Count())
+	}
+}
+
+func TestOGRenderPerfEvidenceIncludesClassifiedDiff(t *testing.T) {
+	d := OGPerfDiff{
+		From:           time.Date(2026, 5, 23, 10, 0, 0, 0, time.UTC),
+		To:             time.Date(2026, 5, 23, 10, 5, 0, 0, time.UTC),
+		TPSDelta:       42,
+		CacheHitOld:    99,
+		CacheHitNew:    75,
+		TempBytesOld:   0,
+		TempBytesNew:   2 * 1024 * 1024 * 1024,
+		DeadlocksOld:   0,
+		DeadlocksNew:   1,
+		CheckpointsOld: 2,
+		CheckpointsNew: 20,
+		SQLTimeChanges: []ogSQLChange{{QueryID: "581990336", DeltaMs: 12000}},
+	}
+	out := ogRenderPerfEvidence(OGPerfSnapshot{Timestamp: d.To}, &d)
+	for _, want := range []string{"perfsnap 结构化证据", "时间窗口", "Cache Hit", "IO风险", "Lock P0", "/sqltune 581990336"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("perfsnap evidence missing %q:\n%s", want, out)
+		}
+	}
+	for _, notWant := range []string{"Evidence Builder", "<SQL_ID>"} {
+		if strings.Contains(out, notWant) {
+			t.Fatalf("perfsnap evidence should not contain %q:\n%s", notWant, out)
+		}
 	}
 }

@@ -31,6 +31,7 @@ func CompressReport(report sentinel.BurstReport) string {
 	writeHeader(&b, report)
 	writeClassification(&b, report.Classification)
 	writeMetrics(&b, report)
+	writeEvidencePackage(&b, report)
 
 	return b.String()
 }
@@ -86,5 +87,15 @@ func writeMetrics(b *strings.Builder, r sentinel.BurstReport) {
 		fmt.Fprintf(b, "  %s: avg=%.1f max=%.1f min=%.1f trend=%s\n",
 			item.label, m.Avg, m.Max, m.Min, m.Trend)
 	}
+	b.WriteString("\n")
+}
+
+func writeEvidencePackage(b *strings.Builder, r sentinel.BurstReport) {
+	text := sentinel.FormatEvidenceDiagnosis(r)
+	if strings.TrimSpace(text) == "" {
+		return
+	}
+	b.WriteString("--- Evidence Builder ---\n")
+	b.WriteString(text)
 	b.WriteString("\n")
 }
