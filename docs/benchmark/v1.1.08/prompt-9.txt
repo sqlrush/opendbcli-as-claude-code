@@ -1,0 +1,61 @@
+── AI 诊断 (auto, 7轮) ──
+基于收集的证据，我已经找到问题根因。
+
+## 根因分析
+
+| 指标 | 数据 | 来源工具 |
+|------|------|---------|
+| 数据库启动时间 | 2026-04-24 09:05:32 | health |
+| 运行时长 | 17 分钟 | health |
+| 系统负载 | LOAD 0.02 | os |
+| CPU 使用 | 4 会话 On CPU | activesessions |
+| 后台任务 | WLM fetch collect info 运行 17 分钟 | activesessions |
+| Autovacuum Workers | 3 个活跃 | resource |
+| Cache Hit Ratio | 99.33% | health |
+| 慢 SQL | 0 条 | slowsql |
+| 长事务 | 0 个 | longtx |
+
+## 诊断结论
+
+**数据库刚重启完成（运行仅 17 分钟），当前处于 Cache 预热和后台任务恢复阶段，并非真正的性能问题。**
+
+### 因果链
+1. 数据库 09:05:32 重启 → Cache 冷启动（shared_buffers 刚加载）
+2. 重启后 WLM 后台监控任务启动 → 运行 17 分钟消耗 CPU
+3. Autovacuum 检查启动 → 3 个 worker 活跃
+4. Checkpoint 同步耗时 178 秒 → 刷脏页到磁盘
+
+### 当前状态
+- **系统负载极低**：LOAD 0.02（16 核系统）
+- **无性能瓶颈**：无慢 SQL、无长事务、无锁等待、Cache 命中率 99%
+- **连接数正常**：12/200 (6%)
+
+用户感知的"CPU 在涨"和"系统变慢"是重启后的**短期恢复现象**，不是持续性问题。
+
+---
+
+## 建议行动
+
+### 1. 确认重启原因（排查是否异常）
+检查数据库日志：
+```sql
+-- 查看最近启动记录
+SELECT * FROM pg_stat_activity 
+WHERE backend_type = 'startup' OR query LIKE '%startup%'
+ORDER BY backend_start DESC LIMIT 10;
+```
+或查看日志文件：`/var/log/gaussdb/pg_log/` 中 09:05 前后的记录
+
+### 2. 等待 Cache 预热完成
+当前 Cache 命中率已达 99.33%，预热基本完成。系统会在几分钟内恢复正常性能。
+
+### 3. 观察 WLM 后台任务
+运行 17 分钟的 `WLM fetch collect info` 任务可能在做历史数据采集，属于正常行为。如需确认：
+```sql
+SELECT * FROM pg_stat_activity WHERE query LIKE '%WLM%';
+```
+
+---
+
+**总结**：当前系统健康，"变慢"是重启后的正常恢复过程。建议确认重启原因（是否计划内维护或异常 crash），无需紧急干预。
+

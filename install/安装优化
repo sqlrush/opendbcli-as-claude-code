@@ -1,0 +1,245 @@
+
+
+
+
+
+◇  Welcome
+╭────────────────────────────────────────────────────────────╮
+│                                                            │
+│  penDB是参考Claude Code交互方式的一个数据库 CLI 智能体，用最简洁的交互，实现最优的管理和诊断
+    作者是SQLrush，邮箱是sqlrush@gmail.com
+    核心功能包括：
+     支持Oracle / MySQL / PostgreSQL 三种常用数据库
+     三种交互方式合一：支持简化命令skill（类似 Claude Code的/命令skill），支持SQL 和数据库特有语法（整合了sqlplus / mysql / psql 3款cli的大部分功能）
+     支持自然语言（类似聊天工具）            │
+     │  · Sentinel 实时探针 — 自动检测异常，给Model和Rule提供诊断信息              │
+     · DBtop 秒级监控大盘 — 秒级对性能抖动进行捕获  
+│  · Model管理 — 自然语言描述问题，LLM 给出方案           │
+│  · Rule Engine管理 — 基于规则引擎的问题整合和model能力互补                            │
+│  · 零依赖 — 拷贝后即运行                               │
+│                                                            │
+╰────────────────────────────────────────────────────────────╯
+
+
+
+╭────────────────────────────────────────────────────────────╮
+│                                                            │
+│  建议给OpenDB 一个专用数据库账号来工作。                     │
+│  Opendb遵循最小权限策略，仅需必要查询权限协助您更好的管理数据库            │
+│                                                            │
+│  推荐最小权限:                                   │
+│  ✅ CREATE SESSION — 连接数据库                            │
+│  ✅ SELECT on V$ views — 性能视图查询                      │
+│  ✅ SELECT on DBA_ views — 数据字典查询                    │
+│  ✅ SELECT_CATALOG_ROLE — 系统目录读取                     │
+│                                                            │
+
+│                                                            │
+│  建议执行以下 SQL:                                         │
+│  CREATE USER opendb IDENTIFIED BY <password>;              │
+│  GRANT CREATE SESSION TO opendb;                           │
+│  GRANT SELECT_CATALOG_ROLE TO opendb;                      │
+│                                                            │
+╰────────────────────────────────────────────────────────────╯
+
+
+ ┌────────────┬───────────────┬───────┬──────────┬───────────────────┬───────────────────────────┐                                                                  
+  │   数据库   │     Host      │ 端口  │   用户   │       密码        │           备注            │
+  ├────────────┼───────────────┼───────┼──────────┼───────────────────┼───────────────────────────┤                                                                  
+  │ Oracle     │ 47.251.30.180 │ 1521  │ SYSTEM   │ OraclePass123     │ Service: ORCL，需手动启动 │
+  ├────────────┼───────────────┼───────┼──────────┼───────────────────┼───────────────────────────┤
+  │ MySQL      │ 47.251.30.180 │ 3306  │ root     │ YourMySQLPass123! │                           │                                                                  
+  ├────────────┼───────────────┼───────┼──────────┼───────────────────┼───────────────────────────┤
+  │ PostgreSQL │ 47.251.30.180 │ 5432  │ postgres │ YourPgPass123!    │                           │                                                                  
+  ├────────────┼───────────────┼───────┼──────────┼───────────────────┼───────────────────────────┤                                                                  
+  │ OpenGauss  │ 47.251.30.180 │ 15432 │ gauss    │ GaussPass123new   │ md5 认证                  │
+  └────────────┴───────────────┴───────┴──────────┴───────────────────┴───────────────────────────┘                                                                  
+                                                            
+
+
+╭────────────────────────────────────────────────────────────╮
+│                                                            │
+│  OpenDB 内置 LLM 诊断引擎，当数据库出现性能问题时，        │
+│  用自然语言描述现象，LLM 会分析根因并给出                  │
+│  可直接执行的 SQL 修复方案。                               │
+│                                                            │
+│  支持 Ollama 本地部署的大模型，数据不出内网。              │
+│                                                            │
+╰────────────────────────────────────────────────────────────╯
+
+
+
+ ◆  Configure LLM?
+  │  ● Ollama — 本地部署，数据不出内网
+  │  ○ Skip — 暂不配置
+  └
+
+│
+◆  Model/auth provider
+│  ○ Anthropic
+│  ○ BytePlus
+│  ○ Chutes
+│  ○ Cloudflare AI Gateway
+│  ○ Copilot
+│  ○ Custom Provider
+
+
+
+◇  Select channel (QuickStart)
+│  Skip for now
+Updated ~/.openclaw/openclaw.json
+Workspace OK: ~/.openclaw/workspace
+Sessions OK: ~/.openclaw/agents/main/sessions
+│
+◇  Web search ─────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│  Web search lets your agent look things up online.                           │
+│  Choose a provider. Some providers need an API key, and some work key-free.  │
+│  Docs: https://docs.openclaw.ai/tools/web                                    │
+│                                                                              │
+├──────────────────────────────────────────────────────────────────────────────╯
+│
+◇  Search provider
+│  Kimi (Moonshot)
+│
+◆  Moonshot / Kimi API key
+│  sk-...
+└
+
+
+│
+◆  Install missing skill dependencies
+│  ◻ Skip for now (Continue without installing dependencies)
+│  ◻ 🔐 1password
+│  ◻ 📝 apple-notes
+│  ◻ ⏰ apple-reminders
+│  ◻ 🐻 bear-notes
+│  ◻ 📰 blogwatcher
+│  ◻ 🫐 blucli
+│  ◻ 📸 camsnap
+│  ◻ 🧩 clawhub
+│  ◻ 🛌 eightctl
+│  ◻ ✨ gemini
+│  ◻ 🧲 gifgrep
+│  ◻ 🎮 gog
+│  ◻ 📍 goplaces
+│  ◻ 📨 imsg
+│  ◻ 📦 mcporter
+│  ◻ 📊 model-usage
+│  ◻ 📄 nano-pdf
+│  ◻ 💎 obsidian
+│  ◻ 🎤 openai-whisper
+│  ◻ 💡 openhue
+│  ◻ 🧿 oracle
+│  ◻ 🛵 ordercli
+│  ◻ 👀 peekaboo
+│  ◻ 🔊 sag
+│  ◻ 📜 session-logs
+│  ◻ 🌊 songsee
+│  ◻ 🔊 sonoscli
+│  ◻ 🧾 summarize
+│  ◻ ✅ things-mac
+│  ◻ 🧵 tmux
+│  ◻ 🎬 video-frames
+│  ◻ 📱 wacli
+│  ◻ 🐦 xurl
+
+
+
+│
+◇  Optional apps ────────────────────────╮
+│                                        │
+│  Add nodes for extra features:         │
+│  - macOS app (system + notifications)  │
+│  - iOS app (camera/canvas)             │
+│  - Android app (camera/canvas)         │
+│                                        │
+├────────────────────────────────────────╯
+│
+◇  Control UI ─────────────────────────────────────────────────────────────────────╮
+│                                                                                  │
+│  Web UI: http://127.0.0.1:18789/                                                 │
+│  Web UI (with token):                                                            │
+│  http://127.0.0.1:18789/#token=1085c9a732369e84f61555f5b6d4ebfa390d070d0a0af813  │
+│  Gateway WS: ws://127.0.0.1:18789                                                │
+│  Gateway: reachable                                                              │
+│  Docs: https://docs.openclaw.ai/web/control-ui                                   │
+│                                                                                  │
+├──────────────────────────────────────────────────────────────────────────────────╯
+│
+◇  Start TUI (best option!) ─────────────────────────────────╮
+│                                                            │
+│  This is the defining action that makes your agent you.    │
+│  Please take your time.                                    │
+│  The more you tell it, the better the experience will be.  │
+│  We will send: "Wake up, my friend!"                       │
+│                                                            │
+├────────────────────────────────────────────────────────────╯
+│
+◇  Token ────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                            │
+│  Gateway token: shared auth for the Gateway + Control UI.                                  │
+│  Stored in: ~/.openclaw/openclaw.json (gateway.auth.token) or OPENCLAW_GATEWAY_TOKEN.      │
+│  View token: openclaw config get gateway.auth.token                                        │
+│  Generate token: openclaw doctor --generate-gateway-token                                  │
+│  Web UI keeps dashboard URL tokens in memory for the current tab and strips them from the  │
+│  URL after load.                                                                           │
+│  Open the dashboard anytime: openclaw dashboard --no-open                                  │
+│  If prompted: paste the token into Control UI settings (or use the tokenized dashboard     │
+│  URL).                                                                                     │
+│                                                                                            │
+├────────────────────────────────────────────────────────────────────────────────────────────╯
+│
+◆  How do you want to hatch your bot?
+│  ● Hatch in TUI (recommended)
+│  ○ Open the Web UI
+│  ○ Do this later
+
+│
+◇  How do you want to hatch your bot?
+│  Hatch in TUI (recommended)
+ openclaw tui - ws://127.0.0.1:18789 - agent main - session main                                                                                                     
+
+ session agent:main:main                                                                                                                                             
+
+                                                                                                                                                                     
+ Wake up, my friend!                    
+
+
+
+ ◇  Configuration Summary
+╭────────────────────────────────────────────────────────────╮
+│                                                            │
+│  Database:  Oracle · 47.251.30.180:1521/ORCLPDB1 · SYSTEM  │
+│              ✓ Connected (19.3.0.0.0)                      │
+│  Sentinel:  Auto-start · 1s interval                       │
+│  LLM:       Moonshot (Kimi) · kimi-k2.5                    │
+│  Rule:      Enabled                                        │
+│  Security:  Confirm on dangerous                           │
+│                                                            │
+│  Config:     /tmp/opendb-test-config/config.yaml           │
+│  Connection: /tmp/opendb-test-                             │
+│  config/connections/ora001.yaml                            │
+│                                                            │
+╰────────────────────────────────────────────────────────────╯
+
+◇  Getting Started
+╭────────────────────────────────────────────────────────────╮
+│                                                            │
+│  opendb              — 启动交互式 REPL                     │
+│  opendb -c ora001  — 连接到指定数据库                      │
+│  opendb configure    — 添加更多连接或修改配置              │
+│  /health             — 数据库健康检查                      │
+│  /dbtop              — 实时监控面板                        │
+│  /diag               — LLM 智能诊断                        │
+│                                                            │
+│  Docs:   https://opendb.ai/docs                            │
+│  GitHub: https://github.com/sqlrush/opendb                 │
+│                                                            │
+╰────────────────────────────────────────────────────────────╯
+
+  └  欢迎来到 OpenDB 的世界，祝使用愉快！
+
+                                                                                                                             
+                                                                                                                                                                     
+

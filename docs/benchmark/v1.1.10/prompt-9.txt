@@ -1,0 +1,100 @@
+── AI 诊断 (auto, 3轮) ──
+## 一、告警主线
+**大量会话长时间占用 CPU**：activesessions 显示 45 个活跃会话中绝大多数处于 `WaitType=CPU / WaitEvent=On CPU` 状态，且单个会话已运行 24-25 分钟，SQL 形态高度一致：
+```
+BEGIN; SELECT 1; SELECT pg_sleep(15…) …
+```
+另有 1 个会话 `WLM fetch collect info from data no…` 已运行 51 分钟同样占 CPU。
+来源：activesessions
+
+health 也印证了这一点：Active=50（标记 ⚠），Connections=57/200（28.5%），但 active 占比 50/57 ≈ 87.7%，TPS=77.9，Cache Hit Ratio=99.28%（缓存正常）。来源：health
+
+## 二、关联问题
+- 实例 Uptime 仅 50m（health ⚠），结合 24-25m 的批量长会话，说明这批会话是在实例启动后不久集中启动的，不是历史累积
+- Idle in TX = 0（health），排除"事务挂起未提交"导致的会话堆积
+- 缓存命中率 99.28%、Idle=7（health），说明 IO/连接池本身没有压力，**CPU 上升完全由活跃会话内的 SQL 行为驱动**
+- 这批会话的 SQL 模板是 `BEGIN; SELECT 1; SELECT pg_sleep(N) …`，pg_sleep 本身不消耗 CPU，但前后挂着 `SELECT 1` 等语句循环执行，且会话不释放，**长期占据连接槽位 + 调度开销 + WLM 统计开销**，叠加放大 CPU 使用率
+
+## 三、当前对比
+本实例 PROFILE.md 中无历史基线（Uptime 仅 50m，刚启动）。从 health 看 Active 阈值已被标 ⚠，相对于 Idle=7 的对比，活跃比例异常偏高（87.7%），可作为本次基线参考点：**正常 OLTP 应保持 active < total connections 的 30-50%**。
+
+## 四、综合评估与排名
+
+| 严重度 | 问题 | 影响 | 修复 SQL |
+|--------|------|------|----------|
+| [HIGH] | 45+ 个会话循环执行 `BEGIN; SELECT 1; SELECT pg_sleep(...)`，长期占 CPU 与连接槽 | CPU 持续冲高，TPS 虚高（commit 主要来自这批 BEGIN），其他业务争抢 CPU 变慢 | 见下方"紧急措施" |
+| [MEDIUM] | 单会话 `WLM fetch collect info from data no…` 运行 51m | WLM 统计长查询本身占用 CPU 与 catalog 锁 | `SELECT pg_cancel_backend(139697967855360);` 必要时 `pg_terminate_backend` |
+| [LOW] | Active=50/57，连接利用率单边偏高 | 留给业务的连接槽不足 | 应用侧引入连接池（如 PgBouncer transaction pool）或限制并发 |
+
+## 紧急措施
+
+**1. 先取消这批长会话，观察 CPU 是否回落（推荐先 cancel，必要时 terminate）：**
+
+```sql
+-- 一次性 cancel 所有跑 pg_sleep 类压测/测试 SQL 的会话
+SELECT pg_cancel_backend(pid)
+FROM pg_stat_activity
+WHERE state = 'active'
+  AND query ILIKE '%pg_sleep%'
+  AND pid <> pg_backend_pid();
+
+-- 30 秒后仍未结束，再 terminate
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE state = 'active'
+  AND query ILIKE '%pg_sleep%'
+  AND pid <> pg_backend_pid();
+```
+- ⚠️ **风险评估**：会回滚这些会话内的事务，但当前 SQL 形态是 `BEGIN; SELECT 1; SELECT pg_sleep(...)`，无写操作，回滚无业务损失
+- 📋 **前置检查**：执行前确认 `query ILIKE '%pg_sleep%'` 命中范围与 activesessions 显示一致；不要把业务正常 SQL 误杀
+- 🔄 **回滚方案**：被 cancel 的会话由客户端自行重连；无 DDL/DML 副作用，无需回滚
+
+**2. 单独处理 WLM 长会话：**
+
+```sql
+SELECT pg_cancel_backend(139697967855360);
+```
+- ⚠️ **风险评估**：仅取消 WLM 信息收集查询，不影响业务事务
+- 📋 **前置检查**：通过 `SELECT pid, query, state FROM pg_stat_activity WHERE pid = 139697967855360;` 再次确认 query 仍是 WLM fetch
+- 🔄 **回滚方案**：被取消后 WLM 会自动重新发起统计，无需手工回滚
+
+## 根因修复
+
+### 方案 1: 排查 pg_sleep 来源，禁止压测/调试脚本进入生产
+- **操作**：找出客户端 IP 和 application_name，从源头停止
+```sql
+SELECT application_name, client_addr, usename, count(*) AS sessions
+FROM pg_stat_activity
+WHERE query ILIKE '%pg_sleep%'
+GROUP BY 1,2,3
+ORDER BY sessions DESC;
+```
+- ⚠️ **风险评估**：纯查询，无风险
+- 📋 **前置检查**：根据返回的 client_addr 联系对应应用方/测试同学
+- 🔄 **回滚方案**：N/A
+
+### 方案 2: 设置 statement_timeout 防止此类长 SQL 再次拖死 CPU
+- **操作**：
+```sql
+-- 全局 5 分钟兜底（按业务最长查询调整）
+ALTER SYSTEM SET statement_timeout = '5min';
+SELECT pg_reload_conf();
+```
+- ⚠️ **风险评估**：会中断所有运行超过 5min 的 SQL；如果有正常的报表/批处理超过此值会被误杀
+- 📋 **前置检查**：先用 `SELECT max(extract(epoch FROM (now()-query_start))) FROM pg_stat_activity WHERE state='active';` 评估业务正常长查询时长；建议先在用户级别设置：`ALTER ROLE app_user SET statement_timeout='5min';`
+- 🔄 **回滚方案**：`ALTER SYSTEM RESET statement_timeout; SELECT pg_reload_conf();`
+
+### 方案 3: idle_in_transaction_session_timeout 兜底
+- **操作**：
+```sql
+ALTER SYSTEM SET idle_in_transaction_session_timeout = '10min';
+SELECT pg_reload_conf();
+```
+- ⚠️ **风险评估**：会断开 idle in tx > 10min 的会话；当前 health 显示 Idle in TX=0，安全
+- 📋 **前置检查**：确认应用框架不会长时间持有空闲事务
+- 🔄 **回滚方案**：`ALTER SYSTEM RESET idle_in_transaction_session_timeout; SELECT pg_reload_conf();`
+
+---
+
+**结论一句话**：CPU 上升与系统变慢的根因是 **45+ 个会话在循环执行 `BEGIN; SELECT 1; SELECT pg_sleep(...)` 类 SQL，全部 On CPU 已运行 24-25 分钟**（证据：activesessions），属于压测/调试脚本进入实例。先 cancel 止血，再加 statement_timeout 防复发。
+

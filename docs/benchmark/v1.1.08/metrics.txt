@@ -1,0 +1,10 @@
+1 elapsed=166s
+2 elapsed=180s
+3 elapsed=38s
+4 elapsed=98s
+5 elapsed=121s
+6 elapsed=68s
+7 elapsed=34s
+8 elapsed=158s
+9 elapsed=157s
+10 elapsed=117s

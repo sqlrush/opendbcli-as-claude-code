@@ -1,0 +1,186 @@
+── AI 诊断 (auto, 3轮) ──
+基于工具采集的数据，生成完整健康报告：
+
+---
+
+# OpenGauss 实例健康报告
+
+**生成时间**: 2026-04-24 09:24:38  
+**实例版本**: openGauss 5.0.0  
+**运行时长**: 19 分钟  
+**整体状态**: ⚠️ WARNING
+
+---
+
+## 1. 内存健康
+
+| 指标 | 数值 | 状态 |
+|------|------|------|
+| shared_buffers | 1 GB | ✓ 正常 |
+| Cache Hit Ratio | 99.33% | ✓ 优秀 |
+| max_process_memory | 12,288 MB | ✓ 正常 |
+| process_used_memory | 556 MB | ✓ 正常 |
+| dynamic_used_memory | 513 MB | ✓ 正常 |
+| dynamic_peak_memory | 517 MB | ✓ 正常 |
+| shared_used_memory | 194 MB | ✓ 正常 |
+| work_mem | 64 MB | ✓ 正常 |
+| effective_cache_size | 128 MB | ⚠️ 偏低 |
+
+**评估**: 内存使用健康，Buffer Cache 命中率 99.33% 优秀。`effective_cache_size=128MB` 偏低，建议调整为系统可用内存的 50-75%（约 32GB）。
+
+---
+
+## 2. WAL 健康
+
+| 指标 | 数值 | 状态 |
+|------|------|------|
+| archive_mode | off | ⚠️ 未启用归档 |
+| archive_command | (disabled) | ⚠️ 未配置 |
+| wal_level | hot_standby | ✓ 正常 |
+| synchronous_commit | on | ✓ 正常 |
+| checkpoint_timeout | 900 s (15分钟) | ✓ 正常 |
+| checkpoint_completion_target | 0.5 | ✓ 正常 |
+| wal_buffers | 16 MB | ✓ 正常 |
+| full_page_writes | on | ✓ 正常 |
+| fsync | on | ✓ 正常 |
+| Timed Checkpoints | 895 | - |
+| Requested Checkpoints | 4 | - |
+| Checkpoint Sync Time | 178,311 ms | ⚠️ 偏高 |
+
+**评估**: 
+- **归档未启用** — 无法做 PITR 恢复，存在数据丢失风险
+- **Checkpoint Sync Time 178 秒** — 刷盘耗时较长，建议检查底层存储性能
+- 建议生产环境启用 WAL 归档
+
+---
+
+## 3. 复制健康
+
+| 指标 | 数值 | 状态 |
+|------|------|------|
+| 角色 | standalone | ℹ️ 单机 |
+| 副本数 | 0 | ℹ️ 无副本 |
+| 复制槽 | 0 | ✓ 无残留槽 |
+
+**评估**: 单机部署，无高可用保护。生产环境建议配置主从复制。
+
+---
+
+## 4. VACUUM 健康
+
+| 指标 | 数值 | 状态 |
+|------|------|------|
+| 有 dead tuples 的表 | 2 个 | ⚠️ 需关注 |
+| 膨胀表 (dead > 5%) | 2 个 | ⚠️ 需关注 |
+| Autovacuum Workers | 3 | ✓ 正常 |
+
+**评估**: 存在 2 个膨胀表，建议检查 autovacuum 是否正常运行，必要时手动 VACUUM。
+
+---
+
+## 5. 索引健康
+
+| 指标 | 数值 | 状态 |
+|------|------|------|
+| 重复索引 | 1 个表 | ⚠️ 冗余 |
+| 未使用索引 | 3 个 | ⚠️ 浪费空间 |
+| 大索引 (>10MB) | 3 个 | ℹ️ 关注膨胀 |
+
+**重复索引详情**:
+- `dbe_pldeveloper.gs_source` 表存在重复索引（相同列组合）
+
+**评估**: 
+- 重复索引浪费写入资源，建议删除冗余索引
+- 未使用索引占用空间且无查询收益，建议评估后清理
+
+---
+
+## 6. 会话健康
+
+| 指标 | 数值 | 状态 |
+|------|------|------|
+| 当前连接 | 12 / 200 (6%) | ✓ 正常 |
+| 活跃会话 | 5 | ✓ 正常 |
+| 空闲会话 | 7 | ✓ 正常 |
+| Idle in Transaction | 0 | ✓ 正常 |
+
+**评估**: 连接数正常，无长事务阻塞风险。
+
+---
+
+## 7. 系统资源
+
+| 指标 | 数值 | 状态 |
+|------|------|------|
+| CPU 核数 | 16 核 | ✓ |
+| CPU Sockets | 1 | ✓ |
+| 物理内存 | 62 GB | ✓ |
+| 系统负载 | 0 | ✓ 空闲 |
+| IO Wait Time | 1646 | ℹ️ 有 IO 等待 |
+
+---
+
+## 8. 数据库空间
+
+| 数据库 | 大小 |
+|--------|------|
+| postgres | 849 MB |
+
+---
+
+## 健康评分汇总
+
+| 维度 | 评分 | 主要问题 |
+|------|------|---------|
+| 内存 | 95/100 | effective_cache_size 偏低 |
+| WAL | 70/100 | 归档未启用、checkpoint sync 耗时高 |
+| 复制 | N/A | 单机无副本 |
+| VACUUM | 80/100 | 2 个膨胀表 |
+| 索引 | 75/100 | 重复索引、未使用索引 |
+| 会话 | 100/100 | 正常 |
+
+---
+
+## 建议修复项
+
+### 优先级高
+
+1. **启用 WAL 归档**
+   ```sql
+   -- 配置归档参数（需修改 postgresql.conf 并重启）
+   archive_mode = on
+   archive_command = 'cp %p /archive/%f'
+   ```
+
+2. **清理重复索引**
+   ```sql
+   -- 查看具体重复索引后删除冗余项
+   SELECT indexrelid::regclass, indexdef 
+   FROM pg_index 
+   WHERE indrelid = 'dbe_pldeveloper.gs_source'::regclass;
+   ```
+
+3. **增大 effective_cache_size**
+   ```sql
+   ALTER SYSTEM SET effective_cache_size = '32GB';
+   SELECT pg_reload_conf();
+   ```
+
+### 优先级中
+
+4. **处理膨胀表**
+   ```sql
+   -- 查看膨胀表详情后执行 VACUUM
+   VACUUM ANALYZE <schema.table>;
+   ```
+
+5. **清理未使用索引**
+   ```sql
+   -- 确认无业务依赖后删除
+   DROP INDEX <index_name>;
+   ```
+
+---
+
+**报告结束**
+

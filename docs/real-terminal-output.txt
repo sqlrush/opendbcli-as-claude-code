@@ -1,0 +1,881 @@
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /sessions
+════════════════════════════════════════════════════════════════
+  ┌──────┬─────────┬──────────┬────────┬────────┬──────────┬───────────┬───────────┬───────────┬───────────┬───────────┐
+  │ SID  │ SERIAL# │ USERNAME │ STATUS │ OSUSER │ MACHINE  │ PROGRAM   │ SQL_ID    │ EVENT     │ WAIT_C... │ SECOND... │
+  ├──────┼─────────┼──────────┼────────┼────────┼──────────┼───────────┼───────────┼───────────┼───────────┼───────────┤
+  │ 431  │ 28562   │ OPEND... │ ACTIVE │ oracle │ oracl... │ opendb    │ 11b9k2... │ SQL*Ne... │ Network   │ 0         │
+  │ 1705 │ 12343   │ SYS      │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ OFS idle  │ Idle      │ 3         │
+  │ 1    │ 15066   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ wait f... │ Idle      │ 0         │
+  │ 2    │ 1677    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 3    │ 51531   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ heartb... │ Idle      │ 0         │
+  │ 4    │ 21113   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 4         │
+  │ 8    │ 5244    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 5         │
+  │ 143  │ 1826    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ pman t... │ Idle      │ 0         │
+  │ 144  │ 64621   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ LGWR w... │ Idle      │ 2639      │
+  │ 145  │ 49833   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ AQPC idle │ Idle      │ 7         │
+  │ 147  │ 37298   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Stream... │ Idle      │ 7         │
+  │ 151  │ 21665   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 4         │
+  │ 285  │ 60631   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ pmon t... │ Idle      │ 1         │
+  │ 286  │ 20161   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ DIAG i... │ Idle      │ 1         │
+  │ 287  │ 63797   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 1700      │
+  │ 288  │ 27553   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 0         │
+  │ 290  │ 10846   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 2         │
+  │ 294  │ 31896   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 5         │
+  │ 427  │ 18947   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ pmon t... │ Idle      │ 1         │
+  │ 428  │ 13098   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 429  │ 62606   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 2         │
+  │ 435  │ 62963   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 4         │
+  │ 569  │ 28280   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 1         │
+  │ 570  │ 18451   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 571  │ 53406   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ lreg t... │ Idle      │ 1         │
+  │ 573  │ 57452   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 3         │
+  │ 575  │ 38403   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ class ... │ Idle      │ 49        │
+  │ 577  │ 40943   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Stream... │ Idle      │ 19748     │
+  │ 580  │ 5075    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 4         │
+  │ 711  │ 31661   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ VKTM L... │ Idle      │ 19763     │
+  │ 712  │ 388     │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 713  │ 58669   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ LGWR w... │ Idle      │ 2639      │
+  │ 714  │ 20540   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ class ... │ Idle      │ 49        │
+  │ 718  │ 25816   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 4         │
+  │ 720  │ 48294   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 3         │
+  │ 853  │ 1622    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 854  │ 32564   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 855  │ 30663   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 857  │ 9521    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 2         │
+  │ 861  │ 50984   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 3         │
+  │ 863  │ 9473    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 2         │
+  │ 995  │ 64789   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 996  │ 39608   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 997  │ 15117   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 1         │
+  │ 1000 │ 29599   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ class ... │ Idle      │ 109       │
+  │ 1003 │ 7002    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 1         │
+  │ 1005 │ 20886   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 5         │
+  │ 1137 │ 49194   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ class ... │ Idle      │ 49        │
+  │ 1138 │ 5713    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 1140 │ 27221   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 5         │
+  │ 1144 │ 18027   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 1         │
+  │ 1146 │ 16809   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 2         │
+  │ 1279 │ 18045   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 0         │
+  │ 1280 │ 569     │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 1281 │ 27152   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 1         │
+  │ 1286 │ 22701   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 5         │
+  │ 1421 │ 38351   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ watchd... │ Idle      │ 0         │
+  │ 1422 │ 12652   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 2         │
+  │ 1423 │ 20117   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 1         │
+  │ 1428 │ 1454    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 1         │
+  │ 1563 │ 34985   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 5         │
+  │ 1564 │ 22062   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ DIAG i... │ Idle      │ 0         │
+  │ 1565 │ 1621    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 0         │
+  │ 1569 │ 50548   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 1         │
+  │ 1706 │ 25831   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 1         │
+  │ 1707 │ 45958   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 19        │
+  │ 1711 │ 13146   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 3         │
+  │ 1713 │ 56242   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 4         │
+  │ 1847 │ 46724   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ watchd... │ Idle      │ 0         │
+  │ 1848 │ 39033   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ LGWR w... │ Idle      │ 2639      │
+  │ 1849 │ 27693   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Data G... │ Idle      │ 17        │
+  │ 1850 │ 11926   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 4         │
+  │ 1851 │ 27246   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Stream... │ Idle      │ 7         │
+  │ 1854 │ 13075   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 5         │
+  │ 1989 │ 58824   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ rdbms ... │ Idle      │ 1         │
+  │ 1990 │ 52148   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ smon t... │ Idle      │ 242       │
+  │ 1991 │ 25400   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ class ... │ Idle      │ 49        │
+  │ 1996 │ 40428   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 2         │
+  │ 1998 │ 34497   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 3         │
+  │ 2131 │ 44453   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ VKRM Idle │ Idle      │ 19763     │
+  │ 2132 │ 7700    │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ LGWR w... │ Idle      │ 2639      │
+  │ 2133 │ 44540   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Data G... │ Idle      │ 559       │
+  │ 2136 │ 42189   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 3         │
+  │ 2138 │ 60571   │ NULL     │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ Space ... │ Idle      │ 1         │
+  └──────┴─────────┴──────────┴────────┴────────┴──────────┴───────────┴───────────┴───────────┴───────────┴───────────┘
+84 sessions found
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /activesessions
+════════════════════════════════════════════════════════════════
+  ┌──────┬─────────┬──────────┬────────┬────────┬──────────┬───────────┬───────────┬───────────┬───────────┬───────────┐
+  │ SID  │ SERIAL# │ USERNAME │ STATUS │ OSUSER │ MACHINE  │ PROGRAM   │ SQL_ID    │ EVENT     │ WAIT_C... │ SECOND... │
+  ├──────┼─────────┼──────────┼────────┼────────┼──────────┼───────────┼───────────┼───────────┼───────────┼───────────┤
+  │ 1705 │ 12343   │ SYS      │ ACTIVE │ oracle │ oracl... │ oracle... │ NULL      │ OFS idle  │ Idle      │ 3         │
+  │ 431  │ 57341   │ OPEND... │ ACTIVE │ oracle │ oracl... │ opendb    │ 8v7u50... │ SQL*Ne... │ Network   │ 0         │
+  └──────┴─────────┴──────────┴────────┴────────┴──────────┴───────────┴───────────┴───────────┴───────────┴───────────┘
+2 active sessions found
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /waits
+════════════════════════════════════════════════════════════════
+  ┌────────────────────────────────┬───────────────┬─────────────┬─────────────────┬─────────────┐
+  │ EVENT                          │ WAIT_CLASS    │ TOTAL_WAITS │ TIME_WAITED_SEC │ AVG_WAIT_MS │
+  ├────────────────────────────────┼───────────────┼─────────────┼─────────────────┼─────────────┤
+  │ control file sequential read   │ System I/O    │ 53427       │ 31.35           │ 0           │
+  │ Data file init write           │ User I/O      │ 258         │ 5.93            │ 0.02        │
+  │ control file parallel write    │ System I/O    │ 7949        │ 5.22            │ 0           │
+  │ latch free                     │ Other         │ 23700       │ 4.49            │ 0           │
+  │ control file heartbeat         │ Other         │ 1           │ 4               │ 4           │
+  │ db file sequential read        │ User I/O      │ 6928        │ 3.97            │ 0           │
+  │ oracle thread bootstrap        │ Other         │ 233         │ 3.35            │ 0.01        │
+  │ log file parallel write        │ System I/O    │ 2294        │ 2.74            │ 0           │
+  │ db file parallel write         │ System I/O    │ 3553        │ 1.9             │ 0           │
+  │ log file sync                  │ Commit        │ 981         │ 1.36            │ 0           │
+  │ external table read            │ User I/O      │ 1           │ 1.35            │ 1.35        │
+  │ Disk file operations I/O       │ User I/O      │ 1539        │ 0.51            │ 0           │
+  │ db file scattered read         │ User I/O      │ 600         │ 0.41            │ 0           │
+  │ library cache load lock        │ Concurrency   │ 35          │ 0.18            │ 0.01        │
+  │ os thread creation             │ Other         │ 235         │ 0.17            │ 0           │
+  │ CSS initialization             │ Other         │ 174         │ 0.17            │ 0           │
+  │ PGA memory operation           │ Other         │ 28104       │ 0.14            │ 0           │
+  │ enq: PR - contention           │ Other         │ 16          │ 0.13            │ 0.01        │
+  │ rdbms ipc reply                │ Other         │ 28          │ 0.13            │ 0           │
+  │ db file single write           │ User I/O      │ 260         │ 0.13            │ 0           │
+  │ library cache: mutex X         │ Concurrency   │ 45          │ 0.1             │ 0           │
+  │ undo segment extension         │ Configuration │ 8           │ 0.09            │ 0.01        │
+  │ LGWR any worker group          │ Other         │ 125         │ 0.08            │ 0           │
+  │ ADR block file read            │ Other         │ 134         │ 0.08            │ 0           │
+  │ row cache mutex                │ Concurrency   │ 61          │ 0.06            │ 0           │
+  │ DLM cross inst call completion │ Other         │ 11          │ 0.05            │ 0           │
+  │ enq: PV - syncstart            │ Other         │ 4           │ 0.05            │ 0.01        │
+  │ Parameter File I/O             │ User I/O      │ 96          │ 0.05            │ 0           │
+  │ cursor: pin S wait on X        │ Concurrency   │ 16          │ 0.05            │ 0           │
+  │ kksfbc child completion        │ Other         │ 1           │ 0.05            │ 0.05        │
+  └────────────────────────────────┴───────────────┴─────────────┴─────────────────┴─────────────┘
+30 wait events found
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /locks
+════════════════════════════════════════════════════════════════
+No rows0 locks found
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /latches
+════════════════════════════════════════════════════════════════
+  ┌─────────────────────────────────┬─────────┬────────┬────────┬───────────┬────────────┐
+  │ NAME                            │ GETS    │ MISSES │ SLEEPS │ SPIN_GETS │ MISS_RATIO │
+  ├─────────────────────────────────┼─────────┼────────┼────────┼───────────┼────────────┤
+  │ space background task latch     │ 48576   │ 30784  │ 25727  │ 7736      │ 63.37      │
+  │ active checkpoint queue latch   │ 59448   │ 934    │ 374    │ 561       │ 1.57       │
+  │ process allocation              │ 2511    │ 181    │ 175    │ 8         │ 7.21       │
+  │ qmn task queue latch            │ 4259    │ 661    │ 53     │ 613       │ 15.52      │
+  │ messages                        │ 424645  │ 1248   │ 23     │ 1225      │ 0.29       │
+  │ post/wait queue                 │ 169018  │ 11029  │ 22     │ 11007     │ 6.53       │
+  │ ksv class latch                 │ 12675   │ 502    │ 12     │ 490       │ 3.96       │
+  │ cache buffers chains            │ 777736  │ 70     │ 9      │ 63        │ 0.01       │
+  │ shared pool                     │ 317742  │ 931    │ 6      │ 925       │ 0.29       │
+  │ AQ Slave freSlvL_kwsbgsgn latch │ 450     │ 36     │ 5      │ 31        │ 8          │
+  │ call allocation                 │ 10222   │ 25     │ 4      │ 21        │ 0.24       │
+  │ ksuosstats global area          │ 2967    │ 2      │ 3      │ 0         │ 0.07       │
+  │ cache buffer handles            │ 816     │ 7      │ 2      │ 6         │ 0.86       │
+  │ transaction allocation          │ 4147    │ 3      │ 1      │ 2         │ 0.07       │
+  │ session switching               │ 1925    │ 1      │ 0      │ 1         │ 0.05       │
+  │ process group creation          │ 2276    │ 1      │ 0      │ 1         │ 0.04       │
+  │ object stats modification       │ 2493    │ 2      │ 0      │ 2         │ 0.08       │
+  │ parameter table management      │ 4700    │ 1      │ 0      │ 1         │ 0.02       │
+  │ enqueues                        │ 2966    │ 1      │ 0      │ 1         │ 0.03       │
+  │ enqueue hash chains             │ 2944109 │ 104    │ 0      │ 104       │ 0          │
+  │ channel operations parent latch │ 8641    │ 15     │ 0      │ 15        │ 0.17       │
+  │ ksv msg queue latch             │ 2171    │ 5      │ 0      │ 5         │ 0.23       │
+  │ active service list             │ 530364  │ 8      │ 0      │ 8         │ 0          │
+  │ object queue header operation   │ 40301   │ 5      │ 0      │ 5         │ 0.01       │
+  │ redo writing                    │ 79711   │ 193    │ 0      │ 193       │ 0.24       │
+  │ redo allocation                 │ 135064  │ 31     │ 0      │ 31        │ 0.02       │
+  │ dummy allocation                │ 2816    │ 2      │ 0      │ 2         │ 0.07       │
+  │ undo global data                │ 31596   │ 2      │ 0      │ 2         │ 0.01       │
+  │ hash table column usage latch   │ 1213    │ 3      │ 0      │ 3         │ 0.25       │
+  │ session state list latch        │ 2574    │ 2      │ 0      │ 2         │ 0.08       │
+  └─────────────────────────────────┴─────────┴────────┴────────┴───────────┴────────────┘
+30 latches with contention
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /mutexes
+════════════════════════════════════════════════════════════════
+  ┌───────────────┬─────────────────────────────────┬────────┬───────────┐
+  │ MUTEX_TYPE    │ LOCATION                        │ SLEEPS │ WAIT_TIME │
+  ├───────────────┼─────────────────────────────────┼────────┼───────────┤
+  │ Cursor Pin    │ kkslce [KKSCHLPIN2]             │ 47     │ 50018     │
+  │ Row Cache     │ [10] kqreqd                     │ 36     │ 10167     │
+  │ Row Cache     │ [19] kqrpre                     │ 32     │ 49232     │
+  │ Library Cache │ kglhdgn2 106                    │ 22     │ 58373     │
+  │ Library Cache │ kgllkc1   57                    │ 10     │ 9558      │
+  │ Library Cache │ kglpin1   4                     │ 8      │ 849       │
+  │ Row Cache     │ [17] kqrCreateUsingSecondaryKey │ 7      │ 14        │
+  │ Library Cache │ kglhdgh3     161                │ 6      │ 36        │
+  │ Library Cache │ kglllal3 111                    │ 5      │ 15        │
+  │ Library Cache │ kgllkdl1  85                    │ 4      │ 25        │
+  │ Library Cache │ kglpnal1  90                    │ 3      │ 14        │
+  │ Library Cache │ kglhdgh1  64                    │ 3      │ 133       │
+  │ Library Cache │ kglllal1 109                    │ 2      │ 6         │
+  │ Cursor Pin    │ kksfbc [KKSCHLFSP2]             │ 2      │ 2129      │
+  │ Library Cache │ kglget2   2                     │ 2      │ 0         │
+  │ Library Cache │ kglpndl1  95                    │ 2      │ 3         │
+  │ Library Cache │ kgllldl2 112                    │ 1      │ 7         │
+  │ Library Cache │ kglhdgn1  62                    │ 1      │ 0         │
+  └───────────────┴─────────────────────────────────┴────────┴───────────┘
+18 mutexes with contention
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /health
+════════════════════════════════════════════════════════════════
+Health Report — orcl (Oracle 19.3.0.0.0)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OK   Instance       UP (running -150 minutes)
+OK   Space          All tablespaces within limits
+OK   Connections    84 / 1500 (6%)
+WARN Slow SQL       4 queries above 5s
+OK   Wait Events    No anomalies
+WARN Backup         No backup records found
+FAIL Alert Log      1120 errors in last 24h
+OK   Standby        Role: PRIMARY, Switchover: NOT ALLOWED
+
+5 OK, 2 WARN, 1 FAIL
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /tempsess
+════════════════════════════════════════════════════════════════
+临时空间占用会话 (共 4 个, 合计 4 MB):
+
+ SID    USER          TEMP_MB  SQL_ID         EVENT                          STATUS
+ ────────────────────────────────────────────────────────────────────────────────
+    575                     1                 class slave wait               ACTIVE
+   1991                     1                 class slave wait               ACTIVE
+   1000                     1                 class slave wait               ACTIVE
+    714                     1                 class slave wait               ACTIVE
+
+提示: /kill 575 终止占用最大的会话
+4 sessions, 4 MB temp
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /undosess
+════════════════════════════════════════════════════════════════
+当前无活跃Undo事务.
+no undo usage
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /pga
+════════════════════════════════════════════════════════════════
+PGA 内存概览:
+
+ 指标                                 值
+ ─────────────────────────────────────────────
+ aggregate PGA auto target           14667.7 MB
+ aggregate PGA target parameter      16576.0 MB
+ maximum PGA allocated                 352.2 MB
+ over allocation count                   0.0 MB
+ total PGA allocated                   351.7 MB
+ total PGA used for auto workareas       0.0 MB
+ total freeable PGA memory              30.4 MB
+
+Top PGA 会话:
+
+ SID      USER               PGA_MB   SQL_ID          PROGRAM
+ ──────────────────────────────────────────────────────────────────────
+ 1705     SYS                   3.0                   oracle@oracledb01 (OFSD)
+ 431      OPENDB_TEST           2.9   frumv2gy7n85k   opendb
+
+提示: /alter pga_aggregate_target 2G 扩大PGA
+
+7 PGA stats, top 2 sessions
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /sga
+════════════════════════════════════════════════════════════════
+SGA 内存概览:
+
+ 组件                            大小          最小          最大
+ ────────────────────────────────────────────────────────
+ DEFAULT buffer cache    13120 MB    13120 MB    13120 MB
+ shared pool              2048 MB     2048 MB     2048 MB
+ large pool                512 MB      512 MB      512 MB
+ java pool                 256 MB      256 MB      256 MB
+ Shared IO Pool            128 MB      128 MB      128 MB
+ ────────────────────────────────────────────────────────
+ SGA Total               36864 MB
+
+5 SGA components, total 36864 MB
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /redo
+════════════════════════════════════════════════════════════════
+Redo 日志状态:
+
+ GROUP    SIZE_MB  MEMBERS  STATUS     SEQUENCE
+ ──────────────────────────────────────────────────
+     1      500        3   INACTIVE   266
+     2      500        3   INACTIVE   269
+     3      500        3   CURRENT    270
+     4      500        2   INACTIVE   267
+     5      500        2   INACTIVE   268
+
+最近24小时日志切换 (按小时):
+
+ 小时     切换次数
+ ────────────────
+
+归档目标:
+
+ DEST                   STATUS   TARGET       ARCHIVER
+ ──────────────────────────────────────────────────
+ LOG_ARCHIVE_DEST_1     VALID    PRIMARY      FOREGROUND
+
+5 redo groups, 0 switch hours, 1 archive dests
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /fra
+════════════════════════════════════════════════════════════════
+FRA 使用概览:
+
+ FRA 路径: /oracle/backup/orcl/rman
+ 总大小: 50 GB | 已用: 2 GB (4.9%) | 可回收: 0 GB
+
+ 类型                           占比        可回收      文件数
+ ────────────────────────────────────────────────────
+ REDO LOG                   4.9%       0.0%        5
+ BACKUP PIECE               0.0%       0.0%        1
+ CONTROL FILE               0.0%       0.0%        1
+
+提示: /alter db_recovery_file_dest_size 150G 扩大FRA
+
+FRA 4.9% used, 3 file types
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /asm
+════════════════════════════════════════════════════════════════
+此数据库未使用ASM存储.
+no ASM disk groups
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /sortusage
+════════════════════════════════════════════════════════════════
+排序段使用:
+
+ 表空间                   总块数          已用块          空闲块      使用率
+ ────────────────────────────────────────────────────────────
+ TEMP                46848          512        46336     1.1%
+
+排序段详情:
+
+ USER             类型           段数         MB
+ ─────────────────────────────────────────────
+                  DATA          4        4.0
+
+提示: /tempsess 查看对应会话
+
+1 sort segments, 1 consumers
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /resource
+════════════════════════════════════════════════════════════════
+资源限制使用:
+
+ 资源名                          当前       最大       上限      使用率
+ ────────────────────────────────────────────────────────────
+ enqueue_locks                31       41    27852     0.1%
+ max_rollback_segments        27       27    65535     0.0%
+ parallel_max_servers         32       32    32767     0.1%
+ processes                   119      137     1500     9.1%
+ sessions                    132      166     2272     7.3%
+
+⚠ 无资源超过 80% 预警线
+5 resources, 0 warnings
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /blocktree
+════════════════════════════════════════════════════════════════
+当前无阻塞链.
+no blocking
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /segments
+════════════════════════════════════════════════════════════════
+  ┌─────────────┬─────────────────────────────┬─────────────────┬─────────────────┬─────────┬─────────┐
+  │ OWNER       │ SEGMENT_NAME                │ SEGMENT_TYPE    │ TABLESPACE_NAME │ SIZE_MB │ EXTENTS │
+  ├─────────────┼─────────────────────────────┼─────────────────┼─────────────────┼─────────┼─────────┤
+  │ SYSTEM      │ BENCH_TEST_50COL            │ TABLE           │ USERS           │ 1600    │ 208     │
+  │ SYS         │ IDL_UB1$                    │ TABLE           │ SYSTEM          │ 392     │ 120     │
+  │ SYS         │ _SYSSMU2_27624015$          │ TYPE2 UNDO      │ UNDOTBS1        │ 159     │ 83      │
+  │ MDSYS       │ SYS_LOB0000064076C00006$$   │ LOBSEGMENT      │ SYSAUX          │ 72      │ 18      │
+  │ MDSYS       │ SYS_LOB0000072921C00006$$   │ LOBSEGMENT      │ SYSAUX          │ 72      │ 17      │
+  │ OPENDB_TEST │ STRESS_TEST                 │ TABLE           │ USERS           │ 50      │ 65      │
+  │ SYS         │ C_TOID_VERSION#             │ CLUSTER         │ SYSTEM          │ 48      │ 63      │
+  │ SYS         │ SYS_LOB0000007422C00004$$   │ LOBSEGMENT      │ SYSAUX          │ 40      │ 14      │
+  │ SYS         │ SOURCE$                     │ TABLE           │ SYSTEM          │ 38      │ 53      │
+  │ SYS         │ IDL_UB2$                    │ TABLE           │ SYSTEM          │ 30      │ 45      │
+  │ SYS         │ _SYSSMU115_1723861502$      │ TYPE2 UNDO      │ UNDOTBS1        │ 28      │ 10      │
+  │ SYS         │ SYS_LOB0000066421C00004$$   │ LOBSEGMENT      │ SYSAUX          │ 24      │ 12      │
+  │ SYS         │ WRH$_ACTIVE_SESSION_HISTORY │ TABLE PARTITION │ SYSAUX          │ 24      │ 39      │
+  │ SYSTEM      │ IDX_BENCH_CODE              │ INDEX           │ SYSTEM          │ 23      │ 38      │
+  │ SYS         │ JAVA$MC$                    │ TABLE           │ SYSTEM          │ 21      │ 36      │
+  │ SYS         │ _SYSSMU12_2090450156$       │ TYPE2 UNDO      │ UNDOTBS1        │ 17      │ 5       │
+  │ SYS         │ _SYSSMU13_4251489755$       │ TYPE2 UNDO      │ UNDOTBS1        │ 17      │ 5       │
+  │ SYS         │ SYS_LOB0000011147C00038$$   │ LOBSEGMENT      │ SYSAUX          │ 16      │ 11      │
+  │ MDSYS       │ SYS_LOB0000067342C00002$$   │ LOBSEGMENT      │ SYSAUX          │ 16      │ 11      │
+  │ SYS         │ SYS_LOB0000010461C00001$$   │ LOBSEGMENT      │ SYSAUX          │ 16      │ 10      │
+  └─────────────┴─────────────────────────────┴─────────────────┴─────────────────┴─────────┴─────────┘
+20 top segments by size
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /segments OPENDB_TEST
+════════════════════════════════════════════════════════════════
+  ┌────────────────────────────────┬──────────────┬─────────────────┬─────────┬─────────┐
+  │ SEGMENT_NAME                   │ SEGMENT_TYPE │ TABLESPACE_NAME │ SIZE_MB │ EXTENTS │
+  ├────────────────────────────────┼──────────────┼─────────────────┼─────────┼─────────┤
+  │ STRESS_TEST                    │ TABLE        │ USERS           │ 50      │ 65      │
+  │ TEST_ORDERS                    │ TABLE        │ USERS           │ 3       │ 18      │
+  │ SYS_C007753                    │ INDEX        │ USERS           │ 1       │ 14      │
+  │ SYS_C007744                    │ INDEX        │ USERS           │ 0       │ 1       │
+  │ SYS_C007754                    │ INDEX        │ USERS           │ 0       │ 1       │
+  │ BIN$TSR0X+adE/7gY5gFEKy3hg==$0 │ TABLE        │ USERS           │ 0       │ 1       │
+  │ BIN$TSR0X+acE/7gY5gFEKy3hg==$0 │ INDEX        │ USERS           │ 0       │ 1       │
+  │ OPENDB_LOCK_TEST               │ TABLE        │ USERS           │ 0       │ 1       │
+  │ HOT_ACCOUNT                    │ TABLE        │ USERS           │ 0       │ 1       │
+  └────────────────────────────────┴──────────────┴─────────────────┴─────────┴─────────┘
+9 segments for OPENDB_TEST
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /os
+════════════════════════════════════════════════════════════════
+OS 指标 (v$osstat):
+
+  CPU:
+    CPUs: 0  Cores: 0  Sockets: 0
+
+  Memory:
+    Physical: 0 MB  Used: 0 MB (0.0%)  Free: 0 MB
+
+cpu_busy=0.0% mem_used=0.0%
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /os proc
+════════════════════════════════════════════════════════════════
+  ┌─────┬──────────────────────────┬──────────────┬───────────────┬─────────────┐
+  │ PID │ PROGRAM                  │ PGA_USED_MEM │ PGA_ALLOC_MEM │ PGA_MAX_MEM │
+  ├─────┼──────────────────────────┼──────────────┼───────────────┼─────────────┤
+  │ 99  │ oracle@oracledb01        │ 2033021      │ 2739957       │ 2739957     │
+  │ 40  │ oracle@oracledb01 (D000) │ 1862445      │ 1945125       │ 1953525     │
+  │ 43  │ oracle@oracledb01 (S000) │ 1178925      │ 1289765       │ 1298165     │
+  │ 51  │ oracle@oracledb01 (P000) │ 1166085      │ 1224229       │ 1232629     │
+  │ 57  │ oracle@oracledb01 (P006) │ 1166085      │ 1224229       │ 1232629     │
+  │ 56  │ oracle@oracledb01 (P005) │ 1166085      │ 1224229       │ 1232629     │
+  │ 55  │ oracle@oracledb01 (P004) │ 1166085      │ 1224229       │ 1232629     │
+  │ 54  │ oracle@oracledb01 (P003) │ 1166085      │ 1224229       │ 1232629     │
+  │ 53  │ oracle@oracledb01 (P002) │ 1166085      │ 1224229       │ 1232629     │
+  │ 52  │ oracle@oracledb01 (P001) │ 1166085      │ 1224229       │ 1232629     │
+  └─────┴──────────────────────────┴──────────────┴───────────────┴─────────────┘
+top 10 processes by PGA usage
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /slowsql
+════════════════════════════════════════════════════════════════
+  ┌───────────────┬────────────┬────────────┬────────────────┬─────────────┬───────────────────────────────────────────┐
+  │ SQL_ID        │ ELAPSED_MS │ EXECUTIONS │ ROWS_PROCESSED │ BUFFER_GETS │ SQL_TEXT                                  │
+  ├───────────────┼────────────┼────────────┼────────────────┼─────────────┼───────────────────────────────────────────┤
+  │ 5368rwh8sxz77 │ 119222.12  │ 5264       │ 10528          │ 138         │ SELECT name, value FROM v$sysstat WHER... │
+  │ 1mhd5z901v56z │ 11841.42   │ 522        │ 3132           │ 2           │ SELECT name, value FROM v$sysstat WHER... │
+  │ 07hpyzy66cj9u │ 10222.77   │ 466        │ 1864           │ 2           │ SELECT name, value FROM v$sysstat WHER... │
+  │ 23k121qmp73m3 │ 7961.86    │ 466        │ 4660           │ 188         │ SELECT event, total_waits, time_waited... │
+  │ gbq2xz3601wa7 │ 3997.09    │ 172        │ 172            │ 165         │ SELECT   (SELECT 1 - (SUM(CASE WHEN na... │
+  │ 7xgz1qnnc9uzs │ 2475.02    │ 466        │ 466            │ 2           │ SELECT ROUND(SUM(bytes)/1024/1024, 0) ... │
+  │ 8r3u69x39w8bv │ 2288.93    │ 466        │ 466            │ 2           │ SELECT database_role FROM v$database      │
+  │ b9p45hkcx0pwh │ 1915.54    │ 1          │ 1              │ 8545        │ select dbms_qopatch.get_opatch_lsinven... │
+  │ d9fj742wj1gm0 │ 1754.92    │ 172        │ 172            │ 190         │ SELECT space_used*100.0/NULLIF(space_l... │
+  │ 20x4skzx6dbjm │ 1569.98    │ 1          │ 1              │ 4369        │ INSERT INTO OPATCH_XINV_TAB(XML_INVENT... │
+  │ 23bzz0j0an5cu │ 1267.58    │ 5264       │ 5264           │ 105         │ SELECT   COUNT(*) AS active,   SUM(CAS... │
+  │ avsv8ar78f5ah │ 1256.41    │ 172        │ 172            │ 506         │ SELECT   (SELECT value FROM v$paramete... │
+  │ bxvm9bfvbxstj │ 1146.48    │ 172        │ 172            │ 346         │ SELECT   NVL((SELECT SUM(bytes_used)*1... │
+  │ 7kq0kr94ygcgg │ 1076.67    │ 466        │ 466            │ 2           │ SELECT ROUND(value/1024/1024, 0) FROM ... │
+  │ 22356bkgsdcnh │ 1032.04    │ 49         │ 49             │ 17          │ SELECT COUNT(*) FROM X$KSPPI A, X$KSPP... │
+  │ 52vrdmjd5nspj │ 1027.94    │ 466        │ 932            │ 2           │ SELECT stat_name, value FROM v$sys_tim... │
+  └───────────────┴────────────┴────────────┴────────────────┴─────────────┴───────────────────────────────────────────┘
+16 slow queries (threshold: 1000ms, took 23.207271ms)
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /topsql
+════════════════════════════════════════════════════════════════
+  ┌─────────────┬───────────┬──────┬──────────────┬───────────┬────────────┬─────────────┬──────────────┬──────────────┐
+  │ SQL_ID      │ ELAPSED_S │ EXEC │ AVG_ELAPS... │ LOGICAL_R │ PHYSICAL_R │ AVG_LOGICAL │ AVG_PHYSICAL │ SQL_TEXT     │
+  ├─────────────┼───────────┼──────┼──────────────┼───────────┼────────────┼─────────────┼──────────────┼──────────────┤
+  │ b3tz7ugq... │ 0.7       │ 6    │ 0.116        │ 2         │ 0          │ 0           │ 0            │ SELECT CO... │
+  │ aykvshm7... │ 0.7       │ 658  │ 0.001        │ 129       │ 6          │ 0           │ 0            │ select si... │
+  │ 03guhbfp... │ 0.6       │ 152  │ 0.004        │ 2792      │ 1082       │ 18          │ 7            │ select /*... │
+  │ 9zg9qd9b... │ 0.3       │ 957  │ 0            │ 3865      │ 1          │ 4           │ 0            │ update us... │
+  │ 0k8522rm... │ 0.3       │ 977  │ 0            │ 5196      │ 3          │ 5           │ 0            │ select pr... │
+  │ 0sbbcuru... │ 0.2       │ 5497 │ 0            │ 16329     │ 329        │ 3           │ 0            │ select /*... │
+  │ 5dqz0hqt... │ 0.2       │ 1288 │ 0            │ 6926      │ 15         │ 5           │ 0            │ select /*... │
+  │ f0h5rpzm... │ 0.2       │ 972  │ 0            │ 0         │ 0          │ 0           │ 0            │ select SY... │
+  │ 772s25v1... │ 0.2       │ 658  │ 0            │ 76        │ 3          │ 0           │ 0            │ select sh... │
+  │ 5yv7yvjg... │ 0.2       │ 658  │ 0            │ 138       │ 8          │ 0           │ 0            │ select TI... │
+  │ fta7r48b... │ 0.2       │ 32   │ 0.005        │ 16        │ 0          │ 1           │ 0            │ SELECT i.... │
+  │ gngtvs38... │ 0.2       │ 94   │ 0.002        │ 188       │ 0          │ 2           │ 0            │ SELECT /*... │
+  │ a3jpjzh7... │ 0.1       │ 152  │ 0.001        │ 880       │ 242        │ 6           │ 2            │ select /*... │
+  │ 0yz43981... │ 0.1       │ 1    │ 0.143        │ 21021     │ 60         │ 21021       │ 60           │ SELECT ow... │
+  │ 3un99a0z... │ 0.1       │ 321  │ 0            │ 4871      │ 179        │ 15          │ 1            │ select ow... │
+  │ 34hfsrng... │ 0.1       │ 6    │ 0.021        │ 4         │ 0          │ 1           │ 0            │ SELECT CO... │
+  │ 5jjb6qqg... │ 0.1       │ 5    │ 0.02         │ 8         │ 0          │ 2           │ 0            │ SELECT sq... │
+  │ 5x2x7y2u... │ 0.1       │ 972  │ 0            │ 1944      │ 0          │ 2           │ 0            │ select de... │
+  │ 0k90b5rp... │ 0.1       │ 1    │ 0.099        │ 649       │ 3          │ 649         │ 3            │ SELECT fi... │
+  │ 9x2prazf... │ 0.1       │ 32   │ 0.003        │ 12902     │ 0          │ 403         │ 0            │  select s... │
+  └─────────────┴───────────┴──────┴──────────────┴───────────┴────────────┴─────────────┴──────────────┴──────────────┘
+Top SQL (最近 10 分钟, 按 总执行时间 排序) - 20 条
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /awr
+════════════════════════════════════════════════════════════════
+AWR 快照列表 (最近 20 个):
+
+ SNAP_ID  BEGIN_TIME     END_TIME         DUR(s)
+ ------------------------------------------------
+ 115      03-18 13:00    03-18 14:00          13
+ 114      03-18 12:00    03-18 13:00           7
+ 113      03-18 11:00    03-18 12:00        3547
+ 112      03-18 09:31    03-18 11:00        1789
+ 111      03-18 09:20    03-18 09:31         662
+ 110      03-17 21:00    03-17 22:00          10
+ 109      03-17 20:00    03-17 21:00          16
+ 108      03-17 19:00    03-17 20:00          13
+ 107      03-17 18:00    03-17 19:00           7
+ 106      03-17 16:46    03-17 18:00         814
+ 105      03-17 16:35    03-17 16:46         662
+ 104      03-17 12:00    03-17 13:00          10
+ 103      03-17 11:00    03-17 12:00          13
+ 102      03-17 10:00    03-17 11:00        3550
+ 101      03-17 08:56    03-17 10:00         283
+ 100      03-17 08:45    03-17 08:56         659
+ 99       03-16 20:20    03-16 21:00        2421
+ 98       03-16 20:09    03-16 20:20         662
+ 97       03-16 18:00    03-16 19:00        3547
+ 96       03-16 17:00    03-16 18:00           4
+
+用法:
+  /awr <snap_id>              分析单个快照
+  /awr <begin_snap> <end_snap> 对比两个快照
+
+listed 20 AWR snapshots
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /ash
+════════════════════════════════════════════════════════════════
+ASH 分析 (最近 5 分钟)
+
+── Top SQL (按采样数) ──
+ SQL_ID           Samples   Pct%  Plan Hash     Last Seen
+ ──────────────────────────────────────────────────────────────────────
+ 98d3pbzwft6vt          1    50%  0             2026-03-18 14:49:28.316 +0000 UTC
+ 0k90b5rp453yc          1    50%  4078266309    2026-03-18 14:49:27.315 +0000 UTC
+
+── Top Wait Events (按采样数) ──
+ Event                                    Wait Class          Samples   Pct%
+ ──────────────────────────────────────────────────────────────────────────────
+ ON CPU                                                             4  66.7%
+ control file sequential read             System I/O                2  33.3%
+
+ASH 分析 (最近 5 分钟) — 2 SQL, 2 等待事件
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /ash 10
+════════════════════════════════════════════════════════════════
+ASH 分析 (最近 10 分钟)
+
+── Top SQL (按采样数) ──
+ SQL_ID           Samples   Pct%  Plan Hash     Last Seen
+ ──────────────────────────────────────────────────────────────────────
+ 98d3pbzwft6vt          1    50%  0             2026-03-18 14:49:28.316 +0000 UTC
+ 0k90b5rp453yc          1    50%  4078266309    2026-03-18 14:49:27.315 +0000 UTC
+
+── Top Wait Events (按采样数) ──
+ Event                                    Wait Class          Samples   Pct%
+ ──────────────────────────────────────────────────────────────────────────────
+ ON CPU                                                             6    75%
+ control file sequential read             System I/O                2    25%
+
+ASH 分析 (最近 10 分钟) — 2 SQL, 2 等待事件
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /space
+════════════════════════════════════════════════════════════════
+  ┌─────────────────┬─────────┬──────────┬──────────┐
+  │ TABLESPACE_NAME │ USED_MB │ TOTAL_MB │ USED_PCT │
+  ├─────────────────┼─────────┼──────────┼──────────┤
+  │ USERS           │ 4233.19 │ 8192     │ 51.67    │
+  │ SYSTEM          │ 938.5   │ 1842     │ 50.95    │
+  │ SYSAUX          │ 726     │ 2430.34  │ 29.87    │
+  │ TEMP            │ 4       │ 4834.42  │ 0.08     │
+  └─────────────────┴─────────┴──────────┴──────────┘
+4 tablespace(s)
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /params pga
+════════════════════════════════════════════════════════════════
+  ┌──────────────────────┬─────────────┬───────────────────────────────────────────────────────────────────┐
+  │ NAME                 │ VALUE       │ DESCRIPTION                                                       │
+  ├──────────────────────┼─────────────┼───────────────────────────────────────────────────────────────────┤
+  │ pga_aggregate_limit  │ 42949672960 │ limit of aggregate PGA memory for the instance or PDB             │
+  │ pga_aggregate_target │ 0           │ Target size for the aggregate PGA memory consumed by the instance │
+  └──────────────────────┴─────────────┴───────────────────────────────────────────────────────────────────┘
+2 parameter(s) matching "%pga%"
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /alert 24
+════════════════════════════════════════════════════════════════
+  ┌──────────────────────────────────────┬─────────────────────────────────────────────────────────────┬───────────────┐
+  │ ORIGINATING_TIMESTAMP                │ MESSAGE_TEXT                                                │ MESSAGE_LEVEL │
+  ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────┼───────────────┤
+  │ 2026-03-18 14:20:32.277 +0800 +08:00 │ Incremental checkpoint up to RBA [0x10e.99.0], current l... │ 16            │
+  │ 2026-03-18 14:10:30.059 +0800 +08:00 │ Completed checkpoint up to RBA [0x10e.2.10], SCN: 192709... │ 16            │
+  │ 2026-03-18 14:05:27.265 +0800 +08:00 │ Beginning log switch checkpoint up to RBA [0x10e.2.10], ... │ 16            │
+  │ 2026-03-18 14:05:27.265 +0800 +08:00 │   Current log# 3 seq# 270 mem# 2: /oracle/oraredo/orcl/r... │ 16            │
+  │ 2026-03-18 14:05:27.265 +0800 +08:00 │   Current log# 3 seq# 270 mem# 1: /oracle/backup/orcl/rm... │ 16            │
+  │ 2026-03-18 14:05:27.265 +0800 +08:00 │   Current log# 3 seq# 270 mem# 0: /oracle/oradata/ORCL/o... │ 16            │
+  │ 2026-03-18 14:05:27.265 +0800 +08:00 │ Thread 1 advanced to log sequence 270 (LGWR switch)         │ 16            │
+  │ 2026-03-18 13:50:29.958 +0800 +08:00 │ Incremental checkpoint up to RBA [0x10d.d6ed5.0], curren... │ 16            │
+  │ 2026-03-18 13:20:27.644 +0800 +08:00 │ Incremental checkpoint up to RBA [0x10d.d6d58.0], curren... │ 16            │
+  │ 2026-03-18 12:50:25.312 +0800 +08:00 │ Incremental checkpoint up to RBA [0x10d.d5258.0], curren... │ 16            │
+  │ 2026-03-18 12:20:23.029 +0800 +08:00 │ Incremental checkpoint up to RBA [0x10d.d50de.0], curren... │ 16            │
+  │ 2026-03-18 11:50:20.711 +0800 +08:00 │ Incremental checkpoint up to RBA [0x10d.d3856.0], curren... │ 16            │
+  │ 2026-03-18 11:24:27.888 +0800 +08:00 │ opiodr aborting process unknown ospid (12035) as a resul... │ 16            │
+  │ 2026-03-18 11:24:27.887 +0800 +08:00 │   Time: 18-MAR-2026 11:24:27                                │ 16            │
+  │ 2026-03-18 11:24:27.887 +0800 +08:00 │     nt OS err code: 0                                       │ 16            │
+  │ 2026-03-18 11:24:27.887 +0800 +08:00 │     nt secondary err code: 0                                │ 16            │
+  │ 2026-03-18 11:24:27.887 +0800 +08:00 │     nt main err code: 0                                     │ 16            │
+  │ 2026-03-18 11:24:27.887 +0800 +08:00 │     ns secondary err code: 12560                            │ 16            │
+  │ 2026-03-18 11:24:27.887 +0800 +08:00 │ TNS-12537: TNS:connection closed                            │ 16            │
+  │ 2026-03-18 11:24:27.887 +0800 +08:00 │                                                             │ 16            │
+  │ 2026-03-18 11:24:27.887 +0800 +08:00 │     ns main err code: 12537                                 │ 16            │
+  │ 2026-03-18 11:24:27.887 +0800 +08:00 │   Tns error struct:                                         │ 16            │
+  │ 2026-03-18 11:24:27.887 +0800 +08:00 │   Tracing not turned on.                                    │ 16            │
+  │ 2026-03-18 11:24:27.886 +0800 +08:00 │   ******************************************************... │ 16            │
+  │ 2026-03-18 11:24:27.886 +0800 +08:00 │   Version 19.3.0.0.0                                        │ 16            │
+  │ 2026-03-18 11:24:27.886 +0800 +08:00 │    VERSION INFORMATION:  TNS for Linux: Version 19.0.0.0... │ 16            │
+  │ 2026-03-18 11:24:27.886 +0800 +08:00 │  Fatal NI connect error 12537, connecting to:  (ADDRESS=... │ 16            │
+  │ 2026-03-18 11:20:18.396 +0800 +08:00 │ Incremental checkpoint up to RBA [0x10d.d36f1.0], curren... │ 16            │
+  │ 2026-03-18 11:04:58.426 +0800 +08:00 │ Completed: ALTER TABLESPACE SYSTEM ADD DATAFILE '/oracle... │ 16            │
+  │ 2026-03-18 11:04:55.332 +0800 +08:00 │ ALTER TABLESPACE SYSTEM ADD DATAFILE '/oracle/oradata/OR... │ 16            │
+  │ 2026-03-18 11:04:42.769 +0800 +08:00 │ Completed: ALTER TABLESPACE SYSAUX ADD DATAFILE '/oracle... │ 16            │
+  │ 2026-03-18 11:04:39.655 +0800 +08:00 │ ALTER TABLESPACE SYSAUX ADD DATAFILE '/oracle/oradata/OR... │ 16            │
+  │ 2026-03-18 10:58:53.319 +0800 +08:00 │ Completed: ALTER TABLESPACE TEMP ADD TEMPFILE '/oracle/o... │ 16            │
+  │ 2026-03-18 10:58:53.222 +0800 +08:00 │ ALTER TABLESPACE TEMP ADD TEMPFILE '/oracle/oradata/ORCL... │ 16            │
+  │ 2026-03-18 10:55:49.139 +0800 +08:00 │ Completed: ALTER TABLESPACE TEMP ADD TEMPFILE '/oracle/o... │ 16            │
+  │ 2026-03-18 10:55:49.029 +0800 +08:00 │ ALTER TABLESPACE TEMP ADD TEMPFILE '/oracle/oradata/ORCL... │ 16            │
+  │ 2026-03-18 10:54:15.759 +0800 +08:00 │ ORA-1119 signalled during: ALTER TABLESPACE TEMP ADD TEM... │ 16            │
+  │ 2026-03-18 10:54:15.754 +0800 +08:00 │ ALTER TABLESPACE TEMP ADD TEMPFILE '/u01/app/oracle/orad... │ 16            │
+  │ 2026-03-18 10:50:43.995 +0800 +08:00 │ ALTER TABLESPACE TEMP ADD TEMPFILE '/u01/app/oracle/orad... │ 16            │
+  │ 2026-03-18 10:50:43.995 +0800 +08:00 │ ORA-1031 signalled during: ALTER TABLESPACE TEMP ADD TEM... │ 16            │
+  │ 2026-03-18 10:50:15.886 +0800 +08:00 │ Incremental checkpoint up to RBA [0x10d.d1725.0], curren... │ 16            │
+  │ 2026-03-18 10:20:13.551 +0800 +08:00 │ Incremental checkpoint up to RBA [0x10d.d13ba.0], curren... │ 16            │
+  │ 2026-03-18 09:50:11.357 +0800 +08:00 │ Incremental checkpoint up to RBA [0x10d.d10de.0], curren... │ 16            │
+  │ 2026-03-18 09:20:12.194 +0800 +08:00 │ Closing scheduler window                                    │ 16            │
+  │ 2026-03-18 09:20:12.194 +0800 +08:00 │ Clearing Resource Manager plan via parameter                │ 16            │
+  │ 2026-03-18 09:20:12.194 +0800 +08:00 │ Closing Resource Manager plan via scheduler window          │ 16            │
+  │ 2026-03-18 09:20:12.036 +0800 +08:00 │ db_recovery_file_dest_size of 51200 MB is 4.93% used. Th... │ 16            │
+  │ 2026-03-18 09:20:12.036 +0800 +08:00 │ space available in the underlying filesystem or ASM disk... │ 16            │
+  │ 2026-03-18 09:20:12.036 +0800 +08:00 │ database for recovery-related files, and does not reflec... │ 16            │
+  │ 2026-03-18 09:20:12.036 +0800 +08:00 │ user-specified limit on the amount of space that will be... │ 16            │
+  │ 2026-03-18 09:20:11.61 +0800 +08:00  │ 29381000,29382296,29391301,29393649,29402110,29411931,29... │ 16            │
+  │ 2026-03-18 09:20:11.61 +0800 +08:00  │ ========================================================... │ 16            │
+  │ 2026-03-18 09:20:11.61 +0800 +08:00  │ 29465047                                                    │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29303918,29304781,29311588,29312310,29312734,29312753,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29357821,29360467,29360775,29367971,29368725,29379299,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29294753,29299830,29307090,29307109,29311336,29329675,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29273360,29282090,29282666,29285453,29285621,29290235,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29244968,29248723,29249583,29251564,29255616,29260224,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29224294,29225861,29229839,29235934,29242906,29243749,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29201695,29209545,29210577,29210610,29210624,29210683,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29170717,29173618,29181568,29182920,29183298,29186091,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29154636,29154829,29159216,29159661,29160462,29161923,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29132456,29139727,29146157,29147849,29149170,29152603,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29111631,29112455,29117337,29123444,29125708,29125786,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29016294,29018680,29024876,29026154,29027933,29047127,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 28942694,28951332,28963036,28968779,28980448,28995287,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 28881191,28881848,28888083,28911140,28925250,28925460,28... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 28808652,28815557,28847541,28847572,28870496,28871040,28... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 28621543,28642469,28699321,28710663,28755846,28772816,28... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ Bugs Fixed: 3,27222128,27572040,27604329,27760043,278778... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ Patch Apply Time: 2019-04-18T15:21:33+08:00                 │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ Patch Description: OCW RELEASE UPDATE 19.3.0.0.0 (295853... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ Patch Id: 29585399                                          │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29558975,29601461                                           │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29462957,29486181,29507616,29515240,29521748,29530812,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29438736,29439522,29450421,29451386,29452576,29452953,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29412066,29412269,29417884,29423826,29429264,29429566,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29394140,29394749,29397954,29398863,29399100,29399121,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29386635,29386660,29387274,29388094,29388524,29388830,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29373588,29374179,29377986,29378029,29379978,29382784,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29361801,29363151,29364171,29364177,29367019,29367561,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29351749,29352867,29353271,29355654,29356547,29356752,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29341209,29343086,29346943,29347620,29348176,29350052,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29332771,29333500,29337310,29338315,29338453,29338780,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29325105,29325257,29325993,29327044,29329087,29331209,29... │ 16            │
+  │ 2026-03-18 09:20:11.609 +0800 +08:00 │ 29313525,29314539,29318410,29319441,29321489,29323946,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29050765,29051702,29052726,29053783,29056024,29056270,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29189307,29189889,29190235,29190474,29190740,29191541,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29181923,29182019,29183912,29184297,29184666,29185193,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29180313,29180455,29180559,29180893,29181153,29181231,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29173373,29173817,29174004,29176318,29177466,29177543,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29168219,29168433,29169073,29169215,29171942,29172618,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29163415,29163437,29163524,29163567,29167111,29167342,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29155099,29157389,29158680,29158899,29159909,29159936,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29142667,29144995,29145214,29145730,29149829,29150338,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29131539,29132938,29134447,29136111,29138641,29141316,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29125380,29126345,29127957,29128935,29129450,29129497,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29119077,29120223,29122224,29122254,29123297,29123432,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29110797,29110802,29110805,29111598,29113282,29113305,29... │ 16            │
+  │ 2026-03-18 09:20:11.608 +0800 +08:00 │ 29061959,29062692,29062848,29062860,29062868,29110526,29... │ 16            │
+  └──────────────────────────────────────┴─────────────────────────────────────────────────────────────┴───────────────┘
+100 alert(s) in last 24 hour(s)
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /backup
+════════════════════════════════════════════════════════════════
+No rows0 backup(s) in last 7 day(s)
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /standby
+════════════════════════════════════════════════════════════════
+=== Database Info ===
+  DATABASE_ROLE:       PRIMARY
+  DB_UNIQUE_NAME:      orcl
+  PROTECTION_MODE:     MAXIMUM PERFORMANCE
+  SWITCHOVER_STATUS:   NOT ALLOWED
+  DATAGUARD_BROKER:    DISABLED
+
+=== Archive Dest Status ===
+DEST_NAME        STATUS           TYPE             SRL              GAP_STATUS     
+LOG_ARCHIVE_DEST_1  VALID            LOCAL            NO               <nil>          
+
+Data Guard status
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /resize TEMP
+════════════════════════════════════════════════════════════════
+表空间 TEMP 文件:
+
+ #    FILE_NAME                                 SIZE_MB  AUTO    MAX_MB
+ ──────────────────────────────────────────────────────────────────────
+    1 /oracle/oradata/ORCL/datafile/o1_mf_temp_nsxnvlqm_.tmp      367  ON       32768
+    2 /oracle/oradata/ORCL/datafile/o1_mf_temp_nsxnvlqm_02.tmp     2048  OFF          0
+    3 /oracle/oradata/ORCL/datafile/o1_mf_temp_nsxnvlqm_03.tmp     2048  OFF          0
+
+操作:
+  /resize TEMP resize <#> <大小>     扩容文件
+  /resize TEMP add <路径> <大小>     新增文件
+  /resize TEMP autoextend <#> <最大>  开启自动扩展
+
+tablespace TEMP: 3 file(s)
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /jobs
+════════════════════════════════════════════════════════════════
+No rows0 scheduler jobs
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /help
+════════════════════════════════════════════════════════════════
+可用命令:
+
+ [1;36m监控大盘:[0m
+  /dbtop            实时性能监控面板
+  /health           数据库健康检查
+
+ [1;36m会话/锁:[0m
+  /sessions         所有会话概览
+  /activesessions   活跃会话列表
+  /waits            等待事件统计
+  /locks            行锁/表锁
+  /blocktree        层级阻塞链 (阻塞者→被阻塞会话树)
+  /latches          Latch 争用
+  /mutexes          Mutex 争用
+
+ [1;36mSQL 分析:[0m
+  /slowsql          慢 SQL 查询 (默认 1000ms)
+  /topsql           Top SQL (按执行时间/逻辑读等排序)
+  /explain          SQL 执行计划
+  /sql              执行自定义 SQL
+
+ [1;36m内存/存储:[0m
+  /sga              SGA 内存详情
+  /pga              PGA 内存详情
+  /space            表空间使用率
+  /tempsess         临时空间占用会话
+  /undosess         Undo 占用会话
+  /sortusage        排序段使用详情
+  /redo             Redo 日志状态
+  /fra              FRA 使用详情
+  /asm              ASM 磁盘组
+
+ [1;36m管理:[0m
+  /kill             终止会话
+  /alter            修改系统参数 (无值时安全检测)
+  /resize           表空间扩容
+  /jobs             调度作业状态
+  /resource         资源限制使用
+  /alert            近期 Alert Log
+  /backup           备份历史
+  /standby          Data Guard 状态
+  /params           搜索 Oracle 参数
+
+ [1;33m✦ AI 诊断[0m
+  [1;33m/diag             数据库诊断 (规则 + AI)[0m
+  [1;33m/sentinel         哨兵监控控制[0m
+
+ [1;36m系统:[0m
+  /login            连接数据库
+  /logout           断开连接
+  /conn             显示当前连接信息
+  /help             显示帮助
+  /clear            清屏
+  /history          查看命令历史
+  /config           查看/修改配置
+
+ [1;36mSchema:[0m
+  /tableinfo        表结构信息
+  /indexadvise      索引建议
+
+  /ash              Show ASH analysis — top SQL and wait events
+  /awr              Show AWR snapshot analysis
+  /os               Show OS-level metrics (CPU, memory, I/O)
+  /planhistory      Show SQL execution plan history from AWR
+  /segments         Show top segments by size or growth
+ [1;33m提示: 直接输入中文问题可触发 AI 诊断 (需配置 LLM)[0m
+
+47 个命令
+
+
+════════════════════════════════════════════════════════════════
+  COMMAND: /planhistory 11b9k2abc1234
+════════════════════════════════════════════════════════════════
+No AWR plan history found for SQL ID 11b9k2abc1234
+No AWR plan history found for SQL ID 11b9k2abc1234
+

@@ -1,0 +1,281 @@
+=== SCENARIO 2 / ROUND 1 ===
+PROMPT: /wdr
+
+WDR 快照 — 20 条
+生成对比报告: SELECT generate_wdr_report(<begin_snap>, <end_snap>, 1, 'all', 'cluster');
+  ┌─────────────┬───────────────────────────────┬───────────────────────────────┬────────────┐
+  │ snapshot_id │ start_ts                      │ end_ts                        │ window_sec │
+  ├─────────────┼───────────────────────────────┼───────────────────────────────┼────────────┤
+  │ 38          │ 2026-05-20 16:17:29.891899+08 │ 2026-05-20 16:17:30.248729+08 │ 0          │
+  │ 37          │ 2026-05-20 15:17:28.899661+08 │ 2026-05-20 15:17:29.228305+08 │ 0          │
+  │ 36          │ 2026-05-20 14:17:28.811033+08 │ 2026-05-20 14:17:29.126823+08 │ 0          │
+  │ 35          │ 2026-05-20 13:16:56.875151+08 │ 2026-05-20 13:16:57.199207+08 │ 0          │
+  │ 34          │ 2026-05-20 12:16:56.315926+08 │ 2026-05-20 12:16:56.636755+08 │ 0          │
+  │ 33          │ 2026-05-20 11:14:33.452831+08 │ 2026-05-20 11:14:33.899206+08 │ 0          │
+  │ 32          │ 2026-05-20 10:02:15.390233+08 │ 2026-05-20 10:02:15.723945+08 │ 0          │
+  │ 31          │ 2026-05-20 09:02:14.415055+08 │ 2026-05-20 09:02:14.769111+08 │ 0          │
+  │ 30          │ 2026-05-20 07:24:08.276776+08 │ 2026-05-20 07:24:08.702107+08 │ 0          │
+  │ 29          │ 2026-05-19 23:36:59.481679+08 │ 2026-05-19 23:36:59.7981+08   │ 0          │
+  │ 28          │ 2026-05-19 22:36:58.822262+08 │ 2026-05-19 22:36:59.137082+08 │ 0          │
+  │ 27          │ 2026-05-19 21:23:56.153529+08 │ 2026-05-19 21:23:56.494688+08 │ 0          │
+  │ 26          │ 2026-05-19 20:23:55.927878+08 │ 2026-05-19 20:23:56.315322+08 │ 0          │
+  │ 25          │ 2026-05-19 19:23:55.875492+08 │ 2026-05-19 19:23:56.227738+08 │ 0          │
+  │ 24          │ 2026-05-19 18:23:55.61293+08  │ 2026-05-19 18:23:55.933675+08 │ 0          │
+  │ 23          │ 2026-05-19 17:23:54.828398+08 │ 2026-05-19 17:23:55.154122+08 │ 0          │
+  │ 22          │ 2026-05-19 16:23:54.561505+08 │ 2026-05-19 16:23:54.938142+08 │ 0          │
+  │ 21          │ 2026-05-19 15:23:53.831284+08 │ 2026-05-19 15:23:54.23086+08  │ 0          │
+  │ 20          │ 2026-05-19 13:45:37.529512+08 │ 2026-05-19 13:45:37.884324+08 │ 0          │
+  │ 19          │ 2026-05-19 12:25:02.939439+08 │ 2026-05-19 12:25:03.2672+08   │ 0          │
+  └─────────────┴───────────────────────────────┴───────────────────────────────┴────────────┘
+
+
+(round 1 took 0s)
+
+=== SCENARIO 2 / ROUND 2 ===
+PROMPT: WDR 里 top SQL 有哪些值得关注
+
+✳ 主动诊断: 查询当前数据库状态...
+✳ AI 分析 (auto, 最多20轮)...
+├ 第1轮: 调用 wdr (14.8s)
+├ 第2轮: 调用 wdr (0.9s)
+├ 第3轮: 调用 sql (5.6s)
+├ 第4轮: 调用 sql (1.8s)
+├ 第5轮: 调用 sql (4.4s)
+├ 第6轮: 调用 wdr (1.9s)
+── AI 诊断 (autonomous, 7轮) ──
+根据之前的诊断结果，我来整理 WDR 中值得关注的 Top SQL：
+
+## WDR Top SQL 分析
+
+### 最值得关注的 Top SQL（按总执行时间排序）
+
+| 排名 | SQL_ID | 调用次数 | 平均耗时 (ms) | 总耗时 (秒) | 查询特征 | 关注原因 |
+|------|--------|----------|---------------|-------------|----------|----------|
+| 1 | 1775585557 | 1,520 | 11,299,201 | 17,174,785 | `SELECT pg_sleep(?)` | **累计执行 198 天**，无业务价值 |
+| 2 | 2747043041 | 168 | 10,328,210 | 1,735,139 | `fault_cpu CROSS JOIN fault_cpu` 循环 100 次 | **笛卡尔积**，单次 2.9 小时 |
+| 3 | 307519804 | 37 | 5,808,679 | 214,921 | `UPDATE fault_lock SET counter=counter+?` | **循环大事务**，频繁 UPDATE |
+| 4 | 423340056 | 2 | 4,186,834 | 8,374 | 复杂 DO 块计算 | 单次执行 4187 秒 |
+| 5 | 2520587944 | 416 | 4,165,554 | 1,732,870 | `fault_io WHERE payload LIKE '%test%'` 循环 200 次 | **模糊查询无索引** |
+
+### 关键问题 SQL 详细分析
+
+**SQL_ID 1775585557** - pg_sleep 查询
+- **问题**：无实际业务意义的等待查询，累计执行 1,520 次，总耗时 1717 万秒
+- **影响**：占用会话资源，无业务价值
+- **建议**：立即停止，检查是否有自动化脚本或监控工具在调用
+
+**SQL_ID 2747043041** - fault_cpu CROSS JOIN
+- **问题**：笛卡尔积查询，循环 100 次，单次执行 2.9 小时
+- **影响**：产生大量临时数据，消耗 CPU 和内存，产生死元组
+- **建议**：添加 WHERE 条件或改为 JOIN，避免笛卡尔积
+
+**SQL_ID 307519804** - fault_lock UPDATE
+- **问题**：循环更新单行数据，37 次调用总耗时 214,921 秒
+- **影响**：行锁竞争，产生大量死元组
+- **建议**：改为批量更新或使用事务合并
+
+**SQL_ID 423340056** - 复杂 DO 块
+- **问题**：单次执行 4187 秒，仅执行 2 次
+- **影响**：长时间持有事务锁
+- **建议**：优化内部逻辑或拆分为小事务
+
+**SQL_ID 2520587944** - fault_io LIKE 查询
+- **问题**：模糊查询无索引，循环 200 次
+- **影响**：全表扫描，消耗大量 IO
+- **建议**：添加索引或使用全文检索
+
+### 总结
+
+WDR 中值得关注的 Top SQL 全部为 **压力测试脚本**（fault_ 系列和 pg_sleep），特征为：
+1. **循环大事务**（100-200 次循环）
+2. **笛卡尔积**（CROSS JOIN）
+3. **模糊查询**（LIKE '%test%'）
+4. **无索引或低效索引**
+
+这些查询是当前数据库性能问题的主要根源，建议优先处理。
+
+
+(round 2 took 74s)
+
+=== SCENARIO 2 / ROUND 3 ===
+PROMPT: 针对这些 top SQL 给出优化建议
+
+✳ 主动诊断: 查询当前数据库状态...
+✳ AI 分析 (auto, 最多20轮)...
+├ 第1轮: 调用 tableinfo, tableinfo, tableinfo, sql (5.2s)
+── AI 诊断 (autonomous, 2轮) ──
+基于已收集的表结构和索引信息，针对 Top SQL 给出优化建议：
+
+## Top SQL 优化建议
+
+### 1. SQL_ID 1775585557 - `SELECT pg_sleep(?)`
+
+**问题**：无业务价值的等待查询，累计执行 1,520 次，总耗时 198 天
+
+**优化建议**：
+```sql
+-- 立即停止调用
+-- 检查是否有监控脚本或自动化任务在调用
+SELECT pg_terminate_backend(pid) 
+FROM pg_stat_activity 
+WHERE query LIKE '%pg_sleep%' AND pid != pg_backend_pid();
+```
+
+### 2. SQL_ID 2747043041 - `fault_cpu CROSS JOIN`
+
+**表结构**：`public.fault_cpu` (x integer)，5000 行，**无索引**
+
+**问题**：笛卡尔积 5000×5000=25,000,000 行，循环 100 次，单次执行 2.9 小时
+
+**优化建议**：
+```sql
+-- 方案 1：添加 WHERE 条件限制结果集
+-- 原查询：FROM fault_cpu a CROSS JOIN fault_cpu b
+-- 优化后：FROM fault_cpu a JOIN fault_cpu b ON a.x < b.x
+
+-- 方案 2：如果确实需要笛卡尔积，改为分批处理
+DO $$
+DECLARE
+    batch_size int := 100;
+    offset_val int := 0;
+BEGIN
+    FOR k IN 1..10 LOOP  -- 减少循环次数
+        PERFORM count(*) 
+        FROM fault_cpu a 
+        JOIN fault_cpu b ON a.x = b.x  -- 改为等值连接
+        WHERE md5((a.x * b.x)::text) > '0';
+        offset_val := offset_val + batch_size;
+    END LOOP;
+END$$;
+```
+
+### 3. SQL_ID 307519804 - `UPDATE fault_lock SET counter=counter+? WHERE id=?`
+
+**表结构**：`public.fault_lock` (id integer PK, counter bigint)，1 行，有主键
+
+**问题**：循环 10 万次更新单行，37 次调用总耗时 214,921 秒
+
+**优化建议**：
+```sql
+-- 方案 1：改为批量更新（推荐）
+DO $$
+BEGIN
+    -- 一次性更新，而不是循环更新
+    UPDATE fault_lock 
+    SET counter = counter + 100000;  -- 直接加总数
+END$$;
+
+-- 方案 2：如果必须循环，减少循环次数
+DO $$
+BEGIN
+    FOR i IN 1..1000 LOOP  -- 从 100000 改为 1000
+        UPDATE fault_lock 
+        SET counter = counter + 100 
+        WHERE id = 1;
+    END LOOP;
+END$$;
+
+-- 方案 3：使用序列或原子操作
+ALTER TABLE fault_lock ADD COLUMN update_seq bigint DEFAULT 0;
+UPDATE fault_lock SET counter = counter + update_seq;
+```
+
+### 4. SQL_ID 423340056 - 复杂 DO 块计算
+
+**问题**：单次执行 4187 秒，仅执行 2 次
+
+**优化建议**：
+```sql
+-- 方案 1：拆分复杂计算为多个小查询
+-- 原：单次执行 4187 秒
+-- 优化：分批处理，每批限制行数
+
+DO $$
+DECLARE
+    batch_size int := 1000;
+    processed int := 0;
+    total int;
+BEGIN
+    -- 先统计总量
+    SELECT count(*) INTO total FROM fault_io;
+    
+    -- 分批处理
+    WHILE processed < total LOOP
+        PERFORM count(*) 
+        FROM fault_io 
+        WHERE id > processed 
+        LIMIT batch_size;
+        
+        processed := processed + batch_size;
+        RAISE NOTICE 'Processed: %, Total: %', processed, total;
+    END LOOP;
+END$$;
+
+-- 方案 2：使用临时表缓存中间结果
+CREATE TEMP TABLE temp_result AS
+SELECT id, payload, substring(payload, 1, 100) as short_payload
+FROM fault_io
+WHERE id BETWEEN 1 AND 10000;
+
+-- 后续操作在临时表上进行
+```
+
+### 5. SQL_ID 2520587944 - `fault_io WHERE payload LIKE '%test%'`
+
+**表结构**：`public.fault_io` (id bigint PK, k bigint, payload text)，1000 万行，1331MB，**仅有主键**
+
+**问题**：模糊查询 `LIKE '%test%'` 无法使用 B-tree 索引，全表扫描 1331MB，循环 200 次
+
+**优化建议**：
+```sql
+-- 方案 1：添加全文检索索引（推荐）
+CREATE EXTENSION IF NOT EXISTS pg_trgm;  -- 文本搜索扩展
+CREATE INDEX idx_fault_io_payload_trgm ON fault_io USING gin (payload gin_trgm_ops);
+
+-- 优化后查询：LIKE '%test%' 现在可以使用 GIN 索引
+SELECT count(*) FROM fault_io WHERE payload LIKE '%test%';
+
+-- 方案 2：使用前缀匹配（如果适用）
+-- 原：LIKE '%test%'
+-- 优化：LIKE 'test%' （可以走 B-tree 索引）
+SELECT count(*) FROM fault_io WHERE payload LIKE 'test%';
+
+-- 方案 3：添加普通索引（如果查询条件允许）
+CREATE INDEX idx_fault_io_payload ON fault_io (payload text_pattern_ops);
+
+-- 方案 4：使用子串匹配（减少扫描量）
+SELECT count(*) 
+FROM fault_io 
+WHERE left(payload, 4) = 'test';  -- 使用前缀匹配
+```
+
+## 综合优化建议
+
+### 立即执行
+```sql
+-- 1. 终止 fault_ 系列查询
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity 
+WHERE query LIKE '%fault_%' AND pid != pg_backend_pid();
+
+-- 2. 创建全文检索索引（解决 LIKE 问题）
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS idx_fault_io_payload_trgm 
+ON fault_io USING gin (payload gin_trgm_ops);
+
+-- 3. 清理死元组
+VACUUM ANALYZE public.fault_lock;
+VACUUM ANALYZE public.fault_cpu;
+VACUUM ANALYZE public.fault_io;
+```
+
+### 长期优化
+1. **移除 pg_sleep 调用**：无业务价值
+2. **避免笛卡尔积**：添加 JOIN 条件或改为分批处理
+3. **批量更新代替循环**：减少事务次数
+4. **添加全文索引**：解决 LIKE 模糊查询性能问题
+5. **定期 VACUUM**：防止死元组堆积
+
+
+(round 3 took 61s)
+

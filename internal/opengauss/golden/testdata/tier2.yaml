@@ -1,0 +1,96 @@
+cases:
+  - id: OG-GOLDEN-MODEL-CURRENTDB-001
+    source: current_session
+    tier: 2
+    database: gaussdb
+    model_tier: all
+    input: 当前数据库存在什么问题
+    mode: batch
+    requires_db: true
+    requires_llm: true
+    tags: [model, currentdb]
+    expected:
+      intent: current_diag
+      route_mode: llm
+      required_strings: ["当前", "health", "waits", "blocktree"]
+      forbidden_strings: ["exceeds the available context size", "超过 600 秒", "WDR_REPORT_BEGIN", "Evidence Builder", "v1_", "无响应"]
+    quality:
+      max_latency_ms: 180000
+      min_score: 85
+      must_distinguish_current_vs_historical: true
+      rubric:
+        - name: evidence_sources
+          required_all: ["health", "waits", "blocktree", "topsql", "slowsql"]
+          points: 15
+        - name: current_historical_boundary
+          required_all: ["当前", "历史"]
+          points: 15
+        - name: dba_conclusion
+          required_any: ["结论", "当前无在线故障", "当前数据库"]
+          points: 10
+        - name: actionability
+          required_any: ["建议", "动作", "排查"]
+          points: 10
+
+  - id: OG-GOLDEN-MODEL-WDR-ANALYZE-001
+    source: current_session
+    tier: 2
+    database: gaussdb
+    model_tier: all
+    input: 我们分析下65到73的报告存在哪些问题
+    mode: batch
+    requires_db: true
+    requires_llm: true
+    tags: [model, wdr]
+    expected:
+      intent: wdr_analyze
+      route_mode: evidence_then_llm
+      skill: wdranalyze
+      args: "65 73"
+      required_strings: ["WDR 分析报告", "诊断边界", "报告元信息", "65 → 73"]
+      forbidden_strings: ["WDR_REPORT_BEGIN", "Evidence Builder", "v1_", "function dbe_perf.generate_wdr_report"]
+    quality:
+      max_latency_ms: 120000
+      min_score: 90
+      must_distinguish_current_vs_historical: true
+      rubric:
+        - name: historical_boundary
+          required_all: ["历史窗口", "当前在线", "诊断边界"]
+          points: 15
+        - name: evidence_chain
+          required_all: ["结构化证据", "根因链", "建议动作"]
+          points: 15
+        - name: report_metadata
+          required_all: ["报告元信息", "报告文件"]
+          points: 10
+
+  - id: OG-GOLDEN-MODEL-SQLTUNE-001
+    source: current_session
+    tier: 2
+    database: gaussdb
+    model_tier: all
+    input: sql id 581990336 如何优化
+    mode: batch
+    requires_db: true
+    requires_llm: true
+    tags: [model, sqltune]
+    expected:
+      intent: sql_tune
+      route_mode: evidence_then_llm
+      skill: sqltune
+      args: "581990336"
+      required_strings: ["SQL_ID=581990336", "SQL Tuning Report", "执行计划"]
+      forbidden_strings: ["2000000×", "预期收益: 2000000", "WITH ...", "原 SQL 不变 ...", "syntax error at end of input", "候选 SQL/DDL 含模板占位符", "<表名>", "exceeds the available context size", "超过 600 秒"]
+    quality:
+      max_latency_ms: 300000
+      min_score: 80
+      rubric:
+        - name: sqltune_flow
+          required_all: ["SQL_ID=581990336", "/sqltune", "执行计划"]
+          points: 15
+        - name: quality_gate
+          forbidden_any: ["2000000×", "WITH ...", "原 SQL 不变 ...", "syntax error at end of input", "候选 SQL/DDL 含模板占位符", "<表名>"]
+          points: 20
+        - name: dba_actionability
+          required_any: ["优化方案", "建议", "执行前检查", "风险等级"]
+          points: 10

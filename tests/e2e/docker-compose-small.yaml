@@ -1,0 +1,208 @@
+# Small-scale E2E test: 1 Cerebrate + 2 Overlords + 10 Workers
+# Usage:
+#   cd tests/e2e
+#   docker compose -f docker-compose-small.yaml up --build -d
+#   docker compose -f docker-compose-small.yaml logs -f cerebrate
+#   curl http://localhost:8080/api/fleet
+
+services:
+  cerebrate:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: cerebrate
+    entrypoint: []
+    command: >
+      sh -c "
+        opendb cluster init --role manager --listen cerebrate:9100 --web 0.0.0.0:8080 2>/dev/null;
+        opendb agent start --role manager
+      "
+    ports:
+      - "9100:9100"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/api/health"]
+      interval: 5s
+      retries: 10
+
+  overlord-1:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: overlord-1
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 3;
+        opendb cluster join --role memory --cerebrate cerebrate:9100 --region china-east --token test --listen overlord-1:9200 2>/dev/null;
+        opendb agent start --role memory
+      "
+    depends_on:
+      cerebrate:
+        condition: service_healthy
+
+  overlord-2:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: overlord-2
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 3;
+        opendb cluster join --role memory --cerebrate cerebrate:9100 --region china-north --token test --listen overlord-2:9201 2>/dev/null;
+        opendb agent start --role memory
+      "
+    depends_on:
+      cerebrate:
+        condition: service_healthy
+
+  drone-1:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: drone-1
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 6;
+        opendb cluster join --role worker --overlord overlord-1:9200 --token test --listen drone-1:9301 2>/dev/null;
+        opendb agent start --role worker
+      "
+    depends_on:
+      - overlord-1
+
+  drone-2:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: drone-2
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 6;
+        opendb cluster join --role worker --overlord overlord-1:9200 --token test --listen drone-2:9302 2>/dev/null;
+        opendb agent start --role worker
+      "
+    depends_on:
+      - overlord-1
+
+  drone-3:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: drone-3
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 6;
+        opendb cluster join --role worker --overlord overlord-1:9200 --token test --listen drone-3:9303 2>/dev/null;
+        opendb agent start --role worker
+      "
+    depends_on:
+      - overlord-1
+
+  drone-4:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: drone-4
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 6;
+        opendb cluster join --role worker --overlord overlord-1:9200 --token test --listen drone-4:9304 2>/dev/null;
+        opendb agent start --role worker
+      "
+    depends_on:
+      - overlord-1
+
+  drone-5:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: drone-5
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 6;
+        opendb cluster join --role worker --overlord overlord-1:9200 --token test --listen drone-5:9305 2>/dev/null;
+        opendb agent start --role worker
+      "
+    depends_on:
+      - overlord-1
+
+  drone-6:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: drone-6
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 6;
+        opendb cluster join --role worker --overlord overlord-2:9201 --token test --listen drone-6:9306 2>/dev/null;
+        opendb agent start --role worker
+      "
+    depends_on:
+      - overlord-2
+
+  drone-7:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: drone-7
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 6;
+        opendb cluster join --role worker --overlord overlord-2:9201 --token test --listen drone-7:9307 2>/dev/null;
+        opendb agent start --role worker
+      "
+    depends_on:
+      - overlord-2
+
+  drone-8:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: drone-8
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 6;
+        opendb cluster join --role worker --overlord overlord-2:9201 --token test --listen drone-8:9308 2>/dev/null;
+        opendb agent start --role worker
+      "
+    depends_on:
+      - overlord-2
+
+  drone-9:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: drone-9
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 6;
+        opendb cluster join --role worker --overlord overlord-2:9201 --token test --listen drone-9:9309 2>/dev/null;
+        opendb agent start --role worker
+      "
+    depends_on:
+      - overlord-2
+
+  drone-10:
+    build:
+      context: ../..
+      dockerfile: tests/e2e/Dockerfile
+    hostname: drone-10
+    entrypoint: []
+    command: >
+      sh -c "
+        sleep 6;
+        opendb cluster join --role worker --overlord overlord-2:9201 --token test --listen drone-10:9310 2>/dev/null;
+        opendb agent start --role worker
+      "
+    depends_on:
+      - overlord-2

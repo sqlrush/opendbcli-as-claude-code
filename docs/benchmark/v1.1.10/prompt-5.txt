@@ -1,0 +1,88 @@
+── AI 诊断 (auto, 4轮) ──
+## 一、告警主线
+
+**SQL 在数据库内核侧不慢，执行计划完全最优**。explain 工具显示该 SQL 走的是 OpenGauss 的 `[Bypass]` 快速路径执行（fastpath），并使用 idx_bench_t5_uid 索引扫描，估算返回 1 行，cost 仅 8.27。
+
+| 指标 | 数据 | 来源工具 |
+|------|------|---------|
+| 表存在性 | public.bench_t5 存在 | sql |
+| 表/索引规模 | 100 万行，87 MB（表 66 + 索引 21） | tableinfo |
+| 索引覆盖 | idx_bench_t5_uid btree(uid) 已存在 | tableinfo |
+| 统计信息新鲜度 | Last Analyze 2026-04-25 11:32:25 | tableinfo |
+| 死元组 | dead_tuples=0 | tableinfo |
+| 执行计划 | [Bypass] Index Scan, cost=0.00..8.27 rows=1 width=37 | explain |
+| 过滤条件下推 | Index Cond: (uid = 123) | explain |
+
+**结论**：服务端执行该 SQL 应在亚毫秒级。用户感知的"慢得离谱"不来自数据库执行本身，而是来自数据库之外的链路。
+
+## 二、关联问题（仍基于已采集证据）
+
+- `[Bypass]` 标记说明 OG 已启用 opfusion 快速路径，连查询解析/优化都跳过了，进一步证明内核侧无瓶颈
+- 索引选择性极佳（1M 行表估算返回 1 行），统计信息刚刷新（11:32:25），优化器没有误判
+- `SELECT *` 只涉及两列（uid integer + name text），width=37 字节，结果集极小，传输开销也不大
+
+## 三、当前对比
+
+无历史 explain 基线。本次执行计划 cost=8.27 属于点查询的理论最低水平，没有可优化空间。
+
+## 四、综合评估与排名
+
+| 严重度 | 问题 | 影响 | 排查方向 |
+|--------|------|------|----------|
+| [HIGH] | 服务端 SQL 不慢，慢在客户端/网络/应用层 | 用户感知慢但根因不在 DB | 见下方"紧急措施" |
+| [LOW] | 无 — 表结构/索引/统计信息全部健康 | 无需在 DB 侧做任何改动 | — |
+
+## 紧急措施
+
+数据库侧无需改动。请按以下顺序自查应用侧：
+
+```sql
+-- 1. 在数据库 psql 命令行直接打时间，验证内核耗时
+\timing on
+SELECT * FROM bench_t5 WHERE uid=123;
+\timing off
+```
+
+```sql
+-- 2. 用 EXPLAIN ANALYZE 确认实际执行时间（非估算）
+EXPLAIN (ANALYZE, BUFFERS, TIMING) SELECT * FROM bench_t5 WHERE uid=123;
+```
+
+如果上面两条都是亚毫秒级（预期会是），那么"慢"来自以下任一处，与 DB 无关：
+
+1. **网络 RTT**：客户端到 OG 实例的链路延迟（跨区/跨机房）
+2. **应用层 ORM**：是否在循环里反复执行（N+1 问题）
+3. **连接建立开销**：每次新建连接而非复用（建议用连接池/PgBouncer）
+4. **未使用绑定变量**：每次 uid 值都不同会触发硬解析（虽然有 [Bypass] 仍建议用预编译语句）
+5. **客户端渲染**：终端/IDE 输出 100 万行数据时实际是因为缺 LIMIT，而不是 uid=123 这条
+6. **session 级别 GUC**：例如 `set enable_bitmapscan=off` 等手动关闭过优化器特性
+
+## 根因修复
+
+### 方案 1: 改用绑定变量（防止后续值变化时硬解析）
+- **操作**：
+```sql
+PREPARE q1(int) AS SELECT * FROM bench_t5 WHERE uid=$1;
+EXECUTE q1(123);
+```
+- **⚠️ 风险评估**：无，只是会话级 prepare
+- **📋 前置检查**：无
+- **🔄 回滚方案**：`DEALLOCATE q1;`
+
+### 方案 2: 如果应用层是 N+1 调用，改批量查询
+- **操作**：
+```sql
+SELECT * FROM bench_t5 WHERE uid = ANY(ARRAY[123, 124, 125, ...]);
+```
+- **⚠️ 风险评估**：单条 SQL 一次拉多行，IN 列表过大时（>1000）改临时表 JOIN
+- **📋 前置检查**：确认应用层确实存在 N+1 模式
+- **🔄 回滚方案**：保留原单条调用即可
+
+### 方案 3: 不需要在 DB 侧做任何改动
+- 当前 explain 显示的 [Bypass] + Index Scan + cost 8.27 已经是该查询能达到的最优形态
+- 不要 CREATE 新索引、不要 VACUUM FULL、不要改优化器参数 — 都不会让它更快
+
+---
+
+**最终结论**：本次诊断基于 sql / tableinfo / explain 三个工具，证据链显示 **数据库侧无可优化点**。请将排查焦点转向应用层（ORM/连接池/网络），如果你能提供"慢"的具体观测方式（应用日志的耗时、客户端打印的时间、还是 OG 服务端 log_min_duration_statement 抓到的耗时），我可以进一步定位是哪一段链路慢。
+

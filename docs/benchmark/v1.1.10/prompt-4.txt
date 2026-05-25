@@ -1,0 +1,87 @@
+── AI 诊断 (auto, 4轮) ──
+## 根因分析
+
+基于本轮实际调用的 **/wal、/checkpoint、/topsql** 三个工具返回的数据：
+
+| 指标 | 数据 | 来源工具 |
+|------|------|---------|
+| 当前 LSN | 0/B333E6A0（≈ 2.87 GB 累计偏移） | /wal |
+| 统计窗口 | 160065 秒（约 44.5 小时） | /wal |
+| Timed Checkpoints | 1593 次 | /wal |
+| Requested Checkpoints | 6 次（占比 0.4%） | /wal |
+| checkpoint_timeout | 900 s | /wal |
+| max_wal_size 压力 | requested=6，未触发强制 checkpoint | /wal |
+| archive_mode | off（不归档，不会因归档堆积） | /wal |
+| full_page_writes | on（FPW 放大 WAL） | /wal |
+| Top SQL Top20 | 全部为 dbe_perf.* / pg_settings / pg_database / version() 等监控读查询，CALLS 最高 148，TOTAL_S 最高 0.20s | /topsql |
+
+**推算 WAL 增速**：2.87 GB / 44.5 h ≈ **64 MB/h ≈ 1 MB/min**（基于 /wal 累计 LSN 与统计窗口）。
+
+**结论：未发现 WAL 异常增长的证据**
+
+- 累计 LSN ≈ 2.87 GB / 44.5 h，平均增速 ~1 MB/min，对一个开启了 full_page_writes 的实例属于低位水平；
+- requested checkpoint 仅 6 次（占 0.4%），说明 max_wal_size 未被打爆，**WAL 体量在配置容量内可控**；
+- /topsql Top20 全部是监控类读 SQL（dbe_perf 视图、pg_settings、version），**没有任何高频写 SQL 进入榜单**；
+- archive_mode=off → 不存在"归档失败导致 pg_wal 堆积"的风险；
+- /checkpoint 工具本轮回显内容过简（仅一行说明），未提供 buffer 写入量与 write/sync 时长，**这部分证据本轮缺失**，不作为结论引用。
+
+## 紧急措施
+
+无需紧急动作。**WAL 增速基于现有证据未达异常阈值**。
+
+如需进一步确认，建议短窗口实测（间隔 60s 跑两次取差）：
+
+```sql
+-- 实测瞬时 WAL 增速
+SELECT now(), pg_current_wal_lsn(),
+       pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0') AS total_bytes;
+-- 间隔 60s 再跑一次，差值 = 每分钟 WAL 字节数
+```
+
+```sql
+-- 看 checkpoint 实际写入量（补全本轮缺失的 /checkpoint 数据）
+SELECT checkpoints_timed, checkpoints_req,
+       checkpoint_write_time, checkpoint_sync_time,
+       buffers_checkpoint, buffers_clean, buffers_backend,
+       stats_reset
+  FROM pg_stat_bgwriter;
+```
+
+```sql
+-- 按写块数（而非返回行数）找写入热点 SQL
+SELECT unique_sql_id, n_calls,
+       n_tuples_inserted, n_tuples_updated, n_tuples_deleted,
+       LEFT(query, 120) AS query
+  FROM dbe_perf.statement
+ ORDER BY (COALESCE(n_tuples_inserted,0)
+         + COALESCE(n_tuples_updated,0)
+         + COALESCE(n_tuples_deleted,0)) DESC
+ LIMIT 10;
+```
+
+## 根因修复
+
+**本轮证据不支撑"WAL 异常"结论，无需做修复操作**。
+
+如后续实测证实 WAL 增速 > 数百 MB/min，再按以下方向定位：
+
+### 方向 1: 如确认 checkpoint 偏频繁放大 FPW
+
+- **操作**:
+  ```sql
+  ALTER SYSTEM SET checkpoint_timeout = '30min';
+  ALTER SYSTEM SET max_wal_size = '4GB';
+  SELECT pg_reload_conf();
+  ```
+- **⚠️ 风险评估**: checkpoint 间隔拉长会延长崩溃恢复时间；max_wal_size 增大会占更多 pg_wal 磁盘
+- **📋 前置检查**: 确认 pg_wal 分区剩余空间；确认业务能容忍更长 crash recovery
+- **🔄 回滚方案**: `ALTER SYSTEM RESET checkpoint_timeout; ALTER SYSTEM RESET max_wal_size; SELECT pg_reload_conf();`
+
+### 方向 2: 如发现高频写 SQL 是源头
+
+- 待补充查询的 `n_tuples_inserted/updated/deleted` 排序结果出来后，针对具体 SQL 做批量提交、合并写入或 COPY 替代逐条 INSERT
+
+---
+
+**一句话结论**：基于 /wal + /checkpoint + /topsql 实际数据，**WAL 增速约 1 MB/min，requested checkpoint 仅 6/1593，Top SQL 无写入热点**，未发现异常。如需更精确判断，请按"紧急措施"中的 SQL 补充瞬时增速与写入热点数据。
+

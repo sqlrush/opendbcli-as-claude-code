@@ -1,0 +1,60 @@
+── AI 诊断 (auto, 5轮) ──
+## 一、告警主线
+**数据库层面未观察到慢的证据**。/waits 显示 55 个活跃会话全部为 `CPU / On CPU`，无任何 IO / Lock / LWLock / IPC 等待事件（仅后台线程活跃，实例处于业务空闲状态）。
+
+/activesessions 显示这 55 个会话中绝大多数是同一个语句模式：
+`BEGIN; SELECT 1; SELECT pg_sleep(15…);`
+均由 `gauss` 用户连接 `postgres` 库，elapsed 集中在 4–5 分钟，最长一个是 31 分钟的 `WLM fetch collect info from data no…`（WLM 后台采集线程，正常）。
+
+来源：/activesessions, /waits
+
+## 二、关联问题
+- 这些 `pg_sleep(15…)` 会话每个都开启了显式事务（`BEGIN`），属于 idle in transaction 风险源。如果持续累积，会持有 snapshot 阻止 VACUUM 回收死元组、推高 xid_age。当前 /waits 未观察到对应等待事件，但属于值得关注的隐患。来源：/activesessions
+- /longtx 工具已被调用并返回 20 个长事务记录条目，与 /activesessions 中观察到的 `pg_sleep(15…)` 会话规模一致，进一步印证这批会话以长事务形式驻留。来源：/longtx
+- WLM 采集会话已运行 31 分钟，属于后台常驻线程，不是异常。来源：/activesessions
+- PROFILE.md 为空白模板，本实例无历史基线可参照。来源：/profile
+
+## 三、当前对比
+PROFILE.md 没有任何历史诊断条目和负载基线（"历史诊断"段标记"暂无"）。本次在数据库内部**找不到对应的等待事件、锁、IO 异常** —— 用户所说"越来越慢"在 OG 内部当前快照里没有证据支撑。
+
+可能的解释方向（按可能性排序）：
+1. 应用侧或客户端测试脚本本身就在 `pg_sleep`，把"慢"当成了数据库慢
+2. 慢发生在采集时刻之外（瞬时），当前快照看不到
+3. 慢的体感来自 OS / 网络 / 客户端，与 OG 无关
+
+来源：/profile, /activesessions, /waits, /longtx
+
+## 四、综合评估与排名
+
+| 严重度 | 问题 | 影响 | 修复 SQL / 动作 |
+|--------|------|------|-----------------|
+| [LOW] | 数据库层无慢证据 | 当前快照 0 业务等待事件、全部 On CPU，无法定位"慢"的根因 | 请提供：① 慢发生的具体时刻与表现（哪条 SQL 慢、慢多少）② 是否本地压测脚本在跑 `pg_sleep`，先停止再观测 |
+| [MEDIUM] | /longtx 显示 20 个长事务 + /activesessions 显示大量 `BEGIN; … pg_sleep(15…)` 的 idle in transaction | 持续会推高 xid_age、阻止 VACUUM 回收死元组 | 若确认是测试残留，清理：`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE query LIKE '%pg_sleep(15%';` |
+| - | 实例无 PROFILE 基线 | 无法做"现在 vs 之前"对比，难以判断是否真"越来越慢" | 建议补全 PROFILE 基本信息，便于后续对比 |
+
+### 紧急措施（可立即执行）
+如果确认这批 `pg_sleep` 会话是测试残留、可以清理：
+
+```sql
+-- 1) 先 review 即将被终止的会话
+SELECT pid, usename, datname, state, xact_start, query
+FROM pg_stat_activity
+WHERE query LIKE '%pg_sleep(15%';
+
+-- 2) 确认无误后再终止
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE query LIKE '%pg_sleep(15%';
+```
+
+- ⚠️ 风险评估：会强制断开这些会话；如果是真实业务在用 pg_sleep（罕见），会导致业务报错
+- 📋 前置检查：先用上面第 1 条 SELECT 确认全部都是 `gauss/postgres` 上的测试连接
+- 🔄 回滚方案：会话被终止后无法回滚，但客户端可重连重跑
+
+### 建议的下一步采集（如用户确认确实慢）
+当前盲查无方向。请告知一个具体场景（例：哪个查询慢、几点钟开始慢、是登录慢还是查询慢），我再针对性采集 /topsql、/checkpoint、/wal、/gsmem、/bloat 等定位。
+
+---
+
+**结论**：基于本次实际调用的 /profile、/activesessions、/waits、/longtx 四个工具，**当前数据库层面没有"慢"的证据**。/waits 显示 0 业务等待，全部 On CPU；显眼现象是大量 `pg_sleep(15…)` 显式事务，这是脚本主动 sleep，不是数据库慢。请补充用户感知"慢"的具体表现后再做针对性诊断。
+

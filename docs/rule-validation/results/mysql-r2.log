@@ -1,0 +1,308 @@
+Connected: 8.0.45
+Rules: 203
+
+Running 100 scenarios...
+
+[1/100] T001 InnoDB行锁级联: blocker空闲
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[2/100] T002 InnoDB行锁级联: blocker跑慢SQL
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[3/100] T003 InnoDB行锁级联: blocker等IO
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[4/100] T004 多层阻塞链
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[5/100] T005 死锁检测
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[6/100] T006 Metadata Lock阻塞DML
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[7/100] T007 Gap Lock阻塞INSERT
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[8/100] T008 Next-Key Lock并发INSERT死锁
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[9/100] T009 FTWRL阻塞全库
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[10/100] T010 外键缺索引导致锁扩散
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[11/100] T011 Online DDL阻塞分析
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[12/100] T012 自增锁争用
+  → [SKIP] rule=                     sev=     cause=
+
+[13/100] T013 LOCK TABLES阻塞并发
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[14/100] T014 INSERT ON DUPLICATE KEY热点争用
+  → [OK  ] rule=MY-029               sev=高    cause=行锁等待高 — 可能存在自增锁争用
+
+[15/100] T015 锁等待超时重试风暴
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[16/100] T016 全表扫描: 缺索引
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[17/100] T017 全表扫描: 选择度低不该加索引
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[18/100] T018 执行计划漂移: 统计信息过期
+  → [SKIP] rule=                     sev=     cause=
+
+[19/100] T019 隐式类型转换索引失效
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[20/100] T020 函数导致索引失效
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[21/100] T021 LIKE前模糊全表扫描
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[22/100] T022 分区裁剪失效
+  → [SKIP] rule=                     sev=     cause=
+
+[23/100] T023 NOT IN子查询退化
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[24/100] T024 OFFSET大分页退化
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[25/100] T025 多列索引顺序不当
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[26/100] T026 过多索引写入变慢
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[27/100] T027 相关子查询N+1
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[28/100] T028 JOIN缺索引全表扫描
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[29/100] T029 大排序溢出到磁盘
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[30/100] T030 Hash Join溢出
+  → [OK  ] rule=MY-038               sev=严重   cause=> 100/s — 大量无索引连接查询
+
+[31/100] T031 SELECT * 回表开销
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[32/100] T032 Filesort + Temporary双重开销
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[33/100] T033 大表COUNT(*)无WHERE
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[34/100] T034 大IN列表估算偏差
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[35/100] T035 窗口函数无索引
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[36/100] T036 Buffer Pool命中率下降: 大查询冲刷
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[37/100] T037 Buffer Pool命中率持续低
+  → [SKIP] rule=                     sev=     cause=
+
+[38/100] T038 Redo Log太小频繁Checkpoint
+  → [SKIP] rule=                     sev=     cause=
+
+[39/100] T039 Undo Log膨胀: 长事务阻止purge
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[40/100] T040 Change Buffer合并拖慢读
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[41/100] T041 Adaptive Hash Index争用
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[42/100] T042 Doublewrite Buffer写入延迟
+  → [SKIP] rule=                     sev=     cause=
+
+[43/100] T043 临时表空间膨胀
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[44/100] T044 InnoDB IO线程不足
+  → [SKIP] rule=                     sev=     cause=
+
+[45/100] T045 Page Cleaner跟不上脏页
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[46/100] T046 sort_buffer过大OOM风险
+  → [SKIP] rule=                     sev=     cause=
+
+[47/100] T047 join_buffer不足Block Nested Loop
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[48/100] T048 tmp_table_size不足磁盘临时表
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[49/100] T049 Table Open Cache不足
+  → [SKIP] rule=                     sev=     cause=
+
+[50/100] T050 Thread Cache不足频繁创建线程
+  → [SKIP] rule=                     sev=     cause=
+
+[51/100] T051 Query Cache争用(5.7)
+  → [SKIP] rule=                     sev=     cause=
+
+[52/100] T052 Prepared Statement泄漏
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[53/100] T053 Buffer Pool Chunk Size内存浪费
+  → [SKIP] rule=                     sev=     cause=
+
+[54/100] T054 Binlog Cache溢出磁盘
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[55/100] T055 内存碎片化RSS增长
+  → [SKIP] rule=                     sev=     cause=
+
+[56/100] T056 Binlog写入速率过高
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[57/100] T057 sync_binlog提交延迟
+  → [SKIP] rule=                     sev=     cause=
+
+[58/100] T058 主从延迟: 大事务
+  → [SKIP] rule=                     sev=     cause=
+
+[59/100] T059 主从延迟: 从库无索引
+  → [SKIP] rule=                     sev=     cause=
+
+[60/100] T060 Binlog文件堆积占满磁盘
+  → [SKIP] rule=                     sev=     cause=
+
+[61/100] T061 GTID errant transaction
+  → [SKIP] rule=                     sev=     cause=
+
+[62/100] T062 半同步降级
+  → [SKIP] rule=                     sev=     cause=
+
+[63/100] T063 STATEMENT格式数据不一致
+  → [SKIP] rule=                     sev=     cause=
+
+[64/100] T064 relay_log_space_limit阻塞
+  → [SKIP] rule=                     sev=     cause=
+
+[65/100] T065 多源复制冲突
+  → [SKIP] rule=                     sev=     cause=
+
+[66/100] T066 innodb_data_file IO延迟
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[67/100] T067 innodb_log_file Redo写入延迟
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[68/100] T068 buf_pool_mutex争用
+  → [SKIP] rule=                     sev=     cause=
+
+[69/100] T069 trx_mutex争用
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[70/100] T070 AHI latch争用
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[71/100] T071 表IO等待集中热表
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[72/100] T072 LOCK_open表定义缓存争用
+  → [SKIP] rule=                     sev=     cause=
+
+[73/100] T073 Binlog Group Commit等待
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[74/100] T074 TPS骤降根因定位
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[75/100] T075 CPU spin等待过度并发
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[76/100] T076 连接风暴无连接池
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[77/100] T077 连接接近max_connections
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[78/100] T078 Sleep会话堆积
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[79/100] T079 会话泄漏趋势
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[80/100] T080 Aborted Connects冲高
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[81/100] T081 Aborted Clients冲高
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[82/100] T082 open_files_limit不足
+  → [SKIP] rule=                     sev=     cause=
+
+[83/100] T083 Active Sessions加速度突增
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[84/100] T084 全库Hang分析
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[85/100] T085 ProxySQL配置不当
+  → [SKIP] rule=                     sev=     cause=
+
+[86/100] T086 innodb_flush_log_at_trx_commit设错
+  → [SKIP] rule=                     sev=     cause=
+
+[87/100] T087 innodb_flush_method不当
+  → [SKIP] rule=                     sev=     cause=
+
+[88/100] T088 innodb_file_per_table=OFF
+  → [SKIP] rule=                     sev=     cause=
+
+[89/100] T089 lower_case_table_names问题
+  → [SKIP] rule=                     sev=     cause=
+
+[90/100] T090 sql_mode不严格
+  → [SKIP] rule=                     sev=     cause=
+
+[91/100] T091 慢查询日志未启用
+  → [SKIP] rule=                     sev=     cause=
+
+[92/100] T092 ERROR日志刷屏
+  → [SKIP] rule=                     sev=     cause=
+
+[93/100] T093 pt-osc导致负载升高
+  → [SKIP] rule=                     sev=     cause=
+
+[94/100] T094 mysqldump长事务阻塞purge
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+[95/100] T095 OPTIMIZE TABLE阻塞读写
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[96/100] T096 版本升级SQL兼容性
+  → [SKIP] rule=                     sev=     cause=
+
+[97/100] T097 Event Scheduler任务堆叠
+  → [SKIP] rule=                     sev=     cause=
+
+[98/100] T098 外键级联删除慢操作
+  → [OK  ] rule=MY_114_CONNECTION_STATUS_MONITORING sev=中    cause=RC4: 异常断连过多（排除法）
+
+[99/100] T099 数据字典锁争用(大量表)
+  → [SKIP] rule=                     sev=     cause=
+
+[100/100] T100 综合: IO慢+锁等待+Binlog堆积
+  → [OK  ] rule=MY_121_CROSS_DB_LOCK_MONITORING sev=中    cause=RC4: 死锁检测差异（排除法）
+
+
+=== Summary ===
+Total=100  RuleFired=63  Skip=37  NoMatch=0

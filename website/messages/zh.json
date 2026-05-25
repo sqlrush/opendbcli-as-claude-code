@@ -1,0 +1,80 @@
+{
+  "nav": {
+    "features": "功能",
+    "docs": "文档",
+    "github": "GitHub",
+    "blog": "博客",
+    "getStarted": "快速开始"
+  },
+  "hero": {
+    "badge": "像Claude Code一样交互的DBCLI Agent",
+    "title1": "最少交互",
+    "title2": "最优诊断",
+    "subtitle": "Oracle · MySQL · PostgreSQL — 斜杠命令交互 / 原生SQL交互 / 自然语言交互",
+    "quickInstall": "快速安装",
+    "copy": "复制",
+    "copied": "已复制 ✓"
+  },
+  "modes": {
+    "title": "三种模式，一个 Agent",
+    "subtitle": "想怎么输入就怎么输入 — OpenDB 同时理解斜杠命令、原生 SQL 和自然语言。",
+    "slash": {
+      "label": "Slash Commands",
+      "title": "60+ 内置 Skill",
+      "desc": "复杂操作一行搞定。像 Claude Code，但专为数据库设计。"
+    },
+    "sql": {
+      "label": "Native SQL",
+      "title": "保留你的习惯",
+      "desc": "直接执行 SQL。像 sqlplus、mysql、psql 一样使用，零学习成本。"
+    },
+    "natural": {
+      "label": "Natural Language",
+      "title": "用大白话提问",
+      "desc": "用自然语言描述问题，AI 自动翻译为诊断动作并给出结果。"
+    }
+  },
+  "features": {
+    "title": "从监控到根因，一步到位",
+    "subtitle": "三层诊断体系 — 从持续感知到 AI 深度推理。",
+    "health": {
+      "title": "全维度健康检查",
+      "desc": "7 个维度、20+ 检查项 — 实例、存储、会话、内存、日志、备份、安全。一条命令，全局掌握。",
+      "stat1Label": "检查维度",
+      "stat2Label": "检查项",
+      "stat3Label": "全量扫描"
+    },
+    "dbtop": {
+      "title": "实时性能仪表盘",
+      "desc": "数据库版的 top 命令。1 秒刷新，实时展示 SGA、PGA、TPS、QPS、等待事件和活跃会话。",
+      "stat1Label": "刷新频率",
+      "stat2Label": "实时指标"
+    },
+    "rule": {
+      "title": "273 规则决策引擎",
+      "desc": "毫秒级确定性诊断。离线可用 — 不需要 LLM、不需要网络、零 API 成本。AI 不可用时的安全兜底。",
+      "stat1Label": "规则数",
+      "stat2Label": "诊断耗时",
+      "stat3Label": "外部依赖"
+    },
+    "llm": {
+      "title": "AI 深度诊断",
+      "desc": "LLM 多轮推理 + 函数调用。自动采集证据、关联症状、给出可执行的修复 SQL — 不是泛泛的建议。",
+      "stat1Label": "最大推理轮数",
+      "stat2Label": "Skill"
+    },
+    "sentinel": {
+      "title": "7×24 异常检测",
+      "desc": "后台探针持续监控 48 项指标，自适应 3-sigma 基线。在故障发生前发现异常。",
+      "stat1Label": "监控指标",
+      "stat2Label": "检测算法",
+      "stat3Label": "持续监控"
+    }
+  },
+  "footer": {
+    "tagline": "最少交互，最优诊断。",
+    "docs": "文档",
+    "issues": "问题反馈",
+    "license": "开源协议"
+  }
+}

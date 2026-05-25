@@ -1,0 +1,238 @@
+{
+  "rule_id": "ORA_085",
+  "name": "锁诊断通用 — 各类锁争用的综合诊断",
+  "category": "performance",
+  "subcategory": "locking",
+  "database": "oracle",
+  "versions": "10gR2+",
+  "tags": ["lock", "enqueue", "blocking_session", "lock_chain", "tx_lock", "tm_lock", "deadlock", "blocker_analysis"],
+  "description": "Oracle 锁争用综合诊断规则。覆盖 TX（行锁/事务锁）、TM（表锁）、UL（用户锁）等各类 enqueue 争用的统一排查方法。包含 blocker 状态深度分析（空闲/慢SQL/被阻塞）、多层阻塞链追溯、死锁检测和影响评估。",
+  "signals": [
+    {"type": "wait_event", "key": "enq: TX - row lock contention"},
+    {"type": "wait_event", "key": "enq: TM - contention"},
+    {"type": "session_state", "key": "blocked sessions"}
+  ],
+  "trigger": {
+    "mode": "auto",
+    "conditions": [
+      {"source": "v$session", "field": "blocked_session_count", "op": "gt", "value": 5, "desc": "被阻塞会话数 > 5"},
+      {"source": "wait_profile", "field": "enqueue_wait_pct", "op": "gt", "value": 10, "desc": "enqueue 等待占 DB Time > 10%"}
+    ],
+    "skip_when": [
+      {"desc": "无锁等待", "condition": "blocked_sessions = 0 AND enqueue_waits = 0"}
+    ]
+  },
+  "root_causes": [
+    {"id": "RC1", "name": "长事务持锁不释放", "probability": "15%", "desc": "事务执行 DML 后长时间未 COMMIT/ROLLBACK，持有行锁阻塞其他会话。常见于忘记提交的交互式会话。"},
+    {"id": "RC2", "name": "热点行争用", "probability": "10%", "desc": "多个事务同时更新同一行（如余额扣减、计数器递增），TX 行锁争用。需应用层优化。"},
+    {"id": "RC3", "name": "锁升级或锁范围过大", "probability": "5%", "desc": "UPDATE 缺少索引导致全表扫描锁定过多行，或应用使用了 LOCK TABLE。"},
+    {"id": "RC4", "name": "分布式事务锁", "probability": "5%", "desc": "通过 DB Link 的分布式事务中，远端锁持有时间长。2PC 准备阶段的锁可能长时间不释放。"},
+    {"id": "RC5", "name": "ITL 争用", "probability": "5%", "desc": "数据块的 ITL 槽位不足，新事务无法在块上记录锁信息，等待 ITL 释放。表现为 enq: TX - allocate ITL entry。"},
+    {"id": "RC6", "name": "未提交事务持锁（blocker 空闲）", "probability": "30%", "desc": "Blocker 完成 DML 后未提交，处于空闲/应用等待状态。不会自行释放锁，需外部干预。"},
+    {"id": "RC7", "name": "慢 SQL 持锁", "probability": "15%", "desc": "Blocker 正在执行耗时 SQL，完成前不会释放锁。需优化 blocker 的 SQL。"},
+    {"id": "RC8", "name": "死锁（循环等待）", "probability": "10%", "desc": "多个事务形成循环锁依赖。Oracle 自动检测（ORA-00060），但频繁死锁说明应用设计有问题。"},
+    {"id": "RC9", "name": "DDL/DML 冲突", "probability": "5%", "desc": "DDL 操作（ALTER TABLE 等）与活跃 DML 冲突，互相阻塞。"}
+  ],
+  "diagnostic_queries": {
+    "step1_victim_impact": {
+      "desc": "评估锁影响范围",
+      "sql": "SELECT COUNT(*) victim_count, ROUND(COUNT(*)*100.0/NULLIF((SELECT COUNT(*) FROM v$session WHERE type='USER' AND status='ACTIVE'),0),1) blocked_pct FROM v$session WHERE blocking_session IS NOT NULL"
+    },
+    "step2_blocker_state": {
+      "desc": "分析 blocker 的状态和等待事件",
+      "sql": "SELECT s.sid, s.serial#, s.username, s.status, s.event AS blocker_event, s.sql_id, s.last_call_et idle_sec, CASE WHEN s.event IN ('PL/SQL lock timer','SQL*Net message from client','Streams AQ: waiting for messages in the queue','pipe get','jobq slave wait','smon timer','pmon timer') OR s.status = 'INACTIVE' THEN 'IDLE_PATTERN' WHEN s.event LIKE 'enq:%' AND s.blocking_session IS NOT NULL THEN 'ALSO_BLOCKED' ELSE 'WORKING' END AS blocker_activity, s.blocking_session AS blocker_of_blocker FROM v$session s WHERE s.sid IN (SELECT DISTINCT blocking_session FROM v$session WHERE blocking_session IS NOT NULL)"
+    },
+    "step3_deadlock_check": {
+      "desc": "检查死锁统计和循环阻塞",
+      "sql": "SELECT (SELECT value FROM v$sysstat WHERE name = 'enqueue deadlocks') deadlock_count, (SELECT COUNT(*) FROM v$session a, v$session b WHERE a.blocking_session = b.sid AND b.blocking_session = a.sid AND a.sid < b.sid) circular_blocks FROM dual"
+    },
+    "step4_chain_depth": {
+      "desc": "阻塞链深度分析",
+      "sql": "SELECT MAX(lvl) max_depth FROM (SELECT LEVEL lvl FROM v$session START WITH sid IN (SELECT DISTINCT blocking_session FROM v$session WHERE blocking_session IS NOT NULL) CONNECT BY PRIOR blocking_session = sid AND LEVEL <= 10)"
+    },
+    "step5_blocker_sql": {
+      "desc": "Blocker SQL 详情",
+      "sql": "SELECT s.sid, s.sql_id, SUBSTR(q.sql_text,1,200) sql_text, q.elapsed_time/GREATEST(q.executions,1)/1e6 avg_sec FROM v$session s LEFT JOIN v$sql q ON s.sql_id = q.sql_id AND q.child_number = 0 WHERE s.sid IN (SELECT DISTINCT blocking_session FROM v$session WHERE blocking_session IS NOT NULL) AND s.sql_id IS NOT NULL"
+    },
+    "step6_lock_tree": {
+      "desc": "锁等待树",
+      "sql": "SELECT LPAD(' ',2*(level-1)) || sid sid_tree, serial#, username, event, blocking_session, sql_id, seconds_in_wait, status FROM v$session START WITH blocking_session IS NULL AND sid IN (SELECT DISTINCT blocking_session FROM v$session WHERE blocking_session IS NOT NULL) CONNECT BY PRIOR sid = blocking_session ORDER SIBLINGS BY seconds_in_wait DESC"
+    },
+    "step7_enqueue_detail": {
+      "desc": "Enqueue 锁详情",
+      "sql": "SELECT l.sid, l.type, DECODE(l.type,'TX','Row Lock','TM','Table Lock','UL','User Lock',l.type) lock_type, DECODE(l.lmode,0,'-',1,'N',2,'RS',3,'RX',4,'S',5,'SRX',6,'X') hold_mode, DECODE(l.request,0,'-',1,'N',2,'RS',3,'RX',4,'S',5,'SRX',6,'X') req_mode FROM v$lock l WHERE (l.lmode > 0 OR l.request > 0) AND l.sid IN (SELECT DISTINCT blocking_session FROM v$session WHERE blocking_session IS NOT NULL UNION SELECT sid FROM v$session WHERE blocking_session IS NOT NULL) ORDER BY l.type, l.lmode DESC"
+    },
+    "step8_ddl_check": {
+      "desc": "检查是否有 DDL 操作参与锁争用",
+      "sql": "SELECT s.sid, s.sql_id, SUBSTR(q.sql_text,1,100) sql_text FROM v$session s JOIN v$sql q ON s.sql_id = q.sql_id AND q.child_number = 0 WHERE s.sid IN (SELECT DISTINCT blocking_session FROM v$session WHERE blocking_session IS NOT NULL UNION SELECT sid FROM v$session WHERE blocking_session IS NOT NULL) AND (UPPER(q.sql_text) LIKE 'ALTER%' OR UPPER(q.sql_text) LIKE 'DROP%' OR UPPER(q.sql_text) LIKE 'CREATE%' OR UPPER(q.sql_text) LIKE 'TRUNCATE%')"
+    }
+  },
+  "decision_tree": {
+    "step": "Step 1: 评估锁影响范围",
+    "query": "step1_victim_impact",
+    "branches": [
+      {
+        "label": "存在被阻塞会话",
+        "condition": {"field": "victim_count", "op": ">", "value": 0},
+        "then": {
+          "step": "Step 2: 分析 blocker 状态",
+          "query": "step2_blocker_state",
+          "branches": [
+            {
+              "label": "blocker 空闲 — 未提交事务",
+              "condition": {"field": "blocker_activity", "op": "contains", "value": "IDLE_PATTERN"},
+              "root_cause": "RC6",
+              "severity": "critical",
+              "confidence": "置信度 92%: blocker 空闲/睡眠，持有未提交事务",
+              "findings": [
+                "Blocker 处于空闲状态，持有未提交事务阻塞其他会话",
+                "空闲 blocker 不会自行释放锁，必须外部干预"
+              ],
+              "actions": [
+                {"type": "urgent", "desc": "Kill 空闲 blocker 会话", "sql": "ALTER SYSTEM KILL SESSION '{sid},{serial#}' IMMEDIATE;"},
+                {"type": "fix", "desc": "修复应用在 DML 后及时 COMMIT"},
+                {"type": "fix", "desc": "设置 IDLE_TIME 资源限制", "sql": "ALTER PROFILE DEFAULT LIMIT IDLE_TIME 10;"}
+              ]
+            },
+            {
+              "label": "blocker 也被阻塞 — 阻塞链",
+              "condition": {"field": "blocker_activity", "op": "contains", "value": "ALSO_BLOCKED"},
+              "then": {
+                "step": "Step 3: 检查死锁和链深度",
+                "query": "step3_deadlock_check",
+                "branches": [
+                  {
+                    "label": "检测到循环阻塞（死锁模式）",
+                    "condition": {"field": "circular_blocks", "op": ">", "value": 0},
+                    "root_cause": "RC8",
+                    "severity": "critical",
+                    "confidence": "置信度 90%: 循环阻塞，频繁死锁",
+                    "findings": [
+                      "存在循环阻塞模式，通常伴随 ORA-00060 死锁",
+                      "应用中事务访问资源的顺序不一致"
+                    ],
+                    "actions": [
+                      {"type": "fix", "desc": "统一事务的资源访问顺序"},
+                      {"type": "fix", "desc": "添加死锁重试逻辑"},
+                      {"type": "investigate", "desc": "检查 alert log 中 ORA-00060 频率"}
+                    ]
+                  },
+                  {
+                    "label": "非循环 — 多层串行阻塞",
+                    "condition": "default",
+                    "root_cause": "RC6",
+                    "severity": "critical",
+                    "confidence": "置信度 85%: 多层阻塞链，需找 root blocker",
+                    "findings": [
+                      "阻塞链存在多层依赖，Kill 中间层无效",
+                      "需沿阻塞链追溯到最顶层 root blocker"
+                    ],
+                    "actions": [
+                      {"type": "urgent", "desc": "定位并处理最顶层 root blocker"},
+                      {"type": "investigate", "desc": "查看锁等待树", "skill": "/ash detail event='enq:%'"}
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "label": "blocker 正在执行 SQL",
+              "condition": {"field": "blocker_activity", "op": "contains", "value": "WORKING"},
+              "then": {
+                "step": "Step 3: 检查 DDL 参与",
+                "query": "step8_ddl_check",
+                "branches": [
+                  {
+                    "label": "DDL 操作参与锁争用",
+                    "condition": {"field": "count", "op": ">", "value": 0},
+                    "root_cause": "RC9",
+                    "severity": "high",
+                    "confidence": "置信度 85%: DDL/DML 冲突",
+                    "findings": [
+                      "DDL 操作（ALTER/CREATE/DROP）与活跃 DML 冲突",
+                      "DDL 需要获取排他锁，与 DML 的行锁不兼容"
+                    ],
+                    "actions": [
+                      {"type": "fix", "desc": "在维护窗口执行 DDL，避免业务高峰"},
+                      {"type": "fix", "desc": "使用 ONLINE DDL（如 ALTER TABLE ... ONLINE）减少锁冲突"},
+                      {"type": "fix", "desc": "设置 DDL_LOCK_TIMEOUT 避免无限等待", "sql": "ALTER SESSION SET DDL_LOCK_TIMEOUT = 10;"}
+                    ]
+                  },
+                  {
+                    "label": "纯 DML — 慢 SQL 持锁",
+                    "condition": "default",
+                    "then": {
+                      "step": "Step 4: 分析 blocker SQL",
+                      "query": "step5_blocker_sql",
+                      "branches": [
+                        {
+                          "label": "blocker SQL 耗时长",
+                          "condition": {"field": "avg_sec", "op": ">", "value": 10},
+                          "root_cause": "RC7",
+                          "severity": "high",
+                          "confidence": "置信度 88%: blocker 执行耗时 SQL",
+                          "findings": [
+                            "Blocker 正在执行耗时 SQL，持锁期间阻塞其他会话"
+                          ],
+                          "actions": [
+                            {"type": "fix", "desc": "优化 blocker SQL", "skill": "/explain {sql_id}"},
+                            {"type": "fix", "desc": "拆分大事务减少持锁时间"},
+                            {"type": "urgent", "desc": "紧急时 Kill blocker", "sql": "ALTER SYSTEM KILL SESSION '{sid},{serial#}' IMMEDIATE;"}
+                          ]
+                        },
+                        {
+                          "label": "blocker SQL 正常 — 热点行",
+                          "condition": "default",
+                          "root_cause": "RC2",
+                          "severity": "high",
+                          "confidence": "置信度 82%: 活跃 blocker，热点行争用",
+                          "findings": ["多事务争用同一行，blocker 正常执行中"],
+                          "actions": [
+                            {"type": "fix", "desc": "应用层优化：拆分热点行或使用队列"}
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "label": "默认 — 通用锁争用",
+              "condition": "default",
+              "root_cause": "RC1",
+              "severity": "high",
+              "confidence": "置信度 70%: 通用锁争用",
+              "findings": ["存在锁争用，需进一步分析 blocker"],
+              "actions": [
+                {"type": "investigate", "desc": "从 ASH 获取详细锁信息", "skill": "/ash detail event='enq:%'"}
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "label": "无被阻塞会话",
+        "condition": "default",
+        "findings": ["当前无锁等待"],
+        "actions": [{"type": "monitor", "desc": "继续监控"}]
+      }
+    ]
+  },
+  "related_rules": {
+    "caused_by": [],
+    "causes_of": [
+      {"rule_id": "ORA_084", "name": "死锁诊断", "relationship": "持续锁争用可能升级为死锁"}
+    ],
+    "related": [
+      {"rule_id": "ORA_083", "name": "DDL/表锁诊断", "relationship": "TM 锁专项"},
+      {"rule_id": "ORA_086", "name": "行锁争用诊断", "relationship": "TX 行锁专项"}
+    ]
+  },
+  "thresholds": {
+    "blocked_sessions_warning": 5,
+    "blocked_sessions_critical": 20,
+    "blocker_idle_warning_seconds": 300,
+    "enqueue_wait_pct_warning": 10
+  }
+}

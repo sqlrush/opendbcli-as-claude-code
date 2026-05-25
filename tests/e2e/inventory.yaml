@@ -1,0 +1,69 @@
+# Sample inventory for OpenDB Autopilot cluster deployment.
+# 1 Cerebrate (Manager) + 2 Overlords + 6 Drones (3 per Overlord).
+#
+# Usage:
+#   opendb cluster deploy --inventory inventory.yaml --binary ./opendb
+#   opendb cluster deploy --inventory inventory.yaml --binary ./opendb --dry-run
+
+# SSH credentials for all nodes.
+ssh_user: deploy
+ssh_key: /home/deploy/.ssh/opendb_deploy_key
+
+# Cerebrate (Manager Agent) — global orchestration, Web dashboard.
+cerebrate:
+  host: 10.0.0.1
+  name: cerebrate-1
+  listen: "0.0.0.0:9100"
+  web: "0.0.0.0:8080"
+
+# Overlords (Memory Agents) — regional coordination, <=200 nodes each.
+overlords:
+  # China East region — Shanghai data center.
+  - host: 10.0.1.1
+    name: overlord-east
+    region: china-east
+
+  # China North region — Beijing data center.
+  - host: 10.0.1.2
+    name: overlord-north
+    region: china-north
+
+# Drones (Worker Agents) — single-node autonomous agents.
+drones:
+  # --- China East drones (overlord: 10.0.1.1) ---
+  - host: 10.0.2.1
+    name: drone-e1
+    overlord: 10.0.1.1
+    db_type: oracle
+    db_conn: "oracle://dbuser:***@10.0.2.1:1521/PRODDB"
+
+  - host: 10.0.2.2
+    name: drone-e2
+    overlord: 10.0.1.1
+    db_type: oracle
+    db_conn: "oracle://dbuser:***@10.0.2.2:1521/PRODDB"
+
+  - host: 10.0.2.3
+    name: drone-e3
+    overlord: 10.0.1.1
+    db_type: mysql
+    db_conn: "mysql://dbuser:***@10.0.2.3:3306/proddb"
+
+  # --- China North drones (overlord: 10.0.1.2) ---
+  - host: 10.0.3.1
+    name: drone-n1
+    overlord: 10.0.1.2
+    db_type: oracle
+    db_conn: "oracle://dbuser:***@10.0.3.1:1521/PRODDB"
+
+  - host: 10.0.3.2
+    name: drone-n2
+    overlord: 10.0.1.2
+    db_type: mysql
+    db_conn: "mysql://dbuser:***@10.0.3.2:3306/proddb"
+
+  - host: 10.0.3.3
+    name: drone-n3
+    overlord: 10.0.1.2
+    db_type: oracle
+    db_conn: "oracle://dbuser:***@10.0.3.3:1521/PRODDB"

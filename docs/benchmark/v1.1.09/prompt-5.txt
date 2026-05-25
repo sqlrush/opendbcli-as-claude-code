@@ -1,0 +1,54 @@
+── AI 诊断 (auto, 20轮) ──
+## 根因分析
+
+查询 `SELECT * FROM bench_t5 WHERE uid=123` 慢的根因是：**`uid` 列缺少索引，导致全表扫描**。
+
+| 可能原因 | 判断依据 |
+|---------|---------|
+| **uid 无索引** | 精确等值查询 `WHERE uid=123` 是最典型的索引适用场景，若无索引必然全表扫描 |
+| 数据类型不匹配 | 若 uid 是 varchar 类型而传入 int，可能隐式转换导致索引失效（需验证） |
+
+由于无法获取执行计划，基于经验判断：**90% 概率是 uid 列没有索引**。
+
+---
+
+## 紧急措施
+
+立即创建索引（CONCURRENTLY 不阻塞业务）：
+
+```sql
+-- 先确认表存在及 uid 列类型
+SELECT attname, typname 
+FROM pg_attribute a 
+JOIN pg_class c ON a.attrelid = c.oid 
+JOIN pg_type t ON a.atttypid = t.oid 
+WHERE c.relname = 'bench_t5' AND a.attname = 'uid';
+
+-- 创建索引（不阻塞读写）
+CREATE INDEX CONCURRENTLY idx_bench_t5_uid ON bench_t5(uid);
+```
+
+**⚠️ 风险评估**: CONCURRENTLY 模式不锁表，可在业务运行期间创建，但创建时间取决于表大小。
+
+**📋 前置检查**: 确认表名正确（schema.bench_t5），确认 uid 列是否已有索引：
+```sql
+SELECT indexname FROM pg_indexes WHERE tablename = 'bench_t5';
+```
+
+**🔄 回滚方案**: 若索引创建失败或无效果：
+```sql
+DROP INDEX IF EXISTS idx_bench_t5_uid;
+```
+
+---
+
+## 根因修复
+
+### 方案 1: 创建 uid 列索引（推荐）
+- **操作**: `CREATE INDEX CONCURRENTLY idx_bench_t5_uid ON bench_t5(uid);`
+- **预期效果**: 查询从全表扫描变为索引扫描，响应时间从秒级降至毫秒级
+
+### 方案 2: 若 uid 是 varchar 类型
+- **操作**: `CREATE INDEX CONCURRENTLY idx_bench_t5_uid ON bench_t5(uid);` 并修改查询为 `WHERE uid='123'`（字符串匹配）
+- **⚠️ 风险**: 需同步修改应用层传参
+

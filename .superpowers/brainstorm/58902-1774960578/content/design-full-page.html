@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenDB — Landing Page Design</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  :root {
+    --bg: #14120b;
+    --bg-surface: #1c1a12;
+    --bg-elevated: #24221a;
+    --text-primary: #edecec;
+    --text-secondary: rgba(237,236,236,0.55);
+    --text-tertiary: rgba(237,236,236,0.3);
+    --border: rgba(237,236,236,0.08);
+    --fill: rgba(237,236,236,0.06);
+    --fill-hover: rgba(237,236,236,0.1);
+    /* Terminal colors (product-authentic) */
+    --t-green: #7ee787;
+    --t-yellow: #ffc61c;
+    --t-orange: #ff6b35;
+    --t-blue: #79c0ff;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== NAV ===== */
+  nav {
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 16px 48px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top:0; z-index:100;
+    background: rgba(20,18,11,0.85);
+    backdrop-filter: blur(12px);
+  }
+  nav .logo { font-size:18px; font-weight:700; letter-spacing:-0.5px; }
+  nav .links { display:flex; gap:28px; }
+  nav .links a { color: var(--text-secondary); font-size:14px; text-decoration:none; }
+  nav .links a:hover { color: var(--text-primary); }
+  nav .right { display:flex; align-items:center; gap:14px; }
+  nav .lang { color: var(--text-tertiary); font-size:13px; }
+  nav .cta-nav {
+    background: var(--fill); color: var(--text-primary);
+    padding:7px 18px; border-radius:7px; font-size:13px; font-weight:500;
+    border:1px solid var(--border); text-decoration:none;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    text-align:center; padding:80px 48px 60px;
+    position:relative; overflow:hidden;
+  }
+  .hero .glow {
+    position:absolute; top:-80px; left:50%; transform:translateX(-50%);
+    width:500px; height:250px;
+    background: radial-gradient(ellipse, rgba(237,236,236,0.04) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .hero .badge {
+    font-size:11px; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:3px; margin-bottom:18px;
+  }
+  .hero h1 {
+    font-size:52px; font-weight:700; line-height:1.15; letter-spacing:-1.5px;
+    max-width:700px; margin:0 auto;
+  }
+  .hero .sub {
+    font-size:17px; color:var(--text-secondary); margin-top:18px;
+    max-width:520px; margin-left:auto; margin-right:auto; line-height:1.65;
+  }
+  .hero .ctas { margin-top:30px; display:flex; gap:12px; justify-content:center; }
+  .hero .btn-primary {
+    background:var(--text-primary); color:var(--bg);
+    padding:11px 26px; border-radius:8px; font-size:14px; font-weight:600;
+    text-decoration:none;
+  }
+  .hero .btn-secondary {
+    background:var(--fill); color:rgba(237,236,236,0.8);
+    padding:11px 26px; border-radius:8px; font-size:14px;
+    border:1px solid var(--border); text-decoration:none;
+  }
+
+  /* ===== TERMINAL MOCKUP ===== */
+  .terminal {
+    max-width:660px; margin:40px auto 0;
+    background:#0c0b08; border:1px solid var(--border); border-radius:12px;
+    overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  }
+  .terminal-bar {
+    display:flex; align-items:center; padding:10px 14px;
+    background:rgba(237,236,236,0.02); border-bottom:1px solid var(--border);
+  }
+  .terminal-dots { display:flex; gap:6px; }
+  .terminal-dots span { width:10px; height:10px; border-radius:50%; }
+  .terminal-title { flex:1; text-align:center; font-size:11px; color:var(--text-tertiary); }
+  .terminal-body {
+    padding:16px 20px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.75;
+  }
+  .t-prompt { color:var(--t-green); }
+  .t-cmd { color:var(--text-primary); }
+  .t-dim { color:var(--text-tertiary); }
+  .t-progress { color:var(--t-yellow); }
+  .t-success { color:var(--t-green); }
+  .t-sep { color:rgba(237,236,236,0.15); }
+  .t-block {
+    margin-top:8px; padding:5px 10px; border-radius:0 4px 4px 0;
+  }
+  .t-block.root { background:rgba(255,107,53,0.06); border-left:2px solid rgba(255,107,53,0.6); }
+  .t-block.fix { background:rgba(126,231,135,0.04); border-left:2px solid rgba(126,231,135,0.5); }
+  .t-block-title { font-weight:600; font-size:11px; }
+  .t-block-text { color:rgba(237,236,236,0.65); font-size:11px; margin-top:2px; }
+
+  /* ===== SECTION COMMON ===== */
+  section { padding:100px 48px; max-width:1100px; margin:0 auto; }
+  section h2 {
+    font-size:36px; font-weight:700; letter-spacing:-1px; text-align:center;
+  }
+  section .section-sub {
+    font-size:16px; color:var(--text-secondary); text-align:center;
+    margin-top:12px; max-width:500px; margin-left:auto; margin-right:auto;
+  }
+
+  /* ===== THREE MODES ===== */
+  .modes-grid {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:48px;
+  }
+  .mode-card {
+    background:var(--fill); border:1px solid var(--border); border-radius:12px;
+    padding:24px; transition: background 0.15s;
+  }
+  .mode-card:hover { background:var(--fill-hover); }
+  .mode-card .mode-label {
+    font-size:11px; text-transform:uppercase; letter-spacing:2px;
+    color:var(--text-tertiary); margin-bottom:10px;
+  }
+  .mode-card h3 { font-size:16px; font-weight:600; margin-bottom:8px; }
+  .mode-card .mode-example {
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    background:rgba(237,236,236,0.03); border-radius:6px; padding:10px 12px;
+    margin-top:10px; color:var(--text-secondary);
+  }
+
+  /* ===== FEATURES ===== */
+  .feature-row {
+    display:flex; align-items:center; gap:48px; margin-top:80px;
+  }
+  .feature-row.reverse { flex-direction:row-reverse; }
+  .feature-info { flex:1; }
+  .feature-info .feature-tag {
+    font-family:'JetBrains Mono',monospace; font-size:13px;
+    color:var(--t-green); margin-bottom:10px;
+  }
+  .feature-info h3 { font-size:24px; font-weight:600; letter-spacing:-0.5px; }
+  .feature-info p { color:var(--text-secondary); margin-top:10px; font-size:15px; line-height:1.65; }
+  .feature-info .feature-stat {
+    display:flex; gap:24px; margin-top:16px;
+  }
+  .feature-info .stat-item .stat-num {
+    font-size:28px; font-weight:700; letter-spacing:-1px;
+  }
+  .feature-info .stat-item .stat-label {
+    font-size:12px; color:var(--text-tertiary);
+  }
+  .feature-terminal {
+    flex:1; background:#0c0b08; border:1px solid var(--border);
+    border-radius:10px; padding:16px 18px; font-family:'JetBrains Mono',monospace;
+    font-size:11px; line-height:1.7; overflow:hidden;
+    box-shadow:0 12px 40px rgba(0,0,0,0.3);
+  }
+
+  /* ===== ARCHITECTURE ===== */
+  .arch-diagram {
+    margin-top:48px; background:var(--fill); border:1px solid var(--border);
+    border-radius:12px; padding:40px; text-align:center;
+  }
+  .arch-layers { display:flex; flex-direction:column; gap:16px; max-width:600px; margin:0 auto; }
+  .arch-layer {
+    display:flex; align-items:center; gap:16px; padding:16px 20px;
+    background:rgba(237,236,236,0.03); border:1px solid var(--border); border-radius:8px;
+  }
+  .arch-layer .layer-icon { font-size:20px; width:40px; text-align:center; }
+  .arch-layer .layer-name { font-weight:600; font-size:14px; }
+  .arch-layer .layer-tools { font-size:13px; color:var(--text-secondary); }
+  .arch-arrow { color:var(--text-tertiary); font-size:18px; text-align:center; }
+
+  /* ===== INSTALL ===== */
+  .install-section { text-align:center; }
+  .install-cmd {
+    display:inline-block; margin-top:32px; background:#0c0b08;
+    border:1px solid var(--border); border-radius:10px; padding:16px 28px;
+    font-family:'JetBrains Mono',monospace; font-size:14px;
+  }
+  .install-badges { display:flex; gap:10px; justify-content:center; margin-top:24px; }
+  .install-badge {
+    background:var(--fill); border:1px solid var(--border); border-radius:20px;
+    padding:6px 16px; font-size:12px; color:var(--text-secondary);
+  }
+  .install-ctas { margin-top:32px; display:flex; gap:12px; justify-content:center; }
+
+  /* ===== FOOTER ===== */
+  footer {
+    border-top:1px solid var(--border); padding:40px 48px;
+    display:flex; justify-content:space-between; align-items:center;
+    max-width:1100px; margin:0 auto;
+  }
+  footer .footer-left { color:var(--text-tertiary); font-size:13px; }
+  footer .footer-links { display:flex; gap:24px; }
+  footer .footer-links a { color:var(--text-secondary); font-size:13px; text-decoration:none; }
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav>
+  <div style="display:flex; align-items:center; gap:28px;">
+    <div class="logo">OpenDB</div>
+    <div class="links">
+      <a href="#">Features</a>
+      <a href="#">Docs</a>
+      <a href="#">GitHub</a>
+      <a href="#">Blog</a>
+    </div>
+  </div>
+  <div class="right">
+    <span class="lang">EN / 中文</span>
+    <a href="#" class="cta-nav">Get Started</a>
+  </div>
+</nav>
+
+<!-- ===== SECTION 1: HERO ===== -->
+<div class="hero">
+  <div class="glow"></div>
+  <div class="badge">Database CLI Agent</div>
+  <h1>One Agent. All Databases.<br>Zero Complexity.</h1>
+  <p class="sub">Manage and diagnose Oracle, MySQL, PostgreSQL with slash commands, native SQL, or natural language — all in one terminal.</p>
+  <div class="ctas">
+    <a href="#" class="btn-primary">Quick Install</a>
+    <a href="#" class="btn-secondary">View on GitHub →</a>
+  </div>
+
+  <!-- Terminal -->
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="terminal-dots">
+        <span style="background:#ff5f57;"></span>
+        <span style="background:#febc2e;"></span>
+        <span style="background:#28c840;"></span>
+      </div>
+      <div class="terminal-title">opendb — ORCLCDB@prod-db-01</div>
+    </div>
+    <div class="terminal-body">
+      <div><span class="t-prompt">opendb&gt;</span> <span class="t-cmd">/llm why is the database slow?</span></div>
+      <div class="t-sep" style="margin-top:6px;">── LLM Diagnosis (Claude Opus) ──────────────────</div>
+      <div style="margin-top:4px;"><span class="t-progress">⟳ Round 1/3</span> <span class="t-dim">collecting wait events, active sessions...</span></div>
+      <div><span class="t-progress">⟳ Round 2/3</span> <span class="t-dim">analyzing top SQL, execution plans...</span></div>
+      <div><span class="t-progress">⟳ Round 3/3</span> <span class="t-dim">correlating root cause, generating fix...</span></div>
+      <div style="margin-top:8px;" class="t-success">✓ Diagnosis complete (1m 59s, 3 rounds)</div>
+      <div class="t-block root">
+        <div class="t-block-title" style="color:var(--t-orange);">ROOT CAUSE — Severity: ■■■□ HIGH</div>
+        <div class="t-block-text">Full table scan on ORDERS (2.1M rows) — missing index on customer_id</div>
+      </div>
+      <div class="t-block fix">
+        <div class="t-block-title" style="color:var(--t-green);">FIX</div>
+        <div class="t-block-text">CREATE INDEX idx_orders_cust ON orders(customer_id);</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 2: THREE MODES ===== -->
+<section>
+  <h2>Three Modes. One Agent.</h2>
+  <p class="section-sub">Type however you think — OpenDB understands slash commands, native SQL, and natural language.</p>
+
+  <div class="modes-grid">
+    <div class="mode-card">
+      <div class="mode-label">Slash Commands</div>
+      <h3>60+ Built-in Skills</h3>
+      <p style="color:var(--text-secondary); font-size:14px;">Complex operations as one-liners. Like Claude Code, but for databases.</p>
+      <div class="mode-example">
+        <span style="color:var(--t-green);">opendb&gt;</span> /health<br>
+        <span style="color:var(--t-green);">opendb&gt;</span> /dbtop<br>
+        <span style="color:var(--t-green);">opendb&gt;</span> /llm diagnose
+      </div>
+    </div>
+
+    <div class="mode-card">
+      <div class="mode-label">Native SQL</div>
+      <h3>Your Habits, Preserved</h3>
+      <p style="color:var(--text-secondary); font-size:14px;">Run SQL directly. Works like sqlplus, mysql, psql — no learning curve.</p>
+      <div class="mode-example">
+        <span style="color:var(--t-green);">opendb&gt;</span> SELECT count(*)<br>
+        &nbsp; FROM orders<br>
+        &nbsp; WHERE status='pending';
+      </div>
+    </div>
+
+    <div class="mode-card">
+      <div class="mode-label">Natural Language</div>
+      <h3>Ask in Plain Words</h3>
+      <p style="color:var(--text-secondary); font-size:14px;">Describe problems naturally. AI translates intent into diagnosis and action.</p>
+      <div class="mode-example">
+        <span style="color:var(--t-green);">opendb&gt;</span> Why are there<br>
+        so many lock waits<br>
+        right now?
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 3: FEATURES ===== -->
+<section>
+  <h2>From Monitoring to Root Cause</h2>
+  <p class="section-sub">A three-layer diagnosis system — from continuous sensing to AI-powered reasoning.</p>
+
+  <!-- /health -->
+  <div class="feature-row">
+    <div class="feature-info">
+      <div class="feature-tag">/health</div>
+      <h3>Full-Spectrum Health Check</h3>
+      <p>20+ checks across 7 dimensions — instance, storage, sessions, memory, logs, backup, and security. Get a complete picture in one command.</p>
+      <div class="feature-stat">
+        <div class="stat-item"><div class="stat-num">7</div><div class="stat-label">Dimensions</div></div>
+        <div class="stat-item"><div class="stat-num">20+</div><div class="stat-label">Check Items</div></div>
+        <div class="stat-item"><div class="stat-num">&lt;5s</div><div class="stat-label">Full Scan</div></div>
+      </div>
+    </div>
+    <div class="feature-terminal">
+      <div style="color:var(--t-green); margin-bottom:6px;">opendb&gt; /health</div>
+      <div style="color:var(--t-sep);">┌─────────────────────────────────────┐</div>
+      <div style="color:var(--t-sep);">│</div>
+      <div>&nbsp; <span style="color:var(--text-primary); font-weight:600;">ORCLCDB</span> <span style="color:var(--t-orange);">● CRITICAL</span></div>
+      <div style="color:var(--t-sep);">│</div>
+      <div>&nbsp; <span style="color:var(--text-secondary);">Instance</span>&nbsp;&nbsp; <span style="color:var(--t-green);">✓</span> OPEN &nbsp;READ WRITE &nbsp;uptime 47d</div>
+      <div>&nbsp; <span style="color:var(--text-secondary);">Storage</span>&nbsp;&nbsp;&nbsp; <span style="color:var(--t-orange);">✗</span> SYSTEM tbs 94.2% used</div>
+      <div>&nbsp; <span style="color:var(--text-secondary);">Sessions</span>&nbsp;&nbsp; <span style="color:var(--t-yellow);">⚠</span> 108/500 active (21.6%)</div>
+      <div>&nbsp; <span style="color:var(--text-secondary);">Memory</span>&nbsp;&nbsp;&nbsp;&nbsp; <span style="color:var(--t-green);">✓</span> SGA 2.4G &nbsp;PGA 847M</div>
+      <div>&nbsp; <span style="color:var(--text-secondary);">Logs</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="color:var(--t-yellow);">⚠</span> 3 ORA-errors in 24h</div>
+      <div>&nbsp; <span style="color:var(--text-secondary);">Backup</span>&nbsp;&nbsp;&nbsp;&nbsp; <span style="color:var(--t-green);">✓</span> Last RMAN 6h ago</div>
+      <div>&nbsp; <span style="color:var(--text-secondary);">Security</span>&nbsp;&nbsp; <span style="color:var(--t-green);">✓</span> No default passwords</div>
+      <div style="color:var(--t-sep);">│</div>
+      <div style="color:var(--t-sep);">│</div>
+      <div>&nbsp; <span style="color:var(--t-orange);">3 issues found</span> — run /llm for diagnosis</div>
+      <div style="color:var(--t-sep);">└─────────────────────────────────────┘</div>
+    </div>
+  </div>
+
+  <!-- /dbtop -->
+  <div class="feature-row reverse">
+    <div class="feature-info">
+      <div class="feature-tag">/dbtop</div>
+      <h3>Real-Time Performance Dashboard</h3>
+      <p>Like Linux <code style="background:var(--fill); padding:2px 6px; border-radius:4px; font-size:13px;">top</code> for databases. 1-second refresh showing SGA, PGA, TPS, QPS, wait events, and active sessions.</p>
+      <div class="feature-stat">
+        <div class="stat-item"><div class="stat-num">1s</div><div class="stat-label">Refresh Rate</div></div>
+        <div class="stat-item"><div class="stat-num">12+</div><div class="stat-label">Metrics</div></div>
+      </div>
+    </div>
+    <div class="feature-terminal">
+      <div style="color:var(--t-green); margin-bottom:6px;">opendb&gt; /dbtop</div>
+      <div style="color:var(--text-primary); font-weight:600;">ORCLCDB <span style="color:var(--t-yellow);">● WARNING</span> &nbsp;<span style="color:var(--text-tertiary);">↻ 1s</span></div>
+      <div style="margin-top:6px; display:flex; gap:16px;">
+        <span style="color:var(--text-secondary);">SGA</span> <span>2.4G</span>
+        <span style="color:var(--text-secondary);">PGA</span> <span>847M</span>
+        <span style="color:var(--text-secondary);">db%</span> <span style="color:var(--t-orange);">78.3</span>
+        <span style="color:var(--text-secondary);">TPS</span> <span>1,247</span>
+      </div>
+      <div style="margin-top:8px; color:var(--text-secondary); font-size:10px;">TOP WAIT EVENTS</div>
+      <div style="margin-top:3px;">
+        <span style="color:var(--t-orange);">▇▇▇▇▇▇▇▇▇░</span> db file seq read &nbsp;<span style="color:var(--text-secondary);">70.6%</span>
+      </div>
+      <div>
+        <span style="color:var(--t-yellow);">▇▇▇░░░░░░░</span> log file sync &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--text-secondary);">21.4%</span>
+      </div>
+      <div>
+        <span style="color:var(--t-green);">▇░░░░░░░░░</span> latch free &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--text-secondary);">&nbsp;3.2%</span>
+      </div>
+      <div style="margin-top:8px; color:var(--text-secondary); font-size:10px;">ACTIVE SESSIONS (108)</div>
+      <div style="margin-top:3px; color:var(--text-tertiary);">SID&nbsp;&nbsp; USER&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; SQL_TYPE&nbsp;&nbsp; EVENT&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; WAIT</div>
+      <div> 142&nbsp; APP_USER&nbsp; SELECT&nbsp;&nbsp;&nbsp;&nbsp; db file seq read&nbsp; 12.3s</div>
+      <div> 287&nbsp; APP_USER&nbsp; UPDATE&nbsp;&nbsp;&nbsp;&nbsp; log file sync&nbsp;&nbsp;&nbsp;&nbsp; 8.7s</div>
+      <div> 053&nbsp; BATCH&nbsp;&nbsp;&nbsp;&nbsp; INSERT&nbsp;&nbsp;&nbsp;&nbsp; db file seq read&nbsp; 6.1s</div>
+    </div>
+  </div>
+
+  <!-- /rule -->
+  <div class="feature-row">
+    <div class="feature-info">
+      <div class="feature-tag">/rule</div>
+      <h3>273-Rule Decision Engine</h3>
+      <p>Millisecond-level deterministic diagnosis. Works offline — no LLM, no network, no API cost. Your safety net when AI is unavailable.</p>
+      <div class="feature-stat">
+        <div class="stat-item"><div class="stat-num">273</div><div class="stat-label">Rules</div></div>
+        <div class="stat-item"><div class="stat-num">2.7s</div><div class="stat-label">Diagnosis</div></div>
+        <div class="stat-item"><div class="stat-num">0</div><div class="stat-label">Dependencies</div></div>
+      </div>
+    </div>
+    <div class="feature-terminal">
+      <div style="color:var(--t-green); margin-bottom:6px;">opendb&gt; /rule</div>
+      <div style="color:var(--t-sep);">── Rule Engine (273 rules, 2.7s) ─────────────</div>
+      <div style="margin-top:6px;">
+        <span style="color:var(--text-secondary);">Category:</span> <span>I/O Performance</span>
+      </div>
+      <div style="margin-top:4px;">
+        <span style="color:var(--t-orange); font-weight:600;">Root Cause: </span>
+        <span>Full table scan causing excessive I/O</span>
+      </div>
+      <div>
+        <span style="color:var(--text-secondary);">Severity:</span> <span style="color:var(--t-orange);">■■■□</span> HIGH
+        &nbsp;&nbsp;<span style="color:var(--text-secondary);">Confidence:</span> 78%
+      </div>
+      <div style="margin-top:8px; color:var(--text-secondary); font-size:10px;">EVIDENCE CHAIN</div>
+      <div style="margin-top:3px;">
+        <span style="color:var(--text-tertiary);">1.</span> db file sequential read = 70.6% of total waits<br>
+        <span style="color:var(--text-tertiary);">2.</span> SQL_ID: 4qr83a1n2k — 2.1M rows full scan<br>
+        <span style="color:var(--text-tertiary);">3.</span> Table ORDERS missing index on customer_id<br>
+        <span style="color:var(--text-tertiary);">4.</span> Buffer cache hit ratio dropped to 67.2%
+      </div>
+      <div style="margin-top:8px; color:var(--text-secondary); font-size:10px;">RECOMMENDED ACTION</div>
+      <div style="margin-top:3px; color:var(--t-green);">CREATE INDEX idx_orders_cust ON orders(customer_id);</div>
+    </div>
+  </div>
+
+  <!-- /llm -->
+  <div class="feature-row reverse">
+    <div class="feature-info">
+      <div class="feature-tag">/llm</div>
+      <h3>AI-Powered Deep Diagnosis</h3>
+      <p>Multi-round LLM reasoning with function calling. Automatically collects evidence, correlates symptoms, and delivers executable fix SQL — not vague suggestions.</p>
+      <div class="feature-stat">
+        <div class="stat-item"><div class="stat-num">20</div><div class="stat-label">Max Rounds</div></div>
+        <div class="stat-item"><div class="stat-num">60+</div><div class="stat-label">Tool Functions</div></div>
+      </div>
+    </div>
+    <div class="feature-terminal">
+      <div style="color:var(--t-green); margin-bottom:6px;">opendb&gt; /llm</div>
+      <div style="color:var(--t-sep);">── LLM Deep Diagnosis ────────────────────────</div>
+      <div style="margin-top:4px;"><span class="t-progress">⟳ R1</span> <span class="t-dim">get_wait_events() → 12 events</span></div>
+      <div><span class="t-progress">⟳ R2</span> <span class="t-dim">get_active_sessions() → 108 sessions</span></div>
+      <div><span class="t-progress">⟳ R3</span> <span class="t-dim">get_sql_plan(4qr83a1n2k) → FULL SCAN</span></div>
+      <div style="margin-top:6px; color:var(--t-success);">✓ Complete (1m 59s)</div>
+      <div style="margin-top:8px; color:var(--text-secondary); font-size:10px;">PROBLEMS FOUND (3)</div>
+      <div style="margin-top:4px;">
+        <span style="color:var(--t-orange);">■■■□</span> Full table scan — 70.6% waits<br>
+        <span style="color:var(--t-yellow);">■■□□</span> Log file contention — 21.4% waits<br>
+        <span style="color:var(--text-tertiary);">■□□□</span> Latch free — 3.2% waits
+      </div>
+      <div style="margin-top:8px; color:var(--text-secondary); font-size:10px;">FIX (Priority Order)</div>
+      <div style="margin-top:3px; color:var(--t-green); line-height:1.8;">
+        1. CREATE INDEX idx_orders_cust ...<br>
+        2. ALTER SYSTEM SET log_buffer ...
+      </div>
+    </div>
+  </div>
+
+  <!-- /sentinel -->
+  <div class="feature-row">
+    <div class="feature-info">
+      <div class="feature-tag">/sentinel</div>
+      <h3>24/7 Anomaly Detection</h3>
+      <p>Background probe monitoring 48 metrics with adaptive 3-sigma baselines. Detects anomalies before they become outages.</p>
+      <div class="feature-stat">
+        <div class="stat-item"><div class="stat-num">48</div><div class="stat-label">Metrics</div></div>
+        <div class="stat-item"><div class="stat-num">3σ</div><div class="stat-label">Detection</div></div>
+        <div class="stat-item"><div class="stat-num">24/7</div><div class="stat-label">Monitoring</div></div>
+      </div>
+    </div>
+    <div class="feature-terminal">
+      <div style="color:var(--t-green); margin-bottom:6px;">opendb&gt; /sentinel start</div>
+      <div class="t-dim">Sentinel started. Monitoring 48 metrics...</div>
+      <div style="margin-top:10px; color:var(--t-orange);">⚡ ANOMALY DETECTED</div>
+      <div style="margin-top:3px;">
+        <span style="color:var(--text-secondary);">Metric:</span> Active Sessions<br>
+        <span style="color:var(--text-secondary);">Baseline:</span> 8.0 &nbsp;→&nbsp; <span style="color:var(--t-orange);">Current: 41</span><br>
+        <span style="color:var(--text-secondary);">Threshold:</span> 3σ = 23.5 &nbsp;<span style="color:var(--t-orange);">BREACHED</span><br>
+        <span style="color:var(--text-secondary);">Duration:</span> 39.8s
+      </div>
+      <div style="margin-top:8px; color:var(--text-secondary); font-size:10px;">BURST COLLECTION TRIGGERED</div>
+      <div style="margin-top:3px;">
+        <span class="t-dim">→ wait events, active SQL, blocking chains captured</span><br>
+        <span class="t-dim">→ run /llm or /rule to diagnose</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 4: ARCHITECTURE ===== -->
+<section>
+  <h2>Three-Layer Architecture</h2>
+  <p class="section-sub">From continuous sensing to intelligent diagnosis — each layer builds on the last.</p>
+
+  <div class="arch-diagram">
+    <div class="arch-layers">
+      <div class="arch-layer">
+        <div class="layer-icon">📡</div>
+        <div>
+          <div class="layer-name">Perception Layer</div>
+          <div class="layer-tools">/sentinel · /scheduler — 24/7 anomaly detection + automated patrol</div>
+        </div>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer">
+        <div class="layer-icon">📊</div>
+        <div>
+          <div class="layer-name">Assessment Layer</div>
+          <div class="layer-tools">/health · /dbtop — full health check + real-time dashboard</div>
+        </div>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer">
+        <div class="layer-icon">🧠</div>
+        <div>
+          <div class="layer-name">Diagnosis Layer</div>
+          <div class="layer-tools">/rule · /llm — 273-rule engine + AI multi-round reasoning</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 5: INSTALL + CTA ===== -->
+<section class="install-section">
+  <h2>Get Started in 30 Seconds</h2>
+  <p class="section-sub">Single binary. Zero dependencies. One command to install.</p>
+
+  <div class="install-cmd">
+    <span style="color:var(--text-tertiary);">$</span>
+    <span style="color:var(--text-primary);"> curl -fsSL https://www.opendbcli.org/install.sh | bash</span>
+  </div>
+
+  <div class="install-badges">
+    <span class="install-badge">Apache 2.0</span>
+    <span class="install-badge">Linux / macOS</span>
+    <span class="install-badge">Oracle · MySQL · PostgreSQL</span>
+    <span class="install-badge">Go 1.21+</span>
+  </div>
+
+  <div class="install-ctas">
+    <a href="#" class="btn-primary" style="background:var(--text-primary); color:var(--bg); padding:12px 32px; border-radius:8px; font-size:15px; font-weight:600; text-decoration:none;">Download Now</a>
+    <a href="#" class="btn-secondary" style="background:var(--fill); color:rgba(237,236,236,0.8); padding:12px 32px; border-radius:8px; font-size:15px; border:1px solid var(--border); text-decoration:none;">Star on GitHub ★</a>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="footer-left">
+    <div style="font-weight:600; margin-bottom:4px;">OpenDB</div>
+    <div>One agent, all databases, zero complexity.</div>
+  </div>
+  <div class="footer-links">
+    <a href="#">Docs</a>
+    <a href="#">GitHub</a>
+    <a href="#">Issues</a>
+    <a href="#">License</a>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+── AI 诊断 (auto, 8轮) ──
+## WAL 增长诊断结论
+
+根据已采集的数据分析：
+
+### 关键发现
+
+| 指标 | 数据 | 来源工具 |
+|------|------|---------|
+| 当前 LSN | 0/5B2CA270 | wal |
+| 统计重置后时长 | 65438 秒（约 18 小时） | wal |
+| 定时 Checkpoint | 884 次 | wal |
+| 请求 Checkpoint | 4 次 | wal |
+| archive_mode | off | wal / backup |
+| archive_command | disabled | wal / backup |
+| wal_level | hot_standby | wal |
+| 当前系统状态 | 空闲，无业务等待 | waits / os |
+| 是否有 standby | 无 | replication |
+| 是否有复制槽 | 无 | slots |
+
+### 分析结论
+
+**从当前数据看，没有发现 WAL 异常增长的证据。** 理由如下：
+
+1. **请求 Checkpoint 仅 4 次** — `checkpoints_req` 低说明没有因 WAL 文件堆积触发强制 checkpoint，WAL 生成速率在可控范围内
+
+2. **系统当前空闲** — waits 显示仅有后台线程活跃，os 显示 LOAD=0、IDLE_TIME 很高，没有活跃写入负载
+
+3. **归档已关闭** — archive_mode=off，WAL 文件不会因归档失败而堆积（但也意味着没有归档保护，需注意磁盘空间）
+
+4. **无复制延迟风险** — 无 standby 和复制槽，不存在复制槽占用 WAL 导致堆积的问题
+
+### 需要进一步确认
+
+当前无法直接判断 WAL 是否"异常增长"，原因：
+
+- **缺少历史对比** — 没有之前的 LSN 快照，无法计算 WAL 生成速率（MB/s 或 GB/h）
+- **缺少写入量数据** — topsql 显示的主要是监控查询，看不到业务写入负载
+
+**建议补充信息：**
+1. 您观察到 WAL 目录增长的具体速率是多少？（如每小时增长多少 GB）
+2. 当前是否在执行批量导入、数据同步等操作？
+3. 是否需要我启用监控快照，过一段时间后再对比 LSN 变化？
+

@@ -1,0 +1,121 @@
+── AI 诊断 (auto, 2轮) ──
+# OpenGauss 实例健康报告
+
+**报告时间**: 2026-04-24 10:21:16  
+**诊断模式**: auto
+
+---
+
+## 一、内存状态
+
+| 指标 | 数值 | 来源 |
+|------|------|------|
+| max_process_memory | 12288 MB | gsmem |
+| process_used_memory | 559 MB (4.5%) | gsmem |
+| shared_buffers | 1024 MB | gsmem |
+| buffer cache 命中率 | **99.32%** | gsmem |
+| dynamic_used_memory | 496 MB | gsmem |
+| shared_used_memory | 201 MB | gsmem |
+
+**评估**: 内存使用健康。Buffer Cache 命中率 99.32%，无内存压力。
+
+---
+
+## 二、WAL 状态
+
+| 指标 | 数值 | 来源 |
+|------|------|------|
+| 当前 LSN | 0/5B54C638 | wal |
+| checkpoint_timeout | 900 s (15min) | wal |
+| 定时 checkpoint 次数 | 951 | wal |
+| archive_mode | **off** | wal |
+| archive_command | disabled | wal |
+| wal_level | hot_standby | wal |
+| synchronous_commit | on | wal |
+
+**评估**: 
+- [MEDIUM] **归档未启用** — 无法做 PITR 恢复，存在数据丢失风险
+- checkpoint 间隔正常，无频繁刷盘迹象
+
+---
+
+## 三、复制状态
+
+| 指标 | 数值 | 来源 |
+|------|------|------|
+| 角色 | Primary | replication |
+| 流复制 standby | **无** | replication |
+
+**评估**: 
+- [HIGH] **无复制配置** — 单点部署，无高可用保护，主机故障将导致服务中断
+
+---
+
+## 四、VACUUM 状态
+
+| 指标 | 数值 | 来源 |
+|------|------|------|
+| 有 dead tuples 的表 | 2 个 | vacuum |
+
+**评估**: dead tuples 数量少，VACUUM 压力正常。建议定期监控 `pg_stat_all_tables.n_dead_tup`。
+
+---
+
+## 五、索引健康
+
+| 问题类型 | 数量 | 详情 | 来源 |
+|----------|------|------|------|
+| 重复索引 | 1 | dbe_pldeveloper.gs_source ×2 | indexhealth |
+| 未使用索引 | 3 | idx_scan=0 | indexhealth |
+| 大索引 (>10MB) | 3 | 可能有膨胀 | indexhealth |
+
+**评估**: 
+- [LOW] 存在冗余索引，建议清理以减少写入开销
+
+---
+
+## 六、会话状态
+
+| 指标 | 数值 | 来源 |
+|------|------|------|
+| 总会话数 | 11 | sessions |
+
+**评估**: 会话数量正常，无连接风暴迹象。
+
+---
+
+## 七、综合评估与排名
+
+| 严重度 | 问题 | 影响 | 修复建议 |
+|--------|------|------|----------|
+| **[HIGH]** | 无流复制 standby | 单点故障，无高可用 | 建议部署至少 1 个 standby 节点，配置流复制 |
+| **[MEDIUM]** | 归档未启用 | 无法 PITR 恢复 | 启用 archive_mode，配置 archive_command |
+| **[LOW]** | 重复索引 | 写入开销增加 | 删除冗余索引 |
+
+### 修复 SQL
+
+**1. 删除重复索引（需先确认具体索引名）**
+```sql
+-- 查询重复索引详情
+SELECT schemaname, tablename, indexname, indexdef
+FROM pg_indexes
+WHERE schemaname = 'dbe_pldeveloper' AND tablename = 'gs_source';
+
+-- 确认后删除其中一个（示例）
+-- DROP INDEX dbe_pldeveloper.gs_source_pkey;  -- 请根据实际情况调整
+```
+
+**2. 启用 WAL 归档**
+```sql
+-- 需要在 postgresql.conf 中配置
+archive_mode = on
+archive_command = 'cp %p /archive/opengauss/%f'  -- 根据实际归档路径调整
+
+-- 重载配置
+SELECT pg_reload_conf();
+```
+
+---
+
+**总结**: 实例整体运行稳定，内存和会话状态健康。主要风险是**无高可用架构**和**未启用归档**，建议优先部署 standby 节点并启用 WAL 归档以保障数据安全。
+

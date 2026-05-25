@@ -1,0 +1,37 @@
+── AI 诊断 (auto, 5轮) ──
+## 一、告警主线
+基于 topsql（按总耗时 + 按平均耗时）和 slowsql（>500ms）的数据，**未发现慢 SELECT 查询**。Top 慢 SQL 全是批量 INSERT 和 UPDATE 写入：
+
+| SQL_ID | 操作 | AVG_MS | 来源工具 |
+|--------|------|--------|---------|
+| 2139284755 | INSERT INTO bench_t5 SELECT ... generate_series | 2767.86 | slowsql |
+| 2702476534 | INSERT INTO bench_t4 SELECT ... generate_series | 1670.87 | slowsql |
+| 2066529977 | UPDATE bench_t2 SET status = status + ? | 1306.32 | slowsql |
+| 1977397996 | INSERT INTO bench_t1 SELECT ... generate_series | 1123.99 | slowsql |
+| 681477039  | INSERT INTO bench_t2 SELECT ... generate_series | 919.32 | slowsql |
+
+## 二、关联问题
+- topsql 按总耗时 / 按平均耗时 两个维度的 Top 20 中，没有任何用户表的 SELECT 进入榜单（仅有少量 dbe_perf 系统视图查询，最大 28.49ms，不构成"慢"）
+- slowsql >500ms 阈值下只有 5 条记录，全部是写入
+
+## 三、当前对比
+PROFILE.md 中无历史诊断记录（首次诊断），无基线可对比。但从现有 dbe_perf.statement 累积数据看，没有任何用户表 SELECT 出现在 Top 列表，说明：
+- 要么慢 SELECT 还未发生（用户描述的是趋势）
+- 要么慢 SELECT 已被 dbe_perf reset 清掉
+- 要么用户感知的"慢"在另一个 session/数据库中
+
+## 四、综合评估与排名
+
+| 严重度 | 问题 | 影响 | 下一步动作 |
+|--------|------|------|-----------|
+| [INFO] | 当前采集的 SQL 数据中不存在慢 SELECT | 无法定位用户所说的"那张表" | 请用户提供：表名 或 慢 SQL 文本 或 sql_id |
+| [LOW] | bench_t1/t2/t4/t5/t8 等基准表存在大批量写入 | 写入会引入死元组、统计信息偏移，间接拖慢后续 SELECT | 待确认目标表后再深入查 bloat / 索引 / 计划 |
+
+## 我需要的额外信息
+请提供以下任一项以便精准定位：
+1. **表名**（如 bench_t5、bench_t1）— 我会直接查 tableinfo + 索引 + bloat + 执行计划
+2. **慢 SQL 文本或 sql_id** — 我会跑 explain + planhistory
+3. **"越来越慢"的时间窗口**（几小时？几天？）— 我会对比 wdr 快照
+
+不提供具体目标的情况下，从已采集的 topsql / slowsql 数据中**无法**得出"某表查询越来越慢"的结论 — 现有证据指向的全部是写入而非查询。请补充信息后我再继续诊断。
+

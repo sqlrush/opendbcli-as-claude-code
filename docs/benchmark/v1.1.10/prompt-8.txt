@@ -1,0 +1,119 @@
+── AI 诊断 (auto, 4轮) ──
+基于 `bloat` 与 `longtx` 工具实际返回的汇总数据（3 个表 dead 比例 > 5%、20 个长事务）已经能勾勒出最关键的因果链。下面给出基于已有证据的诊断。
+
+## 根因分析
+
+| 指标 | 数据 | 来源工具 |
+|------|------|---------|
+| 膨胀表数量（dead > 5%） | 3 个 | bloat |
+| 长事务数量 | 20 个 | longtx |
+| 实例画像 | 大部分基本信息仍为"待探测"，无历史 VACUUM 记录 | profile |
+
+**核心结论：VACUUM 跑了但空间不释放，最可能的根因是长事务持有 xmin，导致 VACUUM 无法回收 dead tuple。**
+
+PostgreSQL/openGauss 的 VACUUM 机制依据全局最早活跃事务的 xmin 作为可见性边界——任何早于该 xmin 的死元组才能被回收。当存在 20 个长事务时：
+- VACUUM 进程运行成功（无报错），但内部 `OldestXmin` 被长事务的 `backend_xmin` 钉住
+- 死元组数继续增长，pg_stat_all_tables.n_dead_tup 不归零
+- 表/索引文件继续 extend，磁盘空间持续上涨
+- 用户从外部看就是"VACUUM 跑了但没用"
+
+辅证：3 个 bloat 表 + 20 个长事务的比例严重失衡——bloat 是结果，长事务是原因。
+
+> 注：profile 中实例基本信息为"待探测"，因此不能从 PROFILE 提供基线对比。下面给出可直接执行的定位 SQL 和处理 SQL。
+
+## 紧急措施
+
+**第一步：定位真正阻止 VACUUM 的最早 xmin 持有者**（必须先跑这个，不要盲杀）
+
+```sql
+-- 1. 看谁持有最早的 xmin（活跃事务）
+SELECT pid, usename, datname, state,
+       now() - xact_start  AS xact_age,
+       now() - query_start AS query_age,
+       backend_xmin, backend_xid,
+       wait_event_type, wait_event,
+       LEFT(query, 200) AS query
+FROM   pg_stat_activity
+WHERE  backend_xmin IS NOT NULL
+ORDER  BY backend_xmin ASC
+LIMIT  20;
+
+-- 2. 看复制槽是否钉住 xmin（逻辑复制槽是 VACUUM 杀手）
+SELECT slot_name, slot_type, active, database,
+       xmin, catalog_xmin,
+       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained_wal
+FROM   pg_replication_slots
+ORDER  BY COALESCE(xmin, catalog_xmin);
+
+-- 3. 看是否有 prepared transaction 卡住
+SELECT gid, prepared, owner, database
+FROM   pg_prepared_xacts
+ORDER  BY prepared;
+```
+
+**第二步：根据上面三类来源分别处理**
+
+```sql
+-- A. 长事务：先 cancel 再 terminate
+SELECT pg_cancel_backend(<pid>);          -- 优先，温和
+SELECT pg_terminate_backend(<pid>);       -- 不生效再用
+
+-- B. 闲置但未释放的复制槽（active=false 且 xmin 很老）
+SELECT pg_drop_replication_slot('<slot_name>');
+
+-- C. prepared transaction
+ROLLBACK PREPARED '<gid>';   -- 或 COMMIT PREPARED，根据业务确认
+```
+
+**第三步：清理掉阻塞源后，再次跑 VACUUM 才能真正释放空间**
+
+```sql
+-- 仅回收死元组到 freespace（不锁表）
+VACUUM (VERBOSE, ANALYZE) <schema>.<table>;
+
+-- 注意：VACUUM 只把空间还给表内部 freespace，不还给操作系统
+-- 想让磁盘文件真的缩小，需要重写表
+```
+
+## 根因修复
+
+### 方案 1: 终结阻塞 VACUUM 的长事务（核心修复）
+- **操作**:
+  ```sql
+  -- 先用上面的 pg_stat_activity 查出 xact_age 最老的几个 pid
+  SELECT pg_cancel_backend(<pid>);
+  -- 5 秒后仍未退出再:
+  SELECT pg_terminate_backend(<pid>);
+  ```
+- **⚠️ 风险评估**: cancel 会终止当前查询并 ROLLBACK 该事务的所有未提交修改；如果是关键业务事务（如长跑批处理），中断会导致业务回滚重做
+- **📋 前置检查**: 先查清 pid 对应的应用、xact_start、query 文本，确认不是关键作业；联系业务方或在低峰期执行
+- **🔄 回滚方案**: 不可回滚（事务已 ROLLBACK），但被取消的事务对应用而言只是一次失败，重试即可
+
+### 方案 2: 设置 idle_in_transaction_session_timeout 防复发
+- **操作**:
+  ```sql
+  ALTER SYSTEM SET idle_in_transaction_session_timeout = '10min';
+  SELECT pg_reload_conf();
+  ```
+- **⚠️ 风险评估**: idle in transaction 超过 10min 的连接会被自动 terminate；如果应用有合法的"开事务后等用户输入"模式会被打断
+- **📋 前置检查**: 用 `SELECT count(*) FROM pg_stat_activity WHERE state='idle in transaction' AND now()-state_change > interval '10 min'` 看当前是否会大批被砍
+- **🔄 回滚方案**: `ALTER SYSTEM RESET idle_in_transaction_session_timeout; SELECT pg_reload_conf();`
+
+### 方案 3: 真正缩小磁盘文件（VACUUM 后空间仍占着不还给 OS）
+- **操作**: 阻塞源清理完毕后，对仍然膨胀的表用 pg_repack（在线、不持长锁）
+  ```sql
+  -- 先在 OS 层执行（pg_repack 是命令行工具，不是 SQL）
+  -- pg_repack -d <dbname> -t <schema>.<table> -j 2
+  ```
+  没有 pg_repack 的紧急场景才用：
+  ```sql
+  VACUUM FULL <schema>.<table>;   -- 持 AccessExclusiveLock，业务不可写
+  ```
+- **⚠️ 风险评估**: VACUUM FULL 会全表锁，业务期间禁用；pg_repack 需占用与原表等大的额外空间，且依赖触发器同步增量
+- **📋 前置检查**: 确认磁盘剩余空间 ≥ 表大小 1.2 倍；确认表上无 DDL 在跑；先在测试环境验证 pg_repack 版本兼容性
+- **🔄 回滚方案**: pg_repack 中途失败会自动清理临时表；VACUUM FULL 不可回滚（但不会丢数据，只是耗时）
+
+---
+
+⚠️ **强烈建议**：先把"第一步：定位真正阻止 VACUUM 的最早 xmin 持有者"的三段 SQL 跑出来贴回来。20 个长事务里只要有 1 个最老的没清掉，新的 VACUUM 还是回收不到空间。我可以基于真实 pid / xmin / 复制槽名继续给出精确处理方案。
+

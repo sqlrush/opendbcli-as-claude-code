@@ -1,0 +1,2730 @@
+[
+  {
+    "id": "T001",
+    "name": "InnoDB行锁级联: blocker空闲",
+    "category": "锁",
+    "rule_fired": "MY-042",
+    "cause": "行锁等待低 — blocker 可能在等 IO 或空闲未提交",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "存在阻塞链但行锁争用速率不高，blocker 可能是空闲未提交事务",
+      "需定位 root blocker 状态（Sleep/IO等待/执行中）"
+    ],
+    "actions": [
+      "[紧急] 定位 root blocker 及其状态 | SQL: SELECT b.BLOCKING_THREAD_ID, t.PROCESSLIST_USER, t.PROCESSLIST_COMMAND, t.PROCESSLIST_STATE, t.PROCESSLIST_TIME, LEFT(t.PROCESSLIST_INFO, 200) AS sql_text, COUNT(*) AS victims FROM performance_schema.data_lock_waits b JOIN performance_schema.threads t ON t.THREAD_ID = b.BLOCKING_THREAD_ID GROUP BY b.BLOCKING_THREAD_ID ORDER BY victims DESC LIMIT 5",
+      "[排查] 检查 InnoDB 锁状态 | SQL: SHOW ENGINE INNODB STATUS"
+    ],
+    "has_sql": true,
+    "secondary": "全表扫描正常",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_connects": 0.9847730098680021,
+      "aborted_connects_rate": 0.9847730098680021,
+      "active_sessions": 13,
+      "blocker_count": 10,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.6,
+      "cpu_sessions": 12,
+      "innodb_row_lock_waits": 2.4619325246700052,
+      "lock_wait_sessions": 55,
+      "lock_waits": 55,
+      "long_queries": 11,
+      "qps": 6.1548313116750135,
+      "redo_rate": 0.7385797574010016,
+      "threads_connected": 13,
+      "threads_running": 13
+    }
+  },
+  {
+    "id": "T002",
+    "name": "InnoDB行锁级联: blocker跑慢SQL",
+    "category": "锁",
+    "rule_fired": "MY-042",
+    "cause": "行锁等待低 — blocker 可能在等 IO 或空闲未提交",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "存在阻塞链但行锁争用速率不高，blocker 可能是空闲未提交事务",
+      "需定位 root blocker 状态（Sleep/IO等待/执行中）"
+    ],
+    "actions": [
+      "[紧急] 定位 root blocker 及其状态 | SQL: SELECT b.BLOCKING_THREAD_ID, t.PROCESSLIST_USER, t.PROCESSLIST_COMMAND, t.PROCESSLIST_STATE, t.PROCESSLIST_TIME, LEFT(t.PROCESSLIST_INFO, 200) AS sql_text, COUNT(*) AS victims FROM performance_schema.data_lock_waits b JOIN performance_schema.threads t ON t.THREAD_ID = b.BLOCKING_THREAD_ID GROUP BY b.BLOCKING_THREAD_ID ORDER BY victims DESC LIMIT 5",
+      "[排查] 检查 InnoDB 锁状态 | SQL: SHOW ENGINE INNODB STATUS"
+    ],
+    "has_sql": true,
+    "secondary": "全表扫描正常",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 0.23191015613168053,
+      "aborted_clients_rate": 0.23191015613168053,
+      "aborted_connects": 1.1595507806584027,
+      "aborted_connects_rate": 1.1595507806584027,
+      "active_sessions": 17,
+      "blocker_count": 10,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1,
+      "cpu_sessions": 17,
+      "history_list_length": 2,
+      "innodb_row_lock_waits": 3.478652341975208,
+      "lock_wait_sessions": 120,
+      "lock_waits": 120,
+      "long_queries": 16,
+      "qps": 8.3487656207405,
+      "redo_rate": 1.275505858724243,
+      "select_full_join": 0.23191015613168053,
+      "select_full_join_rate": 0.23191015613168053,
+      "sleep_sessions": 2,
+      "threads_connected": 19,
+      "threads_running": 18
+    }
+  },
+  {
+    "id": "T003",
+    "name": "InnoDB行锁级联: blocker等IO",
+    "category": "锁",
+    "rule_fired": "MY-042",
+    "cause": "行锁等待低 — blocker 可能在等 IO 或空闲未提交",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "存在阻塞链但行锁争用速率不高，blocker 可能是空闲未提交事务",
+      "需定位 root blocker 状态（Sleep/IO等待/执行中）"
+    ],
+    "actions": [
+      "[紧急] 定位 root blocker 及其状态 | SQL: SELECT b.BLOCKING_THREAD_ID, t.PROCESSLIST_USER, t.PROCESSLIST_COMMAND, t.PROCESSLIST_STATE, t.PROCESSLIST_TIME, LEFT(t.PROCESSLIST_INFO, 200) AS sql_text, COUNT(*) AS victims FROM performance_schema.data_lock_waits b JOIN performance_schema.threads t ON t.THREAD_ID = b.BLOCKING_THREAD_ID GROUP BY b.BLOCKING_THREAD_ID ORDER BY victims DESC LIMIT 5",
+      "[排查] 检查 InnoDB 锁状态 | SQL: SHOW ENGINE INNODB STATUS"
+    ],
+    "has_sql": true,
+    "secondary": "全表扫描正常",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 0.2525725138812938,
+      "aborted_clients_rate": 0.2525725138812938,
+      "aborted_connects": 1.0102900555251753,
+      "aborted_connects_rate": 1.0102900555251753,
+      "active_sessions": 10,
+      "blocker_count": 8,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.6,
+      "cpu_sessions": 10,
+      "history_list_length": 4,
+      "innodb_row_lock_waits": 2.0205801110503505,
+      "lock_wait_sessions": 36,
+      "lock_waits": 36,
+      "long_queries": 9,
+      "qps": 5.556595305388464,
+      "redo_rate": 1.0102900555251753,
+      "sleep_sessions": 2,
+      "threads_connected": 12,
+      "threads_running": 11
+    }
+  },
+  {
+    "id": "T004",
+    "name": "多层阻塞链",
+    "category": "锁",
+    "rule_fired": "MY-042",
+    "cause": "行锁等待低 — blocker 可能在等 IO 或空闲未提交",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "存在阻塞链但行锁争用速率不高，blocker 可能是空闲未提交事务",
+      "需定位 root blocker 状态（Sleep/IO等待/执行中）"
+    ],
+    "actions": [
+      "[紧急] 定位 root blocker 及其状态 | SQL: SELECT b.BLOCKING_THREAD_ID, t.PROCESSLIST_USER, t.PROCESSLIST_COMMAND, t.PROCESSLIST_STATE, t.PROCESSLIST_TIME, LEFT(t.PROCESSLIST_INFO, 200) AS sql_text, COUNT(*) AS victims FROM performance_schema.data_lock_waits b JOIN performance_schema.threads t ON t.THREAD_ID = b.BLOCKING_THREAD_ID GROUP BY b.BLOCKING_THREAD_ID ORDER BY victims DESC LIMIT 5",
+      "[排查] 检查 InnoDB 锁状态 | SQL: SHOW ENGINE INNODB STATUS"
+    ],
+    "has_sql": true,
+    "secondary": "全表扫描正常",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_connects": 0.9234102907280233,
+      "aborted_connects_rate": 0.9234102907280233,
+      "active_sessions": 20,
+      "blocker_count": 10,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.1,
+      "cpu_sessions": 19,
+      "history_list_length": 5,
+      "innodb_row_lock_waits": 2.9549129303296744,
+      "lock_wait_sessions": 121,
+      "lock_waits": 121,
+      "long_queries": 18,
+      "qps": 7.941328500261,
+      "redo_rate": 1.4774564651648372,
+      "sleep_sessions": 2,
+      "threads_connected": 22,
+      "threads_running": 20
+    }
+  },
+  {
+    "id": "T005",
+    "name": "死锁检测",
+    "category": "锁",
+    "rule_fired": "MY-042",
+    "cause": "行锁等待高 — blocker 持有大量行锁",
+    "severity": "严重",
+    "confidence_pct": 73,
+    "findings": [
+      "存在阻塞链且行锁等待高，root blocker 持锁不释放",
+      "大事务或未提交事务阻塞其他会话"
+    ],
+    "actions": [
+      "[紧急] 定位 root blocker 并查看其 SQL | SQL: SELECT b.BLOCKING_THREAD_ID, t.PROCESSLIST_USER, t.PROCESSLIST_TIME, LEFT(t.PROCESSLIST_INFO, 200) AS blocker_sql, COUNT(*) AS victim_count FROM performance_schema.data_lock_waits b JOIN performance_schema.threads t ON t.THREAD_ID = b.BLOCKING_THREAD_ID GROUP BY b.BLOCKING_THREAD_ID ORDER BY victim_count DESC LIMIT 5",
+      "[紧急] 查找运行时间最长的事务 | SQL: SELECT trx_id, trx_started, TIMESTAMPDIFF(SECOND,trx_started,NOW()) duration_sec, trx_rows_locked, trx_rows_modified, trx_mysql_thread_id FROM information_schema.innodb_trx ORDER BY trx_started LIMIT 5",
+      "[修复] KILL 阻塞源会话或等待其事务提交 | SQL: -- KILL {blocker_thread_id}"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 0.5703527612949932,
+      "aborted_clients_rate": 0.5703527612949932,
+      "aborted_connects": 1.1407055225899865,
+      "aborted_connects_rate": 1.1407055225899865,
+      "active_sessions": 11,
+      "avg_row_lock_time_ms": 460.3695652173913,
+      "blocker_count": 8,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.6,
+      "cpu_sessions": 11,
+      "history_list_length": 19,
+      "innodb_row_lock_waits": 13.118113509784845,
+      "lock_wait_sessions": 20,
+      "lock_waits": 20,
+      "qps": 33.650812916404604,
+      "redo_rate": 8.127526848453654,
+      "sleep_sessions": 2,
+      "threads_connected": 13,
+      "threads_running": 12
+    }
+  },
+  {
+    "id": "T006",
+    "name": "Metadata Lock阻塞DML",
+    "category": "锁",
+    "rule_fired": "MY-082",
+    "cause": "5-30 — 中度活跃",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "Threads_running 5-30，SQL 负载偏高",
+      "可能存在缺少索引的查询或并发度偏高"
+    ],
+    "actions": [
+      "[排查] 查看 Top SQL 定位热点查询 | SQL: SELECT DIGEST_TEXT, COUNT_STAR, ROUND(AVG_TIMER_WAIT/1e12, 3) avg_sec, SUM_ROWS_EXAMINED FROM performance_schema.events_statements_summary_by_digest WHERE LAST_SEEN \u003e DATE_SUB(NOW(), INTERVAL 1 MINUTE) ORDER BY SUM_TIMER_WAIT DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 2.044680334634567,
+      "aborted_clients_rate": 2.044680334634567,
+      "aborted_connects": 0.817872133853827,
+      "aborted_connects_rate": 0.817872133853827,
+      "active_sessions": 17,
+      "avg_row_lock_time_ms": 972.6,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1,
+      "cpu_sessions": 16,
+      "handler_read_rnd_next": 0.20446803346345674,
+      "handler_read_rnd_rate": 0.20446803346345674,
+      "history_list_length": 24,
+      "innodb_row_lock_waits": 2.044680334634567,
+      "long_queries": 1,
+      "qps": 251.4956811600518,
+      "redo_rate": 2.249148368098024,
+      "sleep_sessions": 2,
+      "threads_connected": 19,
+      "threads_running": 16
+    }
+  },
+  {
+    "id": "T007",
+    "name": "Gap Lock阻塞INSERT",
+    "category": "锁",
+    "rule_fired": "MY-072",
+    "cause": "lock_waits 3-5 — 轻度 MDL 等待",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "锁等待 3-5，可能存在 MDL 争用",
+      "DDL 操作与长时间查询竞争 MDL 锁"
+    ],
+    "actions": [
+      "[排查] 检查 MDL 锁状态 | SQL: SELECT * FROM performance_schema.metadata_locks WHERE LOCK_STATUS='PENDING'"
+    ],
+    "has_sql": true,
+    "secondary": "全表扫描正常",
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 3.678163415618024,
+      "aborted_clients_rate": 3.678163415618024,
+      "aborted_connects": 1.050903833033721,
+      "aborted_connects_rate": 1.050903833033721,
+      "active_sessions": 8,
+      "blocker_count": 1,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.5,
+      "cpu_sessions": 7,
+      "history_list_length": 24,
+      "innodb_row_lock_waits": 1.3136297912921513,
+      "lock_wait_sessions": 5,
+      "lock_waits": 5,
+      "long_queries": 6,
+      "qps": 4.203615332134884,
+      "redo_rate": 0.5254519165168605,
+      "sleep_sessions": 2,
+      "threads_connected": 10,
+      "threads_running": 8
+    }
+  },
+  {
+    "id": "T008",
+    "name": "Next-Key Lock并发INSERT死锁",
+    "category": "锁",
+    "rule_fired": "MY-082",
+    "cause": "5-30 — 中度活跃",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "Threads_running 5-30，SQL 负载偏高",
+      "可能存在缺少索引的查询或并发度偏高"
+    ],
+    "actions": [
+      "[排查] 查看 Top SQL 定位热点查询 | SQL: SELECT DIGEST_TEXT, COUNT_STAR, ROUND(AVG_TIMER_WAIT/1e12, 3) avg_sec, SUM_ROWS_EXAMINED FROM performance_schema.events_statements_summary_by_digest WHERE LAST_SEEN \u003e DATE_SUB(NOW(), INTERVAL 1 MINUTE) ORDER BY SUM_TIMER_WAIT DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_connects": 1.2096943811724048,
+      "aborted_connects_rate": 1.2096943811724048,
+      "active_sessions": 7,
+      "avg_row_lock_time_ms": 93.14285714285714,
+      "buffer_pool_dirty_pct": 0.01,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 7,
+      "innodb_row_lock_waits": 2.1169651670517085,
+      "qps": 172.68387291236078,
+      "redo_rate": 22.83298144462914,
+      "sleep_sessions": 2,
+      "threads_connected": 9,
+      "threads_running": 8
+    }
+  },
+  {
+    "id": "T009",
+    "name": "FTWRL阻塞全库",
+    "category": "锁",
+    "rule_fired": "MY-076",
+    "cause": "全表扫描正常",
+    "severity": "中",
+    "confidence_pct": 63,
+    "findings": [
+      "有慢查询但全表扫描不多，检查其他原因"
+    ],
+    "actions": [
+      "[排查] 检查 innodb_stats_persistent 配置 | SQL: SELECT @@innodb_stats_persistent, @@innodb_stats_auto_recalc, @@innodb_stats_persistent_sample_pages"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "aborted_connects": 0.9856740839864544,
+      "aborted_connects_rate": 0.9856740839864544,
+      "active_sessions": 18,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1,
+      "cpu_sessions": 2,
+      "io_wait_sessions": 16,
+      "long_queries": 17,
+      "qps": 7.392555629898408,
+      "redo_rate": 0.1232092604983068,
+      "sleep_sessions": 1,
+      "threads_connected": 19,
+      "threads_running": 19
+    }
+  },
+  {
+    "id": "T010",
+    "name": "外键缺索引导致锁扩散",
+    "category": "锁",
+    "rule_fired": "MY-062",
+    "cause": "redo_rate \u003e 200 MB/s — Binlog 快速增长",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Redo 写入速率极高 (\u003e 200 MB/s)，Binlog 快速增长",
+      "如未及时清理，Binlog 可能占满磁盘空间"
+    ],
+    "actions": [
+      "[排查] 检查 Binlog 保留策略 | SQL: SELECT @@binlog_expire_logs_seconds, @@expire_logs_days",
+      "[修复] 设置 Binlog 过期时间 | SQL: SET GLOBAL binlog_expire_logs_seconds=259200 -- 3 天",
+      "[修复] 手动清理旧 Binlog | SQL: PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY)"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_connects": 0.9280313571104646,
+      "aborted_connects_rate": 0.9280313571104646,
+      "active_sessions": 16,
+      "avg_row_lock_time_ms": 0.02702702702702703,
+      "buffer_pool_dirty_pct": 0.03,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1,
+      "cpu_sessions": 11,
+      "innodb_row_lock_waits": 51.50574031963079,
+      "long_queries": 1,
+      "qps": 95653.35201657197,
+      "redo_rate": 4765.093007003319,
+      "sleep_sessions": 17,
+      "threads_connected": 20,
+      "threads_running": 16
+    }
+  },
+  {
+    "id": "T011",
+    "name": "Online DDL阻塞分析",
+    "category": "锁",
+    "rule_fired": "MY-076",
+    "cause": "全表扫描正常",
+    "severity": "中",
+    "confidence_pct": 63,
+    "findings": [
+      "有慢查询但全表扫描不多，检查其他原因"
+    ],
+    "actions": [
+      "[排查] 检查 innodb_stats_persistent 配置 | SQL: SELECT @@innodb_stats_persistent, @@innodb_stats_auto_recalc, @@innodb_stats_persistent_sample_pages"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 1.0848213854856164,
+      "aborted_clients_rate": 1.0848213854856164,
+      "aborted_connects": 1.0848213854856164,
+      "aborted_connects_rate": 1.0848213854856164,
+      "active_sessions": 13,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.7,
+      "cpu_sessions": 2,
+      "handler_read_rnd_next": 0.2169642770971233,
+      "handler_read_rnd_rate": 0.2169642770971233,
+      "long_queries": 12,
+      "qps": 5.858035481622329,
+      "redo_rate": 0.32544641564568494,
+      "sleep_sessions": 1,
+      "threads_connected": 14,
+      "threads_running": 14
+    }
+  },
+  {
+    "id": "T012",
+    "name": "自增锁争用",
+    "category": "锁",
+    "skipped": true,
+    "skip_note": "需要 innodb_autoinc_lock_mode=1 配置，无法运行时更改",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T013",
+    "name": "LOCK TABLES阻塞并发",
+    "category": "锁",
+    "rule_fired": "MY-076",
+    "cause": "全表扫描正常",
+    "severity": "中",
+    "confidence_pct": 63,
+    "findings": [
+      "有慢查询但全表扫描不多，检查其他原因"
+    ],
+    "actions": [
+      "[排查] 检查 innodb_stats_persistent 配置 | SQL: SELECT @@innodb_stats_persistent, @@innodb_stats_auto_recalc, @@innodb_stats_persistent_sample_pages"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 12,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.7,
+      "cpu_sessions": 2,
+      "long_queries": 11,
+      "qps": 5.912363227453845,
+      "sleep_sessions": 2,
+      "threads_connected": 14,
+      "threads_running": 13
+    }
+  },
+  {
+    "id": "T014",
+    "name": "INSERT ON DUPLICATE KEY热点争用",
+    "category": "锁",
+    "rule_fired": "MY-062",
+    "cause": "redo_rate \u003e 200 MB/s — Binlog 快速增长",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Redo 写入速率极高 (\u003e 200 MB/s)，Binlog 快速增长",
+      "如未及时清理，Binlog 可能占满磁盘空间"
+    ],
+    "actions": [
+      "[排查] 检查 Binlog 保留策略 | SQL: SELECT @@binlog_expire_logs_seconds, @@expire_logs_days",
+      "[修复] 设置 Binlog 过期时间 | SQL: SET GLOBAL binlog_expire_logs_seconds=259200 -- 3 天",
+      "[修复] 手动清理旧 Binlog | SQL: PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY)"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 21,
+      "avg_row_lock_time_ms": 4.196288365453247,
+      "blocker_count": 1,
+      "buffer_pool_dirty_pct": 0.08,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.2,
+      "cpu_sessions": 2,
+      "history_list_length": 153,
+      "innodb_row_lock_waits": 348.6919816358404,
+      "lock_wait_sessions": 1,
+      "lock_waits": 1,
+      "qps": 3152.9122222432734,
+      "redo_rate": 1948.5435576209811,
+      "sleep_sessions": 2,
+      "threads_connected": 23,
+      "threads_running": 22
+    }
+  },
+  {
+    "id": "T015",
+    "name": "锁等待超时重试风暴",
+    "category": "锁",
+    "rule_fired": "MY-042",
+    "cause": "行锁等待低 — blocker 可能在等 IO 或空闲未提交",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "存在阻塞链但行锁争用速率不高，blocker 可能是空闲未提交事务",
+      "需定位 root blocker 状态（Sleep/IO等待/执行中）"
+    ],
+    "actions": [
+      "[紧急] 定位 root blocker 及其状态 | SQL: SELECT b.BLOCKING_THREAD_ID, t.PROCESSLIST_USER, t.PROCESSLIST_COMMAND, t.PROCESSLIST_STATE, t.PROCESSLIST_TIME, LEFT(t.PROCESSLIST_INFO, 200) AS sql_text, COUNT(*) AS victims FROM performance_schema.data_lock_waits b JOIN performance_schema.threads t ON t.THREAD_ID = b.BLOCKING_THREAD_ID GROUP BY b.BLOCKING_THREAD_ID ORDER BY victims DESC LIMIT 5",
+      "[排查] 检查 InnoDB 锁状态 | SQL: SHOW ENGINE INNODB STATUS"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 2.7103625969527965,
+      "aborted_clients_rate": 2.7103625969527965,
+      "active_sessions": 12,
+      "avg_row_lock_time_ms": 1113.95,
+      "blocker_count": 10,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.6,
+      "cpu_sessions": 12,
+      "history_list_length": 278,
+      "innodb_row_lock_waits": 4.92793199445963,
+      "lock_wait_sessions": 55,
+      "lock_waits": 55,
+      "long_queries": 1,
+      "qps": 13.551812984763982,
+      "redo_rate": 1.8479744979223611,
+      "sleep_sessions": 1,
+      "threads_connected": 13,
+      "threads_running": 13
+    }
+  },
+  {
+    "id": "T016",
+    "name": "全表扫描: 缺索引",
+    "category": "SQL",
+    "rule_fired": "MY-082",
+    "cause": "5-30 — 中度活跃",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "Threads_running 5-30，SQL 负载偏高",
+      "可能存在缺少索引的查询或并发度偏高"
+    ],
+    "actions": [
+      "[排查] 查看 Top SQL 定位热点查询 | SQL: SELECT DIGEST_TEXT, COUNT_STAR, ROUND(AVG_TIMER_WAIT/1e12, 3) avg_sec, SUM_ROWS_EXAMINED FROM performance_schema.events_statements_summary_by_digest WHERE LAST_SEEN \u003e DATE_SUB(NOW(), INTERVAL 1 MINUTE) ORDER BY SUM_TIMER_WAIT DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 3.073207071241599,
+      "aborted_clients_rate": 3.073207071241599,
+      "active_sessions": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 4,
+      "history_list_length": 280,
+      "qps": 79640.62464769042,
+      "redo_rate": 0.3073207071241599,
+      "sleep_sessions": 5,
+      "threads_connected": 8,
+      "threads_running": 7
+    }
+  },
+  {
+    "id": "T017",
+    "name": "全表扫描: 选择度低不该加索引",
+    "category": "SQL",
+    "rule_fired": "MY-082",
+    "cause": "5-30 — 中度活跃",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "Threads_running 5-30，SQL 负载偏高",
+      "可能存在缺少索引的查询或并发度偏高"
+    ],
+    "actions": [
+      "[排查] 查看 Top SQL 定位热点查询 | SQL: SELECT DIGEST_TEXT, COUNT_STAR, ROUND(AVG_TIMER_WAIT/1e12, 3) avg_sec, SUM_ROWS_EXAMINED FROM performance_schema.events_statements_summary_by_digest WHERE LAST_SEEN \u003e DATE_SUB(NOW(), INTERVAL 1 MINUTE) ORDER BY SUM_TIMER_WAIT DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 6,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 6,
+      "history_list_length": 280,
+      "qps": 13.52097540181339,
+      "sleep_sessions": 1,
+      "threads_connected": 7,
+      "threads_running": 7
+    }
+  },
+  {
+    "id": "T018",
+    "name": "执行计划漂移: 统计信息过期",
+    "category": "SQL",
+    "skipped": true,
+    "skip_note": "需要大量数据变更+ANALYZE TABLE对比，模拟复杂",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T019",
+    "name": "隐式类型转换索引失效",
+    "category": "SQL",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 6,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 6,
+      "handler_read_rnd_next": 12136762.074588766,
+      "handler_read_rnd_rate": 12136762.074588766,
+      "history_list_length": 280,
+      "qps": 41.46146458798146,
+      "sleep_sessions": 1,
+      "threads_connected": 7,
+      "threads_running": 7
+    }
+  },
+  {
+    "id": "T020",
+    "name": "函数导致索引失效",
+    "category": "SQL",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 1.534624861093891,
+      "aborted_clients_rate": 1.534624861093891,
+      "active_sessions": 6,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 6,
+      "handler_read_rnd_next": 19156563.153899435,
+      "handler_read_rnd_rate": 19156563.153899435,
+      "history_list_length": 280,
+      "qps": 63.226544277068314,
+      "sleep_sessions": 1,
+      "threads_connected": 7,
+      "threads_running": 7
+    }
+  },
+  {
+    "id": "T021",
+    "name": "LIKE前模糊全表扫描",
+    "category": "SQL",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 1.5360847587680697,
+      "aborted_clients_rate": 1.5360847587680697,
+      "active_sessions": 6,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 6,
+      "handler_read_rnd_next": 7215900.702978621,
+      "handler_read_rnd_rate": 7215900.702978621,
+      "history_list_length": 280,
+      "qps": 25.49900699554996,
+      "sleep_sessions": 1,
+      "threads_connected": 7,
+      "threads_running": 7
+    }
+  },
+  {
+    "id": "T022",
+    "name": "分区裁剪失效",
+    "category": "SQL",
+    "skipped": true,
+    "skip_note": "需要分区表 part_table，视测试环境而定",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T023",
+    "name": "NOT IN子查询退化",
+    "category": "SQL",
+    "rule_fired": "MY-038",
+    "cause": "10-100/s — 中度无索引 JOIN",
+    "severity": "高",
+    "confidence_pct": 63,
+    "findings": [
+      "Select_full_join 10-100/s，部分 JOIN 未使用索引"
+    ],
+    "actions": [
+      "[排查] 检查无索引 JOIN 的 SQL | SQL: SELECT DIGEST_TEXT, SUM_SELECT_FULL_JOIN FROM performance_schema.events_statements_summary_by_digest WHERE SUM_SELECT_FULL_JOIN \u003e 0 ORDER BY SUM_SELECT_FULL_JOIN DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 1.5848919628439069,
+      "aborted_clients_rate": 1.5848919628439069,
+      "active_sessions": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.2,
+      "cpu_sessions": 3,
+      "handler_read_rnd_next": 3188461.5604915367,
+      "handler_read_rnd_rate": 3188461.5604915367,
+      "history_list_length": 280,
+      "qps": 11.41122213247613,
+      "select_full_join": 10.143308562201005,
+      "select_full_join_rate": 10.143308562201005,
+      "sleep_sessions": 1,
+      "threads_connected": 5,
+      "threads_running": 5
+    }
+  },
+  {
+    "id": "T024",
+    "name": "OFFSET大分页退化",
+    "category": "SQL",
+    "rule_fired": "MY-082",
+    "cause": "5-30 — 中度活跃",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "Threads_running 5-30，SQL 负载偏高",
+      "可能存在缺少索引的查询或并发度偏高"
+    ],
+    "actions": [
+      "[排查] 查看 Top SQL 定位热点查询 | SQL: SELECT DIGEST_TEXT, COUNT_STAR, ROUND(AVG_TIMER_WAIT/1e12, 3) avg_sec, SUM_ROWS_EXAMINED FROM performance_schema.events_statements_summary_by_digest WHERE LAST_SEEN \u003e DATE_SUB(NOW(), INTERVAL 1 MINUTE) ORDER BY SUM_TIMER_WAIT DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 0.9208842458347238,
+      "aborted_clients_rate": 0.9208842458347238,
+      "active_sessions": 6,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 6,
+      "handler_read_rnd_next": 328.7556757629964,
+      "handler_read_rnd_rate": 328.7556757629964,
+      "history_list_length": 280,
+      "qps": 74.59162391261263,
+      "sleep_sessions": 1,
+      "threads_connected": 7,
+      "threads_running": 7
+    }
+  },
+  {
+    "id": "T025",
+    "name": "多列索引顺序不当",
+    "category": "SQL",
+    "rule_fired": "MY-082",
+    "cause": "5-30 — 中度活跃",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "Threads_running 5-30，SQL 负载偏高",
+      "可能存在缺少索引的查询或并发度偏高"
+    ],
+    "actions": [
+      "[排查] 查看 Top SQL 定位热点查询 | SQL: SELECT DIGEST_TEXT, COUNT_STAR, ROUND(AVG_TIMER_WAIT/1e12, 3) avg_sec, SUM_ROWS_EXAMINED FROM performance_schema.events_statements_summary_by_digest WHERE LAST_SEEN \u003e DATE_SUB(NOW(), INTERVAL 1 MINUTE) ORDER BY SUM_TIMER_WAIT DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 1.5359030703515484,
+      "aborted_clients_rate": 1.5359030703515484,
+      "active_sessions": 6,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 6,
+      "history_list_length": 280,
+      "qps": 13.823127633163935,
+      "sleep_sessions": 1,
+      "threads_connected": 7,
+      "threads_running": 7
+    }
+  },
+  {
+    "id": "T026",
+    "name": "过多索引写入变慢",
+    "category": "SQL",
+    "rule_fired": "MY-062",
+    "cause": "redo_rate \u003e 200 MB/s — Binlog 快速增长",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Redo 写入速率极高 (\u003e 200 MB/s)，Binlog 快速增长",
+      "如未及时清理，Binlog 可能占满磁盘空间"
+    ],
+    "actions": [
+      "[排查] 检查 Binlog 保留策略 | SQL: SELECT @@binlog_expire_logs_seconds, @@expire_logs_days",
+      "[修复] 设置 Binlog 过期时间 | SQL: SET GLOBAL binlog_expire_logs_seconds=259200 -- 3 天",
+      "[修复] 手动清理旧 Binlog | SQL: PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY)"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 0.5697166620604315,
+      "aborted_clients_rate": 0.5697166620604315,
+      "active_sessions": 11,
+      "buffer_pool_dirty_pct": 0.23,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.6,
+      "cpu_sessions": 1,
+      "history_list_length": 280,
+      "qps": 1899.4353513094786,
+      "redo_rate": 2668.695274256576,
+      "sleep_sessions": 1,
+      "threads_connected": 12,
+      "threads_running": 12
+    }
+  },
+  {
+    "id": "T027",
+    "name": "相关子查询N+1",
+    "category": "SQL",
+    "rule_fired": "MY-039",
+    "cause": "TPS 低 — 查询效率差",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next 高但 TPS 低，查询效率差",
+      "大量行扫描但产出少，索引可能不适合当前查询模式"
+    ],
+    "actions": [
+      "[排查] 查找扫描行数最多的 SQL | SQL: SELECT DIGEST_TEXT, SUM_ROWS_EXAMINED, SUM_ROWS_SENT FROM performance_schema.events_statements_summary_by_digest ORDER BY SUM_ROWS_EXAMINED DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 3.1711270324654146,
+      "aborted_clients_rate": 3.1711270324654146,
+      "active_sessions": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.2,
+      "cpu_sessions": 4,
+      "handler_read_rnd_next": 750633.9916151526,
+      "handler_read_rnd_rate": 750633.9916151526,
+      "history_list_length": 280,
+      "qps": 77.05838688890957,
+      "redo_rate": 0.4756690548698122,
+      "sleep_sessions": 1,
+      "threads_connected": 5,
+      "threads_running": 5
+    }
+  },
+  {
+    "id": "T028",
+    "name": "JOIN缺索引全表扫描",
+    "category": "SQL",
+    "rule_fired": "MY-076",
+    "cause": "全表扫描正常",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "有慢查询但全表扫描不多，检查其他原因"
+    ],
+    "actions": [
+      "[排查] 检查 innodb_stats_persistent 配置 | SQL: SELECT @@innodb_stats_persistent, @@innodb_stats_auto_recalc, @@innodb_stats_persistent_sample_pages"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 0.31710598031852116,
+      "aborted_clients_rate": 0.31710598031852116,
+      "active_sessions": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.2,
+      "cpu_sessions": 4,
+      "handler_read_rnd_next": 12.684239212740847,
+      "handler_read_rnd_rate": 12.684239212740847,
+      "history_list_length": 280,
+      "long_queries": 3,
+      "qps": 2.219741862229648,
+      "redo_rate": 0.15855299015926058,
+      "sleep_sessions": 1,
+      "threads_connected": 5,
+      "threads_running": 5
+    }
+  },
+  {
+    "id": "T029",
+    "name": "大排序溢出到磁盘",
+    "category": "SQL",
+    "rule_fired": "MY-039",
+    "cause": "TPS 低 — 查询效率差",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next 高但 TPS 低，查询效率差",
+      "大量行扫描但产出少，索引可能不适合当前查询模式"
+    ],
+    "actions": [
+      "[排查] 查找扫描行数最多的 SQL | SQL: SELECT DIGEST_TEXT, SUM_ROWS_EXAMINED, SUM_ROWS_SENT FROM performance_schema.events_statements_summary_by_digest ORDER BY SUM_ROWS_EXAMINED DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.2,
+      "cpu_sessions": 4,
+      "handler_read_rnd_next": 594453.6354062399,
+      "handler_read_rnd_rate": 594453.6354062399,
+      "history_list_length": 280,
+      "qps": 5.07265478963792,
+      "sleep_sessions": 1,
+      "threads_connected": 5,
+      "threads_running": 5
+    }
+  },
+  {
+    "id": "T030",
+    "name": "Hash Join溢出",
+    "category": "SQL",
+    "rule_fired": "MY-038",
+    "cause": "\u003e 100/s — 大量无索引连接查询",
+    "severity": "严重",
+    "confidence_pct": 73,
+    "findings": [
+      "Select_full_join \u003e 100/s，大量 JOIN 操作未使用索引",
+      "无索引 JOIN 导致嵌套循环扫描，性能极差"
+    ],
+    "actions": [
+      "[紧急] 查找无索引 JOIN 的 SQL | SQL: SELECT DIGEST_TEXT, SUM_SELECT_FULL_JOIN, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_SELECT_FULL_JOIN \u003e 0 ORDER BY SUM_SELECT_FULL_JOIN DESC LIMIT 10",
+      "[修复] 为 JOIN 条件列添加索引 | SQL: -- 为 JOIN ON 条件中的列添加索引\n-- ALTER TABLE t ADD INDEX idx_join_col (col)"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 0.9510524480488505,
+      "aborted_clients_rate": 0.9510524480488505,
+      "active_sessions": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.2,
+      "cpu_sessions": 4,
+      "handler_read_rnd_next": 3576908.574129209,
+      "handler_read_rnd_rate": 3576908.574129209,
+      "history_list_length": 280,
+      "qps": 4176.3883168651855,
+      "select_full_join": 2087.8771409499095,
+      "select_full_join_rate": 2087.8771409499095,
+      "sleep_sessions": 1,
+      "threads_connected": 5,
+      "threads_running": 5
+    }
+  },
+  {
+    "id": "T031",
+    "name": "SELECT * 回表开销",
+    "category": "SQL",
+    "rule_fired": "MY-082",
+    "cause": "5-30 — 中度活跃",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "Threads_running 5-30，SQL 负载偏高",
+      "可能存在缺少索引的查询或并发度偏高"
+    ],
+    "actions": [
+      "[排查] 查看 Top SQL 定位热点查询 | SQL: SELECT DIGEST_TEXT, COUNT_STAR, ROUND(AVG_TIMER_WAIT/1e12, 3) avg_sec, SUM_ROWS_EXAMINED FROM performance_schema.events_statements_summary_by_digest WHERE LAST_SEEN \u003e DATE_SUB(NOW(), INTERVAL 1 MINUTE) ORDER BY SUM_TIMER_WAIT DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 0.6146324786516636,
+      "aborted_clients_rate": 0.6146324786516636,
+      "active_sessions": 6,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 5,
+      "handler_read_rnd_next": 33.19015384718983,
+      "handler_read_rnd_rate": 33.19015384718983,
+      "history_list_length": 280,
+      "qps": 79117.64386571741,
+      "sleep_sessions": 1,
+      "threads_connected": 7,
+      "threads_running": 7
+    }
+  },
+  {
+    "id": "T032",
+    "name": "Filesort + Temporary双重开销",
+    "category": "SQL",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.2,
+      "cpu_sessions": 4,
+      "history_list_length": 280,
+      "qps": 66.85779048687692,
+      "sleep_sessions": 1,
+      "threads_connected": 5,
+      "threads_running": 5
+    }
+  },
+  {
+    "id": "T033",
+    "name": "大表COUNT(*)无WHERE",
+    "category": "SQL",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 0.96645574500243,
+      "aborted_clients_rate": 0.96645574500243,
+      "active_sessions": 3,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.2,
+      "cpu_sessions": 3,
+      "qps": 78.28291534519683,
+      "redo_rate": 3.704747022509315,
+      "sleep_sessions": 1,
+      "threads_connected": 4,
+      "threads_running": 4
+    }
+  },
+  {
+    "id": "T034",
+    "name": "大IN列表估算偏差",
+    "category": "SQL",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 0.6307652515623811,
+      "aborted_clients_rate": 0.6307652515623811,
+      "active_sessions": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.2,
+      "cpu_sessions": 4,
+      "qps": 137.19144221481787,
+      "sleep_sessions": 1,
+      "threads_connected": 5,
+      "threads_running": 5
+    }
+  },
+  {
+    "id": "T035",
+    "name": "窗口函数无索引",
+    "category": "SQL",
+    "rule_fired": "MY-039",
+    "cause": "TPS 低 — 查询效率差",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next 高但 TPS 低，查询效率差",
+      "大量行扫描但产出少，索引可能不适合当前查询模式"
+    ],
+    "actions": [
+      "[排查] 查找扫描行数最多的 SQL | SQL: SELECT DIGEST_TEXT, SUM_ROWS_EXAMINED, SUM_ROWS_SENT FROM performance_schema.events_statements_summary_by_digest ORDER BY SUM_ROWS_EXAMINED DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 0.6340386559514789,
+      "aborted_clients_rate": 0.6340386559514789,
+      "active_sessions": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.2,
+      "cpu_sessions": 4,
+      "handler_read_rnd_next": 891619.7131057191,
+      "handler_read_rnd_rate": 891619.7131057191,
+      "qps": 4.121251263684613,
+      "sleep_sessions": 1,
+      "threads_connected": 5,
+      "threads_running": 5
+    }
+  },
+  {
+    "id": "T036",
+    "name": "Buffer Pool命中率下降: 大查询冲刷",
+    "category": "InnoDB",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 0.9513400052076352,
+      "aborted_clients_rate": 0.9513400052076352,
+      "active_sessions": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.2,
+      "cpu_sessions": 4,
+      "handler_read_rnd_next": 7122527.23345538,
+      "handler_read_rnd_rate": 7122527.23345538,
+      "qps": 24.417726800329305,
+      "sleep_sessions": 1,
+      "threads_connected": 5,
+      "threads_running": 5
+    }
+  },
+  {
+    "id": "T037",
+    "name": "Buffer Pool命中率持续低",
+    "category": "InnoDB",
+    "skipped": true,
+    "skip_note": "需要 innodb_buffer_pool_size 很小，无法运行时调小到足够低",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T038",
+    "name": "Redo Log太小频繁Checkpoint",
+    "category": "InnoDB",
+    "skipped": true,
+    "skip_note": "需要 innodb_redo_log_capacity 配置很小，无法运行时更改",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T039",
+    "name": "Undo Log膨胀: 长事务阻止purge",
+    "category": "InnoDB",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "行锁等待低 — blocker 可能在等 IO 或空闲未提交",
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 7,
+      "avg_row_lock_time_ms": 582.2631578947369,
+      "blocker_count": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 7,
+      "handler_read_rnd_next": 1247567.6685381765,
+      "handler_read_rnd_rate": 1247567.6685381765,
+      "history_list_length": 5,
+      "innodb_row_lock_waits": 4.990490255723957,
+      "lock_wait_sessions": 10,
+      "lock_waits": 10,
+      "long_queries": 1,
+      "qps": 7.879721456406248,
+      "redo_rate": 5.5158050194843735,
+      "sleep_sessions": 1,
+      "threads_connected": 8,
+      "threads_running": 8
+    }
+  },
+  {
+    "id": "T040",
+    "name": "Change Buffer合并拖慢读",
+    "category": "InnoDB",
+    "rule_fired": "MY-062",
+    "cause": "redo_rate \u003e 200 MB/s — Binlog 快速增长",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Redo 写入速率极高 (\u003e 200 MB/s)，Binlog 快速增长",
+      "如未及时清理，Binlog 可能占满磁盘空间"
+    ],
+    "actions": [
+      "[排查] 检查 Binlog 保留策略 | SQL: SELECT @@binlog_expire_logs_seconds, @@expire_logs_days",
+      "[修复] 设置 Binlog 过期时间 | SQL: SET GLOBAL binlog_expire_logs_seconds=259200 -- 3 天",
+      "[修复] 手动清理旧 Binlog | SQL: PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY)"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 0.9243497064905999,
+      "aborted_clients_rate": 0.9243497064905999,
+      "active_sessions": 9,
+      "buffer_pool_dirty_pct": 0.24,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.5,
+      "cpu_sessions": 4,
+      "handler_read_rnd_next": 765720.5744002176,
+      "handler_read_rnd_rate": 765720.5744002176,
+      "history_list_length": 9,
+      "qps": 3679.281571715184,
+      "redo_rate": 1562.7056137930083,
+      "sleep_sessions": 2,
+      "threads_connected": 11,
+      "threads_running": 10
+    }
+  },
+  {
+    "id": "T041",
+    "name": "Adaptive Hash Index争用",
+    "category": "InnoDB",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 0.2459331584805469,
+      "aborted_clients_rate": 0.2459331584805469,
+      "active_sessions": 21,
+      "buffer_pool_dirty_pct": 0.08,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.1,
+      "cpu_sessions": 21,
+      "handler_read_rnd_next": 36869613.45775775,
+      "handler_read_rnd_rate": 36869613.45775775,
+      "history_list_length": 9,
+      "qps": 125.91777714204001,
+      "redo_rate": 0.12296657924027345,
+      "sleep_sessions": 1,
+      "threads_connected": 22,
+      "threads_running": 22
+    }
+  },
+  {
+    "id": "T042",
+    "name": "Doublewrite Buffer写入延迟",
+    "category": "InnoDB",
+    "skipped": true,
+    "skip_note": "需要 HDD 存储模拟慢写入",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T043",
+    "name": "临时表空间膨胀",
+    "category": "InnoDB",
+    "rule_fired": "MY-076",
+    "cause": "全表扫描多 — 统计信息可能过期",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "存在慢查询且全表扫描多，统计信息可能过期",
+      "过期的统计信息导致优化器选择错误的执行计划"
+    ],
+    "actions": [
+      "[排查] 检查统计信息最后更新时间 | SQL: SELECT TABLE_SCHEMA, TABLE_NAME, UPDATE_TIME FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('mysql','information_schema','performance_schema','sys') AND UPDATE_TIME \u003c DATE_SUB(NOW(), INTERVAL 7 DAY) ORDER BY UPDATE_TIME LIMIT 10",
+      "[修复] 更新统计信息 | SQL: ANALYZE TABLE {db}.{table}"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 5.792778246288875,
+      "aborted_clients_rate": 5.792778246288875,
+      "active_sessions": 6,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 6,
+      "handler_read_rnd_next": 1768503.7956362374,
+      "handler_read_rnd_rate": 1768503.7956362374,
+      "history_list_length": 9,
+      "long_queries": 5,
+      "qps": 3.3537137215356645,
+      "redo_rate": 0.15244153279707565,
+      "sleep_sessions": 1,
+      "threads_connected": 7,
+      "threads_running": 7
+    }
+  },
+  {
+    "id": "T044",
+    "name": "InnoDB IO线程不足",
+    "category": "InnoDB",
+    "skipped": true,
+    "skip_note": "需要重启更改 innodb_read_io_threads",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T045",
+    "name": "Page Cleaner跟不上脏页",
+    "category": "InnoDB",
+    "rule_fired": "MY-042",
+    "cause": "行锁等待低 — blocker 可能在等 IO 或空闲未提交",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "存在阻塞链但行锁争用速率不高，blocker 可能是空闲未提交事务",
+      "需定位 root blocker 状态（Sleep/IO等待/执行中）"
+    ],
+    "actions": [
+      "[紧急] 定位 root blocker 及其状态 | SQL: SELECT b.BLOCKING_THREAD_ID, t.PROCESSLIST_USER, t.PROCESSLIST_COMMAND, t.PROCESSLIST_STATE, t.PROCESSLIST_TIME, LEFT(t.PROCESSLIST_INFO, 200) AS sql_text, COUNT(*) AS victims FROM performance_schema.data_lock_waits b JOIN performance_schema.threads t ON t.THREAD_ID = b.BLOCKING_THREAD_ID GROUP BY b.BLOCKING_THREAD_ID ORDER BY victims DESC LIMIT 5",
+      "[排查] 检查 InnoDB 锁状态 | SQL: SHOW ENGINE INNODB STATUS"
+    ],
+    "has_sql": true,
+    "secondary": "全表扫描正常",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 0.74727534572418,
+      "aborted_clients_rate": 0.74727534572418,
+      "active_sessions": 23,
+      "blocker_count": 10,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.2,
+      "cpu_sessions": 20,
+      "handler_read_rnd_next": 77846.16368190691,
+      "handler_read_rnd_rate": 77846.16368190691,
+      "history_list_length": 9,
+      "innodb_row_lock_waits": 4.73274385625314,
+      "lock_wait_sessions": 190,
+      "lock_waits": 190,
+      "long_queries": 22,
+      "qps": 10.21276305823046,
+      "redo_rate": 1.74364247335642,
+      "sleep_sessions": 2,
+      "threads_connected": 25,
+      "threads_running": 24
+    }
+  },
+  {
+    "id": "T046",
+    "name": "sort_buffer过大OOM风险",
+    "category": "内存",
+    "skipped": true,
+    "skip_note": "OOM 测试不安全",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T047",
+    "name": "join_buffer不足Block Nested Loop",
+    "category": "内存",
+    "rule_fired": "MY-076",
+    "cause": "全表扫描多 — 统计信息可能过期",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "存在慢查询且全表扫描多，统计信息可能过期",
+      "过期的统计信息导致优化器选择错误的执行计划"
+    ],
+    "actions": [
+      "[排查] 检查统计信息最后更新时间 | SQL: SELECT TABLE_SCHEMA, TABLE_NAME, UPDATE_TIME FROM information_schema.TABLES WHERE TABLE_SCHEMA NOT IN ('mysql','information_schema','performance_schema','sys') AND UPDATE_TIME \u003c DATE_SUB(NOW(), INTERVAL 7 DAY) ORDER BY UPDATE_TIME LIMIT 10",
+      "[修复] 更新统计信息 | SQL: ANALYZE TABLE {db}.{table}"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 7,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 4,
+      "handler_read_rnd_next": 365246.59199832845,
+      "handler_read_rnd_rate": 365246.59199832845,
+      "history_list_length": 9,
+      "long_queries": 6,
+      "qps": 3.1703919691189086,
+      "sleep_sessions": 2,
+      "threads_connected": 9,
+      "threads_running": 8
+    }
+  },
+  {
+    "id": "T048",
+    "name": "tmp_table_size不足磁盘临时表",
+    "category": "内存",
+    "rule_fired": "MY-082",
+    "cause": "5-30 — 中度活跃",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "Threads_running 5-30，SQL 负载偏高",
+      "可能存在缺少索引的查询或并发度偏高"
+    ],
+    "actions": [
+      "[排查] 查看 Top SQL 定位热点查询 | SQL: SELECT DIGEST_TEXT, COUNT_STAR, ROUND(AVG_TIMER_WAIT/1e12, 3) avg_sec, SUM_ROWS_EXAMINED FROM performance_schema.events_statements_summary_by_digest WHERE LAST_SEEN \u003e DATE_SUB(NOW(), INTERVAL 1 MINUTE) ORDER BY SUM_TIMER_WAIT DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "secondary": "全表扫描正常",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 7,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 4,
+      "history_list_length": 9,
+      "long_queries": 3,
+      "qps": 12.681976233180745,
+      "sleep_sessions": 2,
+      "threads_connected": 9,
+      "threads_running": 8
+    }
+  },
+  {
+    "id": "T049",
+    "name": "Table Open Cache不足",
+    "category": "内存",
+    "skipped": true,
+    "skip_note": "需要大量表 + 小 table_open_cache",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T050",
+    "name": "Thread Cache不足频繁创建线程",
+    "category": "内存",
+    "skipped": true,
+    "skip_note": "需要 thread_cache_size=0 配置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T051",
+    "name": "Query Cache争用(5.7)",
+    "category": "内存",
+    "skipped": true,
+    "skip_note": "MySQL 8.0已移除Query Cache",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T052",
+    "name": "Prepared Statement泄漏",
+    "category": "内存",
+    "rule_fired": "MY-076",
+    "cause": "全表扫描正常",
+    "severity": "中",
+    "confidence_pct": 63,
+    "findings": [
+      "有慢查询但全表扫描不多，检查其他原因"
+    ],
+    "actions": [
+      "[排查] 检查 innodb_stats_persistent 配置 | SQL: SELECT @@innodb_stats_persistent, @@innodb_stats_auto_recalc, @@innodb_stats_persistent_sample_pages"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 1.4948318088644907,
+      "aborted_clients_rate": 1.4948318088644907,
+      "active_sessions": 21,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.2,
+      "cpu_sessions": 21,
+      "history_list_length": 10,
+      "long_queries": 20,
+      "qps": 15.197456723455655,
+      "redo_rate": 0.12456931740537422,
+      "sleep_sessions": 2,
+      "threads_connected": 23,
+      "threads_running": 22
+    }
+  },
+  {
+    "id": "T053",
+    "name": "Buffer Pool Chunk Size内存浪费",
+    "category": "内存",
+    "skipped": true,
+    "skip_note": "需要特定 chunk_size/instances 配置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T054",
+    "name": "Binlog Cache溢出磁盘",
+    "category": "内存",
+    "rule_fired": "MY-062",
+    "cause": "redo_rate \u003e 200 MB/s — Binlog 快速增长",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Redo 写入速率极高 (\u003e 200 MB/s)，Binlog 快速增长",
+      "如未及时清理，Binlog 可能占满磁盘空间"
+    ],
+    "actions": [
+      "[排查] 检查 Binlog 保留策略 | SQL: SELECT @@binlog_expire_logs_seconds, @@expire_logs_days",
+      "[修复] 设置 Binlog 过期时间 | SQL: SET GLOBAL binlog_expire_logs_seconds=259200 -- 3 天",
+      "[修复] 手动清理旧 Binlog | SQL: PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY)"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 4,
+      "avg_row_lock_time_ms": 67.87640449438203,
+      "blocker_count": 2,
+      "buffer_pool_dirty_pct": 0.12,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.3,
+      "cpu_sessions": 4,
+      "history_list_length": 81,
+      "innodb_row_lock_waits": 28.210855287527817,
+      "lock_wait_sessions": 3,
+      "lock_waits": 3,
+      "qps": 87.16837307943987,
+      "redo_rate": 15836.116069268423,
+      "sleep_sessions": 2,
+      "threads_connected": 6,
+      "threads_running": 5
+    }
+  },
+  {
+    "id": "T055",
+    "name": "内存碎片化RSS增长",
+    "category": "内存",
+    "skipped": true,
+    "skip_note": "需要长时间运行观察",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T056",
+    "name": "Binlog写入速率过高",
+    "category": "复制",
+    "rule_fired": "MY-062",
+    "cause": "redo_rate \u003e 200 MB/s — Binlog 快速增长",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Redo 写入速率极高 (\u003e 200 MB/s)，Binlog 快速增长",
+      "如未及时清理，Binlog 可能占满磁盘空间"
+    ],
+    "actions": [
+      "[排查] 检查 Binlog 保留策略 | SQL: SELECT @@binlog_expire_logs_seconds, @@expire_logs_days",
+      "[修复] 设置 Binlog 过期时间 | SQL: SET GLOBAL binlog_expire_logs_seconds=259200 -- 3 天",
+      "[修复] 手动清理旧 Binlog | SQL: PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY)"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 0.5703350956516688,
+      "aborted_clients_rate": 0.5703350956516688,
+      "active_sessions": 11,
+      "avg_row_lock_time_ms": 791.88,
+      "blocker_count": 9,
+      "buffer_pool_dirty_pct": 0.13,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.6,
+      "cpu_sessions": 10,
+      "handler_read_rnd_next": 1424497.7368219385,
+      "handler_read_rnd_rate": 1424497.7368219385,
+      "history_list_length": 5,
+      "innodb_row_lock_waits": 7.129188695645861,
+      "lock_wait_sessions": 45,
+      "lock_waits": 45,
+      "qps": 10.836366817381709,
+      "redo_rate": 329.7962690605775,
+      "sleep_sessions": 1,
+      "threads_connected": 12,
+      "threads_running": 12
+    }
+  },
+  {
+    "id": "T057",
+    "name": "sync_binlog提交延迟",
+    "category": "复制",
+    "skipped": true,
+    "skip_note": "需要 sync_binlog=1 + HDD，环境依赖",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T058",
+    "name": "主从延迟: 大事务",
+    "category": "复制",
+    "skipped": true,
+    "skip_note": "需要主从复制环境",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T059",
+    "name": "主从延迟: 从库无索引",
+    "category": "复制",
+    "skipped": true,
+    "skip_note": "需要主从复制环境",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T060",
+    "name": "Binlog文件堆积占满磁盘",
+    "category": "复制",
+    "skipped": true,
+    "skip_note": "磁盘满测试不安全",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T061",
+    "name": "GTID errant transaction",
+    "category": "复制",
+    "skipped": true,
+    "skip_note": "需要主从复制环境",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T062",
+    "name": "半同步降级",
+    "category": "复制",
+    "skipped": true,
+    "skip_note": "需要半同步复制环境",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T063",
+    "name": "STATEMENT格式数据不一致",
+    "category": "复制",
+    "skipped": true,
+    "skip_note": "需要主从复制环境",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T064",
+    "name": "relay_log_space_limit阻塞",
+    "category": "复制",
+    "skipped": true,
+    "skip_note": "需要主从复制环境",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T065",
+    "name": "多源复制冲突",
+    "category": "复制",
+    "skipped": true,
+    "skip_note": "需要多源复制环境",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T066",
+    "name": "innodb_data_file IO延迟",
+    "category": "等待",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 2.2149915016916526,
+      "aborted_clients_rate": 2.2149915016916526,
+      "active_sessions": 21,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.2,
+      "cpu_sessions": 21,
+      "handler_read_rnd_next": 36302861.386540376,
+      "handler_read_rnd_rate": 36302861.386540376,
+      "history_list_length": 8,
+      "qps": 122.31675292675015,
+      "redo_rate": 1.2305508342731404,
+      "sleep_sessions": 2,
+      "threads_connected": 23,
+      "threads_running": 22
+    }
+  },
+  {
+    "id": "T067",
+    "name": "innodb_log_file Redo写入延迟",
+    "category": "等待",
+    "rule_fired": "MY-062",
+    "cause": "redo_rate \u003e 200 MB/s — Binlog 快速增长",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Redo 写入速率极高 (\u003e 200 MB/s)，Binlog 快速增长",
+      "如未及时清理，Binlog 可能占满磁盘空间"
+    ],
+    "actions": [
+      "[排查] 检查 Binlog 保留策略 | SQL: SELECT @@binlog_expire_logs_seconds, @@expire_logs_days",
+      "[修复] 设置 Binlog 过期时间 | SQL: SET GLOBAL binlog_expire_logs_seconds=259200 -- 3 天",
+      "[修复] 手动清理旧 Binlog | SQL: PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY)"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 4.721298704651243,
+      "aborted_clients_rate": 4.721298704651243,
+      "active_sessions": 21,
+      "buffer_pool_dirty_pct": 0.03,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.1,
+      "cpu_sessions": 1,
+      "handler_read_rnd_next": 730352.1090080203,
+      "handler_read_rnd_rate": 730352.1090080203,
+      "history_list_length": 8,
+      "qps": 3406.04428129761,
+      "redo_rate": 1566.9741911331969,
+      "sleep_sessions": 1,
+      "threads_connected": 22,
+      "threads_running": 21
+    }
+  },
+  {
+    "id": "T068",
+    "name": "buf_pool_mutex争用",
+    "category": "等待",
+    "skipped": true,
+    "skip_note": "需要 innodb_buffer_pool_instances=1 配置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T069",
+    "name": "trx_mutex争用",
+    "category": "等待",
+    "rule_fired": "MY-062",
+    "cause": "redo_rate \u003e 200 MB/s — Binlog 快速增长",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Redo 写入速率极高 (\u003e 200 MB/s)，Binlog 快速增长",
+      "如未及时清理，Binlog 可能占满磁盘空间"
+    ],
+    "actions": [
+      "[排查] 检查 Binlog 保留策略 | SQL: SELECT @@binlog_expire_logs_seconds, @@expire_logs_days",
+      "[修复] 设置 Binlog 过期时间 | SQL: SET GLOBAL binlog_expire_logs_seconds=259200 -- 3 天",
+      "[修复] 手动清理旧 Binlog | SQL: PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY)"
+    ],
+    "has_sql": true,
+    "secondary": "\u003e 30 — 大量活跃线程",
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 3.610128237152125,
+      "aborted_clients_rate": 3.610128237152125,
+      "active_sessions": 51,
+      "buffer_pool_dirty_pct": 0.04,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 2.6,
+      "cpu_sessions": 1,
+      "qps": 21371.95916394058,
+      "redo_rate": 2659.671725515899,
+      "sleep_sessions": 5,
+      "threads_connected": 52,
+      "threads_running": 52
+    }
+  },
+  {
+    "id": "T070",
+    "name": "AHI latch争用",
+    "category": "等待",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 10.344815772296247,
+      "aborted_clients_rate": 10.344815772296247,
+      "active_sessions": 29,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.6,
+      "cpu_sessions": 29,
+      "handler_read_rnd_next": 37347324.4847022,
+      "handler_read_rnd_rate": 37347324.4847022,
+      "qps": 129.2046378090878,
+      "redo_rate": 0.4222373784610713,
+      "sleep_sessions": 3,
+      "threads_connected": 32,
+      "threads_running": 30
+    }
+  },
+  {
+    "id": "T071",
+    "name": "表IO等待集中热表",
+    "category": "等待",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 8.240331580099644,
+      "aborted_clients_rate": 8.240331580099644,
+      "active_sessions": 11,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.6,
+      "cpu_sessions": 11,
+      "handler_read_rnd_next": 1323855.3005401103,
+      "handler_read_rnd_rate": 1323855.3005401103,
+      "qps": 239.5379145525517,
+      "sleep_sessions": 1,
+      "threads_connected": 12,
+      "threads_running": 12
+    }
+  },
+  {
+    "id": "T072",
+    "name": "LOCK_open表定义缓存争用",
+    "category": "等待",
+    "skipped": true,
+    "skip_note": "需要大量表 + 小 table_definition_cache",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T073",
+    "name": "Binlog Group Commit等待",
+    "category": "等待",
+    "rule_fired": "MY-062",
+    "cause": "redo_rate \u003e 200 MB/s — Binlog 快速增长",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Redo 写入速率极高 (\u003e 200 MB/s)，Binlog 快速增长",
+      "如未及时清理，Binlog 可能占满磁盘空间"
+    ],
+    "actions": [
+      "[排查] 检查 Binlog 保留策略 | SQL: SELECT @@binlog_expire_logs_seconds, @@expire_logs_days",
+      "[修复] 设置 Binlog 过期时间 | SQL: SET GLOBAL binlog_expire_logs_seconds=259200 -- 3 天",
+      "[修复] 手动清理旧 Binlog | SQL: PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 3 DAY)"
+    ],
+    "has_sql": true,
+    "secondary": "\u003e 30 — 大量活跃线程",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 31,
+      "buffer_pool_dirty_pct": 0.03,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.6,
+      "cpu_sessions": 2,
+      "history_list_length": 2,
+      "qps": 4740.264431007322,
+      "redo_rate": 1968.2445526632612,
+      "sleep_sessions": 1,
+      "threads_connected": 32,
+      "threads_running": 32
+    }
+  },
+  {
+    "id": "T074",
+    "name": "TPS骤降根因定位",
+    "category": "等待",
+    "rule_fired": "MY-042",
+    "cause": "行锁等待低 — blocker 可能在等 IO 或空闲未提交",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "存在阻塞链但行锁争用速率不高，blocker 可能是空闲未提交事务",
+      "需定位 root blocker 状态（Sleep/IO等待/执行中）"
+    ],
+    "actions": [
+      "[紧急] 定位 root blocker 及其状态 | SQL: SELECT b.BLOCKING_THREAD_ID, t.PROCESSLIST_USER, t.PROCESSLIST_COMMAND, t.PROCESSLIST_STATE, t.PROCESSLIST_TIME, LEFT(t.PROCESSLIST_INFO, 200) AS sql_text, COUNT(*) AS victims FROM performance_schema.data_lock_waits b JOIN performance_schema.threads t ON t.THREAD_ID = b.BLOCKING_THREAD_ID GROUP BY b.BLOCKING_THREAD_ID ORDER BY victims DESC LIMIT 5",
+      "[排查] 检查 InnoDB 锁状态 | SQL: SHOW ENGINE INNODB STATUS"
+    ],
+    "has_sql": true,
+    "secondary": "全表扫描正常",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 6.135059153226975,
+      "aborted_clients_rate": 6.135059153226975,
+      "active_sessions": 22,
+      "blocker_count": 10,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.2,
+      "cpu_sessions": 22,
+      "history_list_length": 2,
+      "innodb_row_lock_waits": 4.38218510944784,
+      "lock_wait_sessions": 210,
+      "lock_waits": 210,
+      "long_queries": 21,
+      "qps": 14.242101605705479,
+      "redo_rate": 1.752874043779136,
+      "sleep_sessions": 1,
+      "threads_connected": 23,
+      "threads_running": 23
+    }
+  },
+  {
+    "id": "T075",
+    "name": "CPU spin等待过度并发",
+    "category": "等待",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 59,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 3.2,
+      "cpu_sessions": 59,
+      "handler_read_rnd_next": 59809903.269580744,
+      "handler_read_rnd_rate": 59809903.269580744,
+      "history_list_length": 3,
+      "qps": 120.51345839805572,
+      "redo_rate": 0.07845928281123418,
+      "sleep_sessions": 4,
+      "threads_connected": 63,
+      "threads_running": 61
+    }
+  },
+  {
+    "id": "T076",
+    "name": "连接风暴无连接池",
+    "category": "连接",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "比率高 — 可能 OR 条件导致索引失效",
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 19.97310527501125,
+      "aborted_clients_rate": 19.97310527501125,
+      "active_sessions": 5,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.6,
+      "cpu_sessions": 1,
+      "handler_read_rnd_next": 7509404.900026751,
+      "handler_read_rnd_rate": 7509404.900026751,
+      "history_list_length": 3,
+      "qps": 50579.55891335057,
+      "sleep_sessions": 7,
+      "threads_connected": 12,
+      "threads_running": 2
+    }
+  },
+  {
+    "id": "T077",
+    "name": "连接接近max_connections",
+    "category": "连接",
+    "rule_fired": "MY-081",
+    "cause": "空闲连接 50-100 — 偏高",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "空闲连接 50-100，连接未被有效回收",
+      "检查应用连接池 min_idle 配置和 wait_timeout 设置"
+    ],
+    "actions": [
+      "[排查] 按来源分析空闲连接分布 | SQL: SELECT user, LEFT(host, LOCATE(':', host)-1) AS client_ip, COUNT(*) cnt FROM information_schema.processlist WHERE command='Sleep' GROUP BY user, client_ip ORDER BY cnt DESC",
+      "[修复] 减小 wait_timeout | SQL: SET GLOBAL wait_timeout=600;"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 4.1,
+      "cpu_sessions": 1,
+      "history_list_length": 3,
+      "qps": 79.70235898147529,
+      "sleep_sessions": 81,
+      "threads_connected": 82,
+      "threads_running": 2
+    }
+  },
+  {
+    "id": "T078",
+    "name": "Sleep会话堆积",
+    "category": "连接",
+    "rule_fired": "MY-081",
+    "cause": "空闲连接 50-100 — 偏高",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "空闲连接 50-100，连接未被有效回收",
+      "检查应用连接池 min_idle 配置和 wait_timeout 设置"
+    ],
+    "actions": [
+      "[排查] 按来源分析空闲连接分布 | SQL: SELECT user, LEFT(host, LOCATE(':', host)-1) AS client_ip, COUNT(*) cnt FROM information_schema.processlist WHERE command='Sleep' GROUP BY user, client_ip ORDER BY cnt DESC",
+      "[修复] 减小 wait_timeout | SQL: SET GLOBAL wait_timeout=600;"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 2.6,
+      "cpu_sessions": 1,
+      "history_list_length": 3,
+      "qps": 50.058293180769695,
+      "sleep_sessions": 51,
+      "threads_connected": 52,
+      "threads_running": 2
+    }
+  },
+  {
+    "id": "T079",
+    "name": "会话泄漏趋势",
+    "category": "连接",
+    "rule_fired": "MY-081",
+    "cause": "空闲连接 30-50 — 轻度堆积",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "空闲连接 30-50，关注增长趋势"
+    ],
+    "actions": [
+      "[排查] 检查连接来源和 wait_timeout 配置 | SQL: SELECT @@wait_timeout, @@interactive_timeout; SELECT user, COUNT(*) cnt FROM information_schema.processlist WHERE command='Sleep' GROUP BY user ORDER BY cnt DESC"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 2.1,
+      "cpu_sessions": 1,
+      "history_list_length": 3,
+      "qps": 40.13772599231074,
+      "sleep_sessions": 41,
+      "threads_connected": 42,
+      "threads_running": 2
+    }
+  },
+  {
+    "id": "T080",
+    "name": "Aborted Connects冲高",
+    "category": "连接",
+    "rule_fired": "MY-012",
+    "cause": "10-50/s — 中度连接拒绝",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "Aborted_connects 10-50/s，存在异常连接尝试"
+    ],
+    "actions": [
+      "[排查] 检查 error log 定位失败原因 | SQL: SHOW GLOBAL STATUS LIKE 'Aborted%'"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "aborted_connects": 49.95577283880379,
+      "aborted_connects_rate": 49.95577283880379,
+      "active_sessions": 1,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "history_list_length": 3,
+      "qps": 0.33303848559202526,
+      "sleep_sessions": 1,
+      "threads_connected": 2,
+      "threads_running": 2
+    }
+  },
+  {
+    "id": "T081",
+    "name": "Aborted Clients冲高",
+    "category": "连接",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "history_list_length": 3,
+      "qps": 300.0727726430281,
+      "sleep_sessions": 1,
+      "threads_connected": 2,
+      "threads_running": 2
+    }
+  },
+  {
+    "id": "T082",
+    "name": "open_files_limit不足",
+    "category": "连接",
+    "skipped": true,
+    "skip_note": "需要小 open_files_limit 配置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T083",
+    "name": "Active Sessions加速度突增",
+    "category": "连接",
+    "rule_fired": "MY-082",
+    "cause": "\u003e 30 — 大量活跃线程",
+    "severity": "高",
+    "confidence_pct": 68,
+    "findings": [
+      "Threads_running \u003e 30，大量线程同时活跃",
+      "CPU 密集型查询或并发过高，可能导致吞吐下降"
+    ],
+    "actions": [
+      "[紧急] 查看当前活跃线程的 SQL | SQL: SELECT id, user, host, db, time, LEFT(info, 200) AS sql_text FROM information_schema.processlist WHERE command='Query' AND info IS NOT NULL ORDER BY time DESC LIMIT 20",
+      "[修复] 限制并发度或优化高频 SQL | SQL: -- 检查 Top SQL: SELECT DIGEST_TEXT, COUNT_STAR, AVG_TIMER_WAIT/1e12 avg_sec FROM performance_schema.events_statements_summary_by_digest ORDER BY SUM_TIMER_WAIT DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "secondary": "30-100 — 并发线程偏高",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 50,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 2.6,
+      "cpu_sessions": 50,
+      "history_list_length": 3,
+      "qps": 108.70779433559807,
+      "sleep_sessions": 2,
+      "threads_connected": 52,
+      "threads_running": 51
+    }
+  },
+  {
+    "id": "T084",
+    "name": "全库Hang分析",
+    "category": "连接",
+    "rule_fired": "MY-076",
+    "cause": "全表扫描正常",
+    "severity": "中",
+    "confidence_pct": 63,
+    "findings": [
+      "有慢查询但全表扫描不多，检查其他原因"
+    ],
+    "actions": [
+      "[排查] 检查 innodb_stats_persistent 配置 | SQL: SELECT @@innodb_stats_persistent, @@innodb_stats_auto_recalc, @@innodb_stats_persistent_sample_pages"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 10.921710084065138,
+      "aborted_clients_rate": 10.921710084065138,
+      "active_sessions": 22,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.2,
+      "cpu_sessions": 2,
+      "history_list_length": 3,
+      "io_wait_sessions": 20,
+      "long_queries": 21,
+      "qps": 9.611104873977322,
+      "sleep_sessions": 1,
+      "threads_connected": 23,
+      "threads_running": 23
+    }
+  },
+  {
+    "id": "T085",
+    "name": "ProxySQL配置不当",
+    "category": "连接",
+    "skipped": true,
+    "skip_note": "需要 ProxySQL 环境",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T086",
+    "name": "innodb_flush_log_at_trx_commit设错",
+    "category": "配置",
+    "skipped": true,
+    "skip_note": "需要特定配置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T087",
+    "name": "innodb_flush_method不当",
+    "category": "配置",
+    "skipped": true,
+    "skip_note": "需要重启更改",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T088",
+    "name": "innodb_file_per_table=OFF",
+    "category": "配置",
+    "skipped": true,
+    "skip_note": "需要特定配置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T089",
+    "name": "lower_case_table_names问题",
+    "category": "配置",
+    "skipped": true,
+    "skip_note": "需要初始化时配置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T090",
+    "name": "sql_mode不严格",
+    "category": "配置",
+    "skipped": true,
+    "skip_note": "需要特定 sql_mode 配置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T091",
+    "name": "慢查询日志未启用",
+    "category": "运维",
+    "skipped": true,
+    "skip_note": "需要 slow_query_log=OFF 配置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T092",
+    "name": "ERROR日志刷屏",
+    "category": "运维",
+    "skipped": true,
+    "skip_note": "需要触发大量错误日志",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T093",
+    "name": "pt-osc导致负载升高",
+    "category": "运维",
+    "skipped": true,
+    "skip_note": "需要 pt-online-schema-change 工具",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T094",
+    "name": "mysqldump长事务阻塞purge",
+    "category": "运维",
+    "rule_fired": "MY-007",
+    "cause": "缓存尚可但全表扫描量大 — 需优化 SQL",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "Handler_read_rnd_next \u003e 1M/s，大量全表扫描",
+      "虽然缓存命中率正常，但全扫消耗 CPU 且阻碍索引使用"
+    ],
+    "actions": [
+      "[紧急] 定位全表扫描的 SQL 并优化 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 为高频全扫 SQL 添加索引 | SQL: -- EXPLAIN FORMAT=TREE {sql_text}\n-- CREATE INDEX idx_xxx ON table(col)"
+    ],
+    "has_sql": true,
+    "secondary": "行锁等待低 — blocker 可能在等 IO 或空闲未提交",
+    "absorbed": 1,
+    "metrics": {
+      "aborted_clients": 0.7881909666749588,
+      "aborted_clients_rate": 0.7881909666749588,
+      "active_sessions": 7,
+      "avg_row_lock_time_ms": 583.6842105263158,
+      "blocker_count": 4,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.4,
+      "cpu_sessions": 7,
+      "handler_read_rnd_next": 1243786.363838863,
+      "handler_read_rnd_rate": 1243786.363838863,
+      "history_list_length": 11,
+      "innodb_row_lock_waits": 4.991876122274739,
+      "lock_wait_sessions": 10,
+      "lock_waits": 10,
+      "long_queries": 1,
+      "qps": 7.881909666749588,
+      "redo_rate": 7.093718700074629,
+      "sleep_sessions": 2,
+      "threads_connected": 9,
+      "threads_running": 8
+    }
+  },
+  {
+    "id": "T095",
+    "name": "OPTIMIZE TABLE阻塞读写",
+    "category": "运维",
+    "rule_fired": "MY-041",
+    "cause": "比率高 — 可能 OR 条件导致索引失效",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "大量随机读取，可能存在 OR 条件导致索引失效的 SQL",
+      "MySQL 在 OR 条件跨列时可能放弃索引使用"
+    ],
+    "actions": [
+      "[排查] 查找全表扫描的 SQL 检查是否有 OR 条件 | SQL: SELECT DIGEST_TEXT, SUM_NO_INDEX_USED, COUNT_STAR FROM performance_schema.events_statements_summary_by_digest WHERE SUM_NO_INDEX_USED \u003e 0 ORDER BY COUNT_STAR DESC LIMIT 10",
+      "[修复] 将 OR 改写为 UNION ALL | SQL: -- 将 SELECT ... WHERE a=1 OR b=2 改写为\n-- SELECT ... WHERE a=1 UNION ALL SELECT ... WHERE b=2 AND a\u003c\u003e1"
+    ],
+    "has_sql": true,
+    "secondary": "100K-1M/s — 中度全表扫描",
+    "absorbed": 0,
+    "metrics": {
+      "aborted_clients": 1.5960699357082202,
+      "aborted_clients_rate": 1.5960699357082202,
+      "active_sessions": 1,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "handler_read_rnd_next": 387860.68906479864,
+      "handler_read_rnd_rate": 387860.68906479864,
+      "history_list_length": 20,
+      "qps": 9.04439630234658,
+      "redo_rate": 65.30586153606134,
+      "sleep_sessions": 1,
+      "threads_connected": 2,
+      "threads_running": 2
+    }
+  },
+  {
+    "id": "T096",
+    "name": "版本升级SQL兼容性",
+    "category": "运维",
+    "skipped": true,
+    "skip_note": "需要升级场景",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T097",
+    "name": "Event Scheduler任务堆叠",
+    "category": "运维",
+    "skipped": true,
+    "skip_note": "需要 event_scheduler=ON + 配置 event",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T098",
+    "name": "外键级联删除慢操作",
+    "category": "运维",
+    "rule_fired": "MY-082",
+    "cause": "5-30 — 中度活跃",
+    "severity": "中",
+    "confidence_pct": 68,
+    "findings": [
+      "Threads_running 5-30，SQL 负载偏高",
+      "可能存在缺少索引的查询或并发度偏高"
+    ],
+    "actions": [
+      "[排查] 查看 Top SQL 定位热点查询 | SQL: SELECT DIGEST_TEXT, COUNT_STAR, ROUND(AVG_TIMER_WAIT/1e12, 3) avg_sec, SUM_ROWS_EXAMINED FROM performance_schema.events_statements_summary_by_digest WHERE LAST_SEEN \u003e DATE_SUB(NOW(), INTERVAL 1 MINUTE) ORDER BY SUM_TIMER_WAIT DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 6,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 0.6,
+      "cpu_sessions": 5,
+      "history_list_length": 20,
+      "long_queries": 1,
+      "qps": 112332.10711209274,
+      "redo_rate": 0.24649423682596672,
+      "sleep_sessions": 5,
+      "threads_connected": 13,
+      "threads_running": 9
+    }
+  },
+  {
+    "id": "T099",
+    "name": "数据字典锁争用(大量表)",
+    "category": "运维",
+    "skipped": true,
+    "skip_note": "需要 50000+ 表环境",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T100",
+    "name": "综合: IO慢+锁等待+Binlog堆积",
+    "category": "运维",
+    "rule_fired": "MY-042",
+    "cause": "行锁等待低 — blocker 可能在等 IO 或空闲未提交",
+    "severity": "高",
+    "confidence_pct": 73,
+    "findings": [
+      "存在阻塞链但行锁争用速率不高，blocker 可能是空闲未提交事务",
+      "需定位 root blocker 状态（Sleep/IO等待/执行中）"
+    ],
+    "actions": [
+      "[紧急] 定位 root blocker 及其状态 | SQL: SELECT b.BLOCKING_THREAD_ID, t.PROCESSLIST_USER, t.PROCESSLIST_COMMAND, t.PROCESSLIST_STATE, t.PROCESSLIST_TIME, LEFT(t.PROCESSLIST_INFO, 200) AS sql_text, COUNT(*) AS victims FROM performance_schema.data_lock_waits b JOIN performance_schema.threads t ON t.THREAD_ID = b.BLOCKING_THREAD_ID GROUP BY b.BLOCKING_THREAD_ID ORDER BY victims DESC LIMIT 5",
+      "[排查] 检查 InnoDB 锁状态 | SQL: SHOW ENGINE INNODB STATUS"
+    ],
+    "has_sql": true,
+    "secondary": "全表扫描多 — 统计信息可能过期",
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 22,
+      "blocker_count": 10,
+      "buffer_pool_hit_pct": 100,
+      "connections_pct": 1.2,
+      "cpu_sessions": 22,
+      "handler_read_rnd_next": 7203075.368030185,
+      "handler_read_rnd_rate": 7203075.368030185,
+      "history_list_length": 20,
+      "innodb_row_lock_waits": 3.288840436015495,
+      "lock_wait_sessions": 120,
+      "lock_waits": 120,
+      "long_queries": 16,
+      "qps": 32.66914833108725,
+      "redo_rate": 1.2059081598723482,
+      "sleep_sessions": 2,
+      "threads_connected": 24,
+      "threads_running": 23
+    }
+  }
+]

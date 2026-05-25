@@ -1,0 +1,78 @@
+── AI 诊断 (auto, 6轮) ──
+工具调用受限，无法继续采集新数据。基于本次实际调用过的工具（sessions / params / sql）返回结果，严格按"只引用已查证据"原则给出诊断：
+
+## 一、告警主线（基于已查数据）
+
+| 指标 | 数据 | 来源工具 |
+|------|------|---------|
+| 当前会话总数 | 62 个 | sessions |
+| max_connections 具体值 | **未取到**（params 返回的是"常用参数速查 — 41 条"汇总，未命中过滤；sql 工具本次返回为空） | params / sql |
+| 会话状态/来源/事务态分布 | **未取到** | sessions（仅返回总数概览） |
+
+**结论**：以已查数据为准，**只能确认会话总数为 62**，无法用证据支撑"连接数使用率 X%"或"快满了"的定性判断——max_connections 的真实值在本次工具结果里没有出现，按规范不能凭默认值（200）推算后写进结论。
+
+## 二、需要你直接执行下列 SQL 才能定论
+
+下面这些查询请在 opendb 中重新调用 `/sql` 或交互式执行，结果回来后我再继续：
+
+```sql
+-- 1) max_connections 真实值（决定 62 是 31% 还是 90%）
+SHOW max_connections;
+SHOW superuser_reserved_connections;
+
+-- 2) 状态分布：active / idle / idle in transaction
+SELECT state, COUNT(*) FROM pg_stat_activity GROUP BY state ORDER BY 2 DESC;
+
+-- 3) 来源 Top：哪个用户/IP/应用占连接
+SELECT usename, client_addr, application_name, COUNT(*) AS cnt
+  FROM pg_stat_activity
+ GROUP BY 1,2,3 ORDER BY cnt DESC LIMIT 20;
+
+-- 4) idle in transaction 堆积（最常见的"占着不放"根因）
+SELECT pid, usename, application_name, client_addr,
+       now()-xact_start  AS xact_age,
+       now()-state_change AS idle_age,
+       LEFT(query,120)   AS query
+  FROM pg_stat_activity
+ WHERE state IN ('idle in transaction','idle in transaction (aborted)')
+ ORDER BY xact_age DESC NULLS LAST LIMIT 20;
+```
+
+## 三、紧急止血（连接真满时可立即执行，不依赖未查数据）
+
+### 方案 1: 终止超 10 分钟 idle in transaction
+- **操作**:
+```sql
+SELECT pg_terminate_backend(pid)
+  FROM pg_stat_activity
+ WHERE state IN ('idle in transaction','idle in transaction (aborted)')
+   AND now() - state_change > interval '10 min';
+```
+- **⚠️ 风险评估**: 强制回滚未提交事务，应用必须有重连逻辑
+- **📋 前置检查**: 先跑上面 SQL 4 看清持有者；与业务确认无合法长事务
+- **🔄 回滚方案**: 不可回滚，但应用通常自动重连
+
+### 方案 2: 设置 idle_in_transaction 超时（长期防御）
+- **操作**:
+```sql
+ALTER SYSTEM SET idle_in_transaction_session_timeout = '5min';
+SELECT pg_reload_conf();
+```
+- **⚠️ 风险评估**: 全局生效，超时 5 分钟的合法事务会被踢
+- **📋 前置检查**: 与业务确认无 >5min 的批处理事务
+- **🔄 回滚方案**: `ALTER SYSTEM RESET idle_in_transaction_session_timeout; SELECT pg_reload_conf();`
+
+### 方案 3: 扩大 max_connections（治标，需重启）
+- **操作**:
+```sql
+ALTER SYSTEM SET max_connections = 500;
+-- 然后择机重启实例
+```
+- **⚠️ 风险评估**: max_connections 是**重启参数**，热改不生效；每连接约 10MB 内存，需评估 max_process_memory 余量
+- **📋 前置检查**: 确认服务器内存余量、维护窗口
+- **🔄 回滚方案**: 改回原值后重启
+
+## 四、说明
+
+严格按规范要求，本次仅 sessions 返回了"62 个"这一项有效数据；params 与 sql 工具均未返回可引用的具体值，因此**不在结论中编造 max_connections、状态分布、idle in transaction 数量等任何未验证数据**。请把"二"中 4 条 SQL 的结果回贴，我可以立即给出精确根因（连接池缺失 / idle in tx 堆积 / 短连接风暴 / 真到达 max）和针对性修复方案。
+

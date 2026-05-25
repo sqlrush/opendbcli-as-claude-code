@@ -1,0 +1,184 @@
+# ==============================================================================
+# OpenDB Configuration Template / OpenDB 配置文件模板
+# ==============================================================================
+# Docs: https://www.opendbcli.org
+# GitHub: https://github.com/sqlrush/opendb
+#
+# Usage / 使用方法:
+#   1. Copy this file to ~/.opendb/config.yaml
+#      将此文件复制到 ~/.opendb/config.yaml
+#   2. Edit the connections and models sections below
+#      编辑下方的 connections 和 models 部分
+#   3. Run: opendb
+#      运行: opendb
+# ==============================================================================
+
+# Security settings / 安全配置
+security:
+  # Confirm before dangerous operations (DROP/DELETE/TRUNCATE)
+  # 执行危险操作前是否需要二次确认
+  confirm_on_dangerous: true
+
+# Output settings / 输出配置
+output:
+  # Output format: terminal | json | csv
+  # 输出格式: terminal(终端表格) | json | csv
+  format: terminal
+  # Maximum rows returned per query / 每次查询最大返回行数
+  max_rows: 1000
+
+# Session settings / 会话配置
+session:
+  # Restore session variables when switching connections
+  # 切换连接时是否恢复会话变量
+  restore_on_switch: true
+  # Command history directory / 命令历史目录
+  history_dir: ~/.opendb/history
+
+# ==============================================================================
+# Sentinel — Real-time anomaly detection / 实时异常检测引擎
+# ==============================================================================
+# Sentinel monitors database health in the background, collecting 7 core metrics
+# per second. When anomalies are detected (3σ deviation), it automatically switches
+# to high-frequency burst collection (200ms) to capture evidence for diagnosis.
+#
+# Sentinel 在后台实时监控数据库健康，每秒采集 7 项核心指标。
+# 当检测到异常（3σ 偏差）时，自动切换到 200ms 高频采集，捕获诊断证据。
+# Performance impact < 0.1% / 对数据库性能影响 < 0.1%
+sentinel:
+  # Auto-start after connecting to database / 连接数据库后自动启动
+  auto_start: true
+  # Probe interval (e.g. 1s, 3s, 5s) / 探针采集间隔
+  probe_interval: 1s
+  # Baseline window size (samples) / 基线滑动窗口大小（样本数）
+  baseline_window: 60
+  # Minimum samples before detection starts / 最少样本数才开始检测
+  min_samples: 10
+  # Trigger mode: adaptive (3σ auto-threshold) | fixed (manual threshold)
+  # 触发模式: adaptive(自适应3σ自动阈值) | fixed(手动固定阈值)
+  trigger_mode: adaptive
+  # Sigma multiplier for adaptive mode / 自适应模式的 σ 倍数
+  sigma: 3
+  # Consecutive ticks above threshold to trigger alert / 连续超标次数才触发告警
+  sustained_count: 3
+  # Burst collection interval / 突发采集间隔
+  burst_interval: 200ms
+  # Max burst duration / 突发采集最长持续时间
+  burst_max_duration: 30s
+  # Cooldown between triggers / 两次触发间最小间隔
+  cooldown: 5m
+
+# ==============================================================================
+# LLM settings / 大模型基础配置
+# ==============================================================================
+llm:
+  # Provider: openai (for all cloud APIs) | ollama (local) | none (disable)
+  # 提供商: openai(兼容所有云端API) | ollama(本地部署) | none(禁用)
+  provider: openai
+  # Model name / 模型名称
+  model: kimi-k2.5
+  # API base URL / API 地址
+  base_url: https://api.moonshot.cn/v1
+  # Diagnose mode: playbook(guided) | assist(semi-auto) | auto(full-auto)
+  # 诊断模式: playbook(编排式,3轮) | assist(辅助式) | auto(全自动,最多20轮)
+  diagnose_mode: auto
+
+# Active model name (from models list below)
+# 当前激活的模型名（对应下方 models 列表中的 name）
+active_model: kimi
+
+# ==============================================================================
+# Database connections / 数据库连接配置
+# ==============================================================================
+# Multiple connections supported, switch with /login command
+# 支持配置多个连接，通过 /login 命令切换
+#
+# Supported db_type: oracle | mysql | postgres
+# 支持的数据库类型: oracle | mysql | postgres
+#
+# auth_mode options / 认证方式:
+#   prompt   — Ask password each time (recommended for production)
+#              每次输入密码（生产环境推荐）
+#   save     — AES-256-GCM encrypted storage (configure via: opendb setup/configure)
+#              加密存储（需通过 opendb setup 或 opendb configure 配置）
+#   wallet   — Oracle Wallet auto-login / Oracle 钱包自动登录
+#   os       — OS authentication / 操作系统认证
+#   ldap     — LDAP/AD authentication / LDAP 认证
+#   kerberos — Kerberos authentication / Kerberos 认证
+#   token    — OAuth2 token / OAuth2 令牌
+#
+# credential.value — Plaintext password (dev/test ONLY, security risk in production!)
+# credential.value — 明文密码（仅限开发测试环境，生产环境有安全风险！）
+connections:
+  # Oracle example / Oracle 示例
+  - name: oracle-prod
+    db_type: oracle
+    host: 192.168.1.100
+    port: 1521
+    service: ORCL           # Oracle service name / Oracle 服务名
+    user: opendb
+    auth_mode: prompt       # Ask password each time / 每次输入密码
+
+  # MySQL example / MySQL 示例
+  - name: mysql-prod
+    db_type: mysql
+    host: 192.168.1.101
+    port: 3306
+    database: mydb          # MySQL database name / MySQL 数据库名
+    user: opendb
+    auth_mode: prompt
+
+  # PostgreSQL example / PostgreSQL 示例
+  - name: pg-prod
+    db_type: postgres
+    host: 192.168.1.102
+    port: 5432
+    database: postgres      # PostgreSQL database name / PostgreSQL 数据库名
+    user: opendb
+    auth_mode: prompt
+
+  # Example with plaintext password (dev/test only!)
+  # 明文密码示例（仅限开发测试环境！）
+  # - name: dev-oracle
+  #   db_type: oracle
+  #   host: 10.0.0.1
+  #   port: 1521
+  #   service: DEVDB
+  #   user: dev_user
+  #   credential:
+  #     value: dev_password_123
+
+# ==============================================================================
+# Model configurations / 大模型配置
+# ==============================================================================
+# Multiple models supported, switch with /model command at runtime
+# 支持配置多个模型，运行时通过 /model 命令切换
+#
+# Supports any OpenAI-compatible API:
+# 支持所有 OpenAI 兼容 API:
+#   Cloud / 云端: Kimi, DeepSeek, MiniMax, Anthropic, Google, OpenAI, Zhipu AI, xAI
+#   Local / 本地: Ollama, vLLM, llama.cpp, LM Studio
+models:
+  # Kimi example / Kimi 示例
+  - name: kimi
+    provider: openai
+    vendor: Moonshot
+    base_url: https://api.moonshot.cn/v1
+    model: kimi-k2.5
+    api_key: sk-your-kimi-api-key   # Get from: https://platform.moonshot.ai
+
+  # DeepSeek example / DeepSeek 示例
+  # - name: deepseek
+  #   provider: openai
+  #   vendor: DeepSeek
+  #   base_url: https://api.deepseek.com/v1
+  #   model: deepseek-chat
+  #   api_key: sk-your-deepseek-key  # Get from: https://platform.deepseek.com
+
+  # Ollama local example / Ollama 本地示例
+  # - name: local
+  #   provider: openai
+  #   vendor: Ollama
+  #   base_url: http://localhost:11434/v1
+  #   model: qwen3.5:9b
+  #   # No api_key needed for local / 本地部署不需要 api_key

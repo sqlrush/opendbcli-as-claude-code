@@ -1,0 +1,203 @@
+cases:
+  - id: OG-GOLDEN-WDR-LIST-001
+    source: current_session
+    tier: 0
+    database: opengauss
+    model_tier: deterministic
+    input: 当前有哪几个wdr报告
+    mode: natural_language
+    requires_db: false
+    requires_llm: false
+    tags: [router, wdr]
+    expected:
+      intent: wdr_list
+      route_mode: direct_skill
+      skill: wdr
+      required_tools: [wdr]
+      forbidden_tools: [wdranalyze, sql]
+    quality:
+      max_latency_ms: 5000
+      min_score: 90
+
+  - id: OG-GOLDEN-WDR-ANALYZE-PAIR-001
+    source: current_session
+    tier: 0
+    database: gaussdb
+    model_tier: deterministic
+    input: 分析 快照76和77之间生成的wdr报告
+    mode: natural_language
+    requires_db: false
+    requires_llm: false
+    tags: [router, wdr]
+    expected:
+      intent: wdr_analyze
+      route_mode: evidence_then_llm
+      skill: wdranalyze
+      args: "76 77"
+      required_tools: [wdranalyze]
+      forbidden_tools: [wdr, sql]
+    quality:
+      max_latency_ms: 5000
+      min_score: 90
+
+  - id: OG-GOLDEN-WDR-ANALYZE-LOOSE-001
+    source: current_session
+    tier: 0
+    database: gaussdb
+    model_tier: deterministic
+    input: 我们分析下65到73的报告存在哪些问题
+    mode: natural_language
+    requires_db: false
+    requires_llm: false
+    tags: [router, wdr]
+    expected:
+      intent: wdr_analyze
+      route_mode: evidence_then_llm
+      skill: wdranalyze
+      args: "65 73"
+      required_tools: [wdranalyze]
+      forbidden_tools: [wdr, sql]
+    quality:
+      max_latency_ms: 5000
+      min_score: 90
+      must_distinguish_current_vs_historical: true
+
+  - id: OG-GOLDEN-SQLTUNE-SQLID-001
+    source: current_session
+    tier: 0
+    database: gaussdb
+    model_tier: deterministic
+    input: sql id 581990336 如何优化
+    mode: natural_language
+    requires_db: false
+    requires_llm: false
+    tags: [router, sqltune]
+    expected:
+      intent: sql_tune
+      route_mode: evidence_then_llm
+      skill: sqltune
+      args: "581990336"
+      required_tools: [sqltune]
+      forbidden_tools: [health, topsql, slowsql, blocktree, sql]
+    quality:
+      max_latency_ms: 5000
+      min_score: 95
+
+  - id: OG-GOLDEN-CURRENTDB-ROUTE-001
+    source: current_session
+    tier: 0
+    database: opengauss
+    model_tier: deterministic
+    input: 当前数据库存在什么问题
+    mode: natural_language
+    requires_db: false
+    requires_llm: false
+    tags: [router, currentdb]
+    expected:
+      intent: current_diag
+      route_mode: llm
+    quality:
+      max_latency_ms: 5000
+      min_score: 80
+      must_distinguish_current_vs_historical: true
+
+  - id: OG-GOLDEN-BLOCKERS-ROUTE-001
+    source: manual
+    tier: 0
+    database: opengauss
+    model_tier: deterministic
+    input: 当前有没有阻塞
+    mode: natural_language
+    requires_db: false
+    requires_llm: false
+    tags: [router, blockers]
+    expected:
+      intent: blockers
+      route_mode: direct_skill
+      skill: blocktree
+      required_tools: [blocktree]
+      forbidden_tools: [sql]
+    quality:
+      max_latency_ms: 5000
+      min_score: 90
+
+  - id: OG-GOLDEN-SLOWSQL-ROUTE-001
+    source: manual
+    tier: 0
+    database: opengauss
+    model_tier: deterministic
+    input: 当前有哪些慢SQL
+    mode: natural_language
+    requires_db: false
+    requires_llm: false
+    tags: [router, slowsql]
+    expected:
+      intent: slow_sql
+      route_mode: direct_skill
+      skill: slowsql
+      required_tools: [slowsql]
+      forbidden_tools: [sql]
+    quality:
+      max_latency_ms: 5000
+      min_score: 90
+
+  - id: OG-GOLDEN-SESSIONS-ROUTE-001
+    source: manual
+    tier: 0
+    database: gaussdb
+    model_tier: deterministic
+    input: 当前有哪些活跃会话
+    mode: natural_language
+    requires_db: false
+    requires_llm: false
+    tags: [router, sessions]
+    expected:
+      intent: sessions
+      route_mode: direct_skill
+      skill: activesessions
+      required_tools: [activesessions]
+      forbidden_tools: [sql]
+    quality:
+      max_latency_ms: 5000
+      min_score: 90
+
+  - id: OG-GOLDEN-PARAMS-ROUTE-001
+    source: manual
+    tier: 0
+    database: gaussdb
+    model_tier: deterministic
+    input: shared_buffers 参数配置如何
+    mode: natural_language
+    requires_db: false
+    requires_llm: false
+    tags: [router, params]
+    expected:
+      intent: params
+      route_mode: direct_skill
+      skill: params
+      args: shared_buffers
+      required_tools: [params]
+      forbidden_tools: [sql]
+    quality:
+      max_latency_ms: 5000
+      min_score: 90
+
+  - id: OG-GOLDEN-OBJECT-STATS-ROUTE-001
+    source: manual
+    tier: 0
+    database: opengauss
+    model_tier: deterministic
+    input: 当前有哪些表膨胀
+    mode: natural_language
+    requires_db: false
+    requires_llm: false
+    tags: [router, objstats]
+    expected:
+      intent: object_stats
+      route_mode: direct_skill
+      skill: objstats
+      required_tools: [objstats]
+      forbidden_tools: [sql]
+    quality:
+      max_latency_ms: 5000
+      min_score: 90

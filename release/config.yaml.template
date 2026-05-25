@@ -1,0 +1,181 @@
+# ============================================================================
+# dbaa 配置文件模板  ~/.dbaa/config.yaml
+# ============================================================================
+# 修改后保存到 ~/.dbaa/config.yaml 即可生效
+# 未列出的参数使用内置默认值，只需改你关心的部分
+
+# ----------------------------------------------------------------------------
+# 当前激活的 LLM 模型（在下方 models: 数组里选一个 name）
+# ----------------------------------------------------------------------------
+active_model: deepseek-v4-pro
+
+# ----------------------------------------------------------------------------
+# 安全（Security）
+# ----------------------------------------------------------------------------
+security:
+  default_level: 0              # 0=只读, 1=操作需确认, 2=管理需确认, 3=危险强制确认
+  confirm_on_dangerous: true    # DDL/DML 等危险操作前弹出确认
+
+# ----------------------------------------------------------------------------
+# 输出（Output）
+# ----------------------------------------------------------------------------
+output:
+  format: terminal              # terminal | json | csv
+  max_rows: 1000                # 单次查询最大返回行数
+
+# ----------------------------------------------------------------------------
+# LLM 全局参数
+# ----------------------------------------------------------------------------
+llm:
+  diagnose_mode: auto           # auto=AI诊断 / playbook=固定剧本 / assist=AI辅助
+  max_rounds: 0                 # 0=无限制；限制 LLM-工具调用轮数
+  max_result_tokens: 4000       # 每次工具返回给 LLM 的结果最大 token 数
+
+# ----------------------------------------------------------------------------
+# 会话（Session）
+# ----------------------------------------------------------------------------
+session:
+  restore_on_switch: true       # 切换连接时恢复会话变量
+  history_dir: ~/.dbaa/history  # 命令历史存储目录
+
+# ----------------------------------------------------------------------------
+# Sentinel 实时监控（自动巡检）
+# ----------------------------------------------------------------------------
+sentinel:
+  auto_start: true              # dbaa 启动时自动开 Sentinel
+  probe_interval: 1s            # 探测间隔
+  baseline_window: 60           # 基线窗口（秒）
+  min_samples: 10               # 最少样本数
+  trigger_mode: adaptive        # adaptive=自适应 / fixed=固定阈值
+  sigma: 3                      # adaptive 模式下的 sigma 倍数
+  sustained_count: 3            # 连续触发 N 次才告警
+  burst_interval: 200ms         # 异常爆发采集间隔
+  burst_max_duration: 30s       # 爆发最长持续时间
+  cooldown: 5m                  # 告警冷却时间
+  thresholds:                   # 固定阈值（trigger_mode=fixed 时生效；0=未设定）
+    active_multiplier: 0
+    cpu_multiplier: 0
+    io_multiplier: 0
+    lock_absolute: 0
+    long_sql_absolute: 0
+    redo_multiplier: 0
+    hard_parse_multiplier: 0
+
+# ----------------------------------------------------------------------------
+# 调度（Scheduler）— 定时任务
+# ----------------------------------------------------------------------------
+scheduler:
+  auto_start: false             # dbaa 启动时是否自动激活定时任务
+  tasks: []                     # 定时任务列表，建议用 /scheduler 命令交互式管理
+
+# ============================================================================
+# 数据库连接列表
+# ============================================================================
+# 支持的 db_type: oracle | mysql | postgres | opengauss
+# 密码两种方式（任选一种）：
+#   1. 明文（开发/测试）  → credential.value: "明文密码"
+#   2. 加密保存（生产）   → auth_mode: save + credential.provider: save
+#      首次运行 dbaa 后用 /login 命令交互式输入密码，自动加密存到 ~/.dbaa/credentials/
+# ============================================================================
+connections:
+  - name: gaussdb               # 连接名（用于 dbaa -c <name>）
+    db_type: opengauss
+    host: 127.0.0.1
+    port: 15432
+    database: postgres
+    user: dbuser
+    auth_mode: save             # save=加密存储 / 不写=用 value 明文
+    credential:
+      provider: save             # 与 auth_mode 配对
+
+  # 示例：明文密码连接（仅供开发测试）
+  # - name: oracle
+  #   db_type: oracle
+  #   host: 192.168.1.10
+  #   port: 1521
+  #   service: orclpdb1
+  #   user: system
+  #   credential:
+  #     value: "your_password_here"
+
+  # - name: mysql
+  #   db_type: mysql
+  #   host: 192.168.1.20
+  #   port: 3306
+  #   database: mysql
+  #   user: root
+  #   credential:
+  #     value: "your_password_here"
+
+  # - name: pg
+  #   db_type: postgres
+  #   host: 192.168.1.30
+  #   port: 5432
+  #   database: postgres
+  #   user: postgres
+  #   credential:
+  #     value: "your_password_here"
+
+# ============================================================================
+# LLM 模型列表
+# ============================================================================
+# 每个模型的关键字段：
+#   name        : 模型别名，dbaa 内通过 /model <name> 切换
+#   provider    : openai | ollama | anthropic
+#   base_url    : LLM API 入口
+#   model       : 厂商定义的模型 ID
+#   api_key     : 厂商 API Key（本地部署可填 dummy）
+#   capability  : large | medium | small（影响调度策略）
+#   strip_think : true=剥离 <think>...</think> 思考标签后再展示给用户
+# ============================================================================
+models:
+  # ---------------- 商用云模型 ----------------
+  - name: deepseek-v4-pro
+    provider: openai
+    vendor: DeepSeek
+    base_url: https://api.deepseek.com/v1
+    model: deepseek-v4-pro
+    capability: large
+    api_key: REPLACE_WITH_YOUR_API_KEY
+    strip_think: true
+    description: DeepSeek-V4-Pro (思考模式)
+
+  - name: glm-5.1
+    provider: openai
+    vendor: Zhipu AI
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    model: glm-5.1
+    capability: medium
+    api_key: REPLACE_WITH_YOUR_API_KEY
+    strip_think: true
+    description: GLM-5.1 (智谱旗舰)
+
+  - name: kimi-k2.6
+    provider: openai
+    vendor: Moonshot
+    base_url: https://api.moonshot.cn/v1
+    model: kimi-k2.6
+    capability: medium
+    api_key: REPLACE_WITH_YOUR_API_KEY
+    strip_think: true
+    description: Kimi-K2.6 (thinking 控制)
+
+  # ---------------- 本地/私有部署模型 ----------------
+  # vLLM 部署（参考 docs/deploy-qwen-opus-vllm.md）
+  # - name: qwen-opus-local
+  #   provider: openai
+  #   vendor: Self-Hosted
+  #   base_url: http://localhost:8000/v1   # 通过 SSH 隧道连到 GPU 服务器
+  #   model: qwen3.5-27b-opus
+  #   capability: large
+  #   api_key: dummy
+  #   strip_think: true
+  #   description: Qwen3.5-27B Opus 蒸馏（本地 vLLM）
+
+  # Ollama 部署（轻量本地推理）
+  # - name: ollama-qwen
+  #   provider: ollama
+  #   base_url: http://localhost:11434
+  #   model: qwen3.5:27b
+  #   capability: large
+  #   strip_think: true

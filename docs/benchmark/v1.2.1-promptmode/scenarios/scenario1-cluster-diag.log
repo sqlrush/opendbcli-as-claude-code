@@ -1,0 +1,248 @@
+=== SCENARIO 1 / ROUND 1 ===
+✳ 主动诊断: 查询当前数据库状态...
+✳ AI 分析 (auto, 最多20轮)...
+├ 第1轮: 调用 health (1.8s)
+├ 第2轮: 调用 activesessions, vacuum (3.5s)
+├ 第3轮: 调用 autovacuum, bloat (5.5s)
+├ 第4轮: 调用 vacuum, bloat (2.5s)
+├ 第5轮: 调用 sql, sql (6.2s)
+├ 第6轮: 调用 sql, sql (4.7s)
+├ 第7轮: 调用 sql, sql (6.8s)
+├ 第8轮: 调用 sql, sql (2.5s)
+├ 第9轮: 调用 vacuum (2.2s)
+├ 第10轮: 调用 autovacuum (3.4s)
+├ 第11轮: 调用 vacuum (1.3s)
+├ 第12轮: 调用 autovacuum (3.4s)
+├ 第13轮: 调用 sql (6.5s)
+├ 第14轮: 调用 topsql, waits (7.9s)
+├ 第15轮: 调用 bloat, autovacuum (16.1s)
+── AI 诊断 (autonomous, 16轮) ──
+好的，我基于已采集的数据给出诊断结论。
+
+## 根因分析
+
+从工具返回数据来看，数据库**当前并无活跃的业务查询阻塞**，但存在严重的死元组堆积问题，这可能导致历史查询变慢。
+
+| 指标 | 数值 | 状态 | 来源工具 |
+|------|------|------|---------|
+| 活跃会话 | 5 个 | 全部在 CPU 上，无等待 | waits |
+| 活跃会话查询 | pg_sleep(1)、fault_* 测试 SQL | 无业务查询运行 | activesessions |
+| 死元组总数 | 3,167,265,070（31.6 亿） | ⚠️ 异常 | health |
+| autovacuum 状态 | 1 个 worker 进行中，3 张表死元组堆积 | 未跟上 | autovacuum |
+| 表膨胀 | 1 个表 dead tuple 占比 > 1% | 存在 bloat | bloat |
+| Top SQL（最耗时） | pg_sleep(1) 总耗时 17174784ms，fault_* 表测试 SQL | 非业务 SQL 占用资源 | topsql |
+
+**根因判断：**
+
+当前数据库**并未处于"慢"的状态**——5 个活跃会话全部在 CPU 上运行（autovacuum 和 WLM 后台线程），没有业务查询在运行，没有等待事件。
+
+**死元组 31.6 亿** 是历史高负载（从 topsql 可见大量 fault_* 表的测试 SQL，如 `fault_lock`、`fault_cpu`、`fault_io`、`fault_wal`）留下的"历史遗留问题"。autovacuum 当前只有 1 个 worker 在处理，无法快速消化堆积。这虽然不会直接导致当前查询变慢（因为当前没有查询），但会：
+1. 表体积持续膨胀，占用磁盘空间
+2. 未来新查询扫描这些表时会更慢
+
+## 紧急措施
+
+当前无紧急止血需求，但建议尽快执行 VACUUM 清理死元组：
+
+```sql
+-- 查看死元组最多的表
+SELECT relname, n_dead_tup, n_live_tup,
+       CASE WHEN n_live_tup > 0 THEN ROUND(n_dead_tup::numeric / n_live_tup::numeric * 100, 1) ELSE 0 END AS dead_pct
+FROM pg_stat_user_tables
+ORDER BY n_dead_tup DESC
+LIMIT 10;
+
+-- 对死元组最多的表执行 VACUUM ANALYZE（建议在生产低峰期执行）
+VACUUM ANALYZE <表名>;
+```
+
+## 根因修复
+
+| 操作 | 说明 | 风险 |
+|------|------|------|
+| 1. 停止 fault_* 表测试 SQL | topsql 显示大量 fault_* 表（fault_lock, fault_cpu, fault_io, fault_wal）的循环测试 SQL 在运行，这是死元组的主要来源 | 无风险，建议停止测试 |
+| 2. 执行 VACUUM ANALYZE | 清理已堆积的 31.6 亿死元组 | VACUUM 会持有 ShareUpdateExclusiveLock，建议低峰期执行 |
+| 3. 调整 autovacuum 参数 | 当前 autovacuum 仅 1 个 worker 在处理，建议增加 `autovacuum_max_workers` | 需要重启或重载，增加 CPU 开销 |
+
+**建议优先执行：**
+
+```sql
+-- 1. 停止 fault_* 相关测试 SQL 的客户端连接
+-- 2. 在低峰期执行 VACUUM ANALYZE 清理死元组
+VACUUM ANALYZE;
+-- 3. 检查 autovacuum 配置
+SHOW autovacuum_max_workers;
+SHOW autovacuum_naptime;
+```
+
+
+=== SCENARIO 1 / ROUND 2 ===
+✳ 主动诊断: 查询当前数据库状态...
+✳ AI 分析 (auto, 最多20轮)...
+├ 第1轮: 调用 vacuum, autovacuum (6.0s)
+├ 第2轮: 调用 bloat, sql (4.8s)
+├ 第3轮: 调用 sql (4.3s)
+├ 第4轮: 调用 bloat, vacuum (6.4s)
+├ 第5轮: 调用 vacuum, autovacuum (2.1s)
+├ 第6轮: 调用 sql (3.7s)
+├ 第7轮: 调用 vacuum, bloat, autovacuum (3.0s)
+├ 第8轮: 调用 sql (4.0s)
+├ 第9轮: 调用 sql, sql (7.2s)
+├ 第10轮: 调用 vacuum, autovacuum, bloat (3.8s)
+├ 第11轮: 调用 vacuum, autovacuum, bloat, sql (9.1s)
+├ 第12轮: 调用 vacuum, autovacuum (5.0s)
+├ 第13轮: 调用 vacuum (1.3s)
+├ 第14轮: 调用 sql, sql (4.8s)
+├ 第15轮: 调用 sql (24.8s)
+├ 第16轮: 调用 bloat (3.1s)
+├ 第17轮: 调用 bloat, vacuum (3.8s)
+├ 第18轮: 调用 vacuum, bloat (4.3s)
+── AI 诊断 (autonomous, 19轮) ──
+根据已采集的工具数据，以下是死元组问题的详细评估：
+
+## 死元组问题评估
+
+| 指标 | 数值 | 严重程度 |
+|------|------|---------|
+| 死元组总数 | **3,167,265,070**（31.6 亿） | 🔴 极严重 |
+| 涉及表数量 | 2-3 张表 | 多表影响 |
+| autovacuum 状态 | 仅 1 个 worker 在处理 | 处理速度严重不足 |
+| 表膨胀 | bloat 工具确认存在（>0%） | 已确认 |
+
+## 严重性判断
+
+**31.6 亿死元组属于极严重级别**，判断依据：
+
+- 健康检查中该指标被标记为 ⚠️ WARNING
+- autovacuum 仅 1 个 worker，面对 31.6 亿死元组几乎无法消化（typical vacuum 速度约数万-数十万 tuples/秒，需要数小时到数天）
+- 之前 topsql 显示存在大量 fault_* 表（fault_lock、fault_cpu、fault_io、fault_wal）的循环 INSERT/UPDATE 测试 SQL，这是死元组的主要来源
+
+## 影响范围
+
+根据工具返回：
+- **vacuum 工具确认：2 张表** 存在死元组
+- **autovacuum 工具确认：3 张表** 有死元组堆积（1 张正在被处理）
+- **bloat 工具确认：1 张表** 膨胀率超过阈值
+
+具体表名由于 SQL 查询在 pg_stat_user_tables 视图上存在字段引用问题，未能直接获取完整列表。但从历史数据可以推断主要涉及的表为 **fault_* 系列表**（fault_lock、fault_cpu、fault_io、fault_wal）以及可能的 bench_* 表。
+
+## 影响分析
+
+31.6 亿死元组对数据库的影响：
+1. **表空间膨胀**：这些死元组占据大量磁盘空间，即使不删除也不会影响数据正确性
+2. **查询性能下降**：扫描这些表时会读取死元组，增加 IO 负担
+3. **VACUUM 压力大**：当前 autovacuum 已无力消化，可能阻塞正常维护操作
+4. **未来风险**：若持续不处理，可能触发 XID 相关警告或进一步影响 VACUUM 效率
+
+## 建议处理方案
+
+```sql
+-- 1. 先查看具体哪些表有死元组（尝试不同方式获取表名）
+SELECT s.relname, s.schemaname, s.n_dead_tup, s.n_live_tup,
+       pg_size_pretty(pg_total_relation_size(s.relid)) as total_size
+FROM pg_stat_user_tables s
+WHERE s.n_dead_tup > 0;
+
+-- 2. 停止 fault_* 相关测试 SQL 的客户端连接
+-- 3. 在低峰期执行 VACUUM ANALYZE 清理（需要较长时间）
+VACUUM ANALYZE;
+```
+
+**注意**：由于当前无法通过 SQL 获取确切表名，建议先通过 `\dt fault_*` 等 psql 命令或直接执行 `VACUUM ANALYZE`（不带表名会扫描所有表）来处理。
+
+
+=== SCENARIO 1 / ROUND 3 ===
+✳ 主动诊断: 查询当前数据库状态...
+✳ AI 分析 (auto, 最多20轮)...
+├ 第1轮: 调用 sql, segments (7.1s)
+├ 第2轮: 调用 sql, bloat (3.3s)
+├ 第3轮: 调用 sql, sql (3.6s)
+├ 第4轮: 调用 sql, autovacuum (3.9s)
+├ 第5轮: 调用 sql, sql (7.0s)
+├ 第6轮: 调用 sql, bloat (3.1s)
+├ 第7轮: 调用 sql, sql (4.9s)
+├ 第8轮: 调用 sql, sql (4.8s)
+├ 第9轮: 调用 bloat, sql (4.1s)
+├ 第10轮: 调用 autovacuum, sql (5.7s)
+├ 第11轮: 调用 autovacuum, bloat (5.5s)
+├ 第12轮: 调用 autovacuum, bloat (7.0s)
+├ 第13轮: 调用 autovacuum, bloat (4.8s)
+├ 第14轮: 调用 sql, sql (5.2s)
+├ 第15轮: 调用 sql, sql (6.1s)
+├ 第16轮: 调用 autovacuum, bloat (2.6s)
+├ 第17轮: 调用 sql, sql (7.1s)
+├ 第18轮: 调用 sql, bloat, autovacuum (5.4s)
+── AI 诊断 (autonomous, 19轮) ──
+## 根因分析
+
+根据工具返回数据：
+- **bloat 工具**：确认有 **1 个表** 存在死元组膨胀（dead > 0%）
+- **autovacuum 工具**：显示 **1 个 autovacuum worker** 正在进行，另有 **3 张表** 死元组堆积
+- **vacuum 工具**：确认有 **2 个表** 有 dead tuples
+- **topsql 历史数据**：fault_lock、fault_cpu、fault_io、fault_wal 表有大量循环测试 SQL
+
+## 先 vacuum 哪个表
+
+**按优先级排序：**
+
+1. **bloat 工具标记的那个表**（膨胀率最高的表）→ 先处理这个
+2. **autovacuum worker 正在处理的那张表** → 等它完成或跳过
+3. **剩余 2-3 张堆积死元组的表** → 按顺序处理
+
+## 具体方案
+
+### 第一步：确认具体表名
+
+```sql
+-- 方法1：查看有死元组的表
+SELECT relname, n_dead_tup, n_live_tup, pg_size_pretty(pg_total_relation_size(relid)) as total_size
+FROM pg_stat_user_tables
+WHERE n_dead_tup > 0
+ORDER BY n_dead_tup DESC;
+
+-- 方法2：查看 bloat 最严重的表（需要先安装 pgstattuple 扩展）
+CREATE EXTENSION IF NOT EXISTS pgstattuple;
+SELECT pgstattuple(relname) FROM pg_class WHERE relname IN ('fault_lock', 'fault_cpu', 'fault_io', 'fault_wal');
+```
+
+### 第二步：按优先级执行 VACUUM
+
+```sql
+-- 方案A：只 vacuum 死元组最多的表（推荐先做）
+VACUUM ANALYZE <表名>;  -- 替换为实际表名
+
+-- 方案B：如果无法确认具体表名，执行全局 vacuum（会处理所有表）
+VACUUM ANALYZE;
+
+-- 方案C：针对 fault_* 表（从 topsql 看到的测试表）
+VACUUM ANALYZE fault_lock;
+VACUUM ANALYZE fault_cpu;
+VACUUM ANALYZE fault_io;
+VACUUM ANALYZE fault_wal;
+```
+
+### 第三步：验证清理效果
+
+```sql
+-- 检查清理后死元组数量
+SELECT relname, n_dead_tup, n_live_tup
+FROM pg_stat_user_tables
+WHERE n_dead_tup > 0
+ORDER BY n_dead_tup DESC;
+```
+
+## ⚠️ 风险评估
+
+| 操作 | 风险 | 缓解措施 |
+|------|------|---------|
+| `VACUUM` | ShareUpdateExclusiveLock，阻塞其他表的 VACUUM FULL 和 DDL | 低峰期执行，避免 DDL 冲突 |
+| `VACUUM ANALYZE` | 同时更新统计信息，增加 CPU 负载 | 先执行 VACUUM，再单独执行 ANALYZE |
+| 全局 VACUUM | 处理所有表，耗时较长 | 建议先处理单个大表 |
+
+## 执行建议
+
+1. **先确认表名**：执行方法1或方法2的 SQL 获取具体表名
+2. **按优先级执行**：先处理 bloat 标记的表 → fault_* 测试表 → 其他表
+3. **低峰期执行**：建议在业务低峰期执行，避免影响业务查询
+4. **监控执行进度**：执行后可通过 `pg_stat_activity` 查看 VACUUM 进度
+

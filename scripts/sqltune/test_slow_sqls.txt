@@ -1,0 +1,79 @@
+## /sqltune 能力测试集 — 5 个慢 SQL 各自针对不同能力 (G1-G7)
+##
+## 用法: 拷贝整段 SQL 后跑
+##   dbaa -c gaussdb /sqltune "<paste SQL>"
+## 或在 dbaa REPL 内
+##   /sqltune <paste SQL>
+##
+## 预估耗时: 简单 SQL 30-90s, 复杂 SQL 2-5 min, 千行 5-8 min
+
+────────────────────────────────────────────────────────
+[SQL 1] G1 索引策略 + G2 CBO 解读 (简单, ~1-2 min)
+─ 现象: bench_og_hot.uid 无索引, 等值查询走 Seq Scan 扫 300 万行
+─ 期望 tuner 抓到: CREATE INDEX idx_bench_og_hot_uid + Index Scan cost 估算
+─ 7 项能力: G1 索引策略 + G2 CBO 决策溯源
+─ 实测: 之前已跑过, 2m 54s 输出 6795 bytes 完整诊断
+
+SELECT count(*) FROM bench_og_hot WHERE uid = 12345;
+
+────────────────────────────────────────────────────────
+[SQL 2] G4 SQL 重写 - non-sargable 谓词 (简单, ~2-3 min)
+─ 现象: WHERE uid + 1 = X (函数包裹) 阻止索引, 即使加了索引也走 Seq Scan
+─ 期望 tuner 抓到: 1) 改写 WHERE uid = X-1  2) 或建表达式索引 ON (uid+1)
+─ 7 项能力: G1 + G4 (经典 sargable 反模式)
+
+SELECT count(*) FROM bench_mix_b WHERE uid + 1 = 50000;
+
+────────────────────────────────────────────────────────
+[SQL 3] G2 CBO 解读 + G3 统计准确性 (中等, ~3-4 min)
+─ 现象: 两表 JOIN, 双方过滤条件 + uid 跨表关联, CBO 容易选错 NL/Hash
+─ 期望 tuner 抓到: ANALYZE 三表; CREATE STATISTICS 多列依赖; 加 idx_b_uid
+─ 7 项能力: G2 + G3 + G6 (HINT 强制 join 顺序也是选项)
+
+SELECT a.id, a.status, b.name
+FROM bench_mix_a a
+JOIN bench_mix_b b ON b.id = a.id
+WHERE a.status BETWEEN 1 AND 3
+  AND b.uid > 1000000
+ORDER BY a.id LIMIT 100;
+
+────────────────────────────────────────────────────────
+[SQL 4] G4 SQL 重写 - NOT IN → NOT EXISTS (中等, ~3 min)
+─ 现象: NOT IN 子查询, 优化器不能转 anti-join (NULL 语义), 性能极差
+─ 期望 tuner 抓到: 重写为 NOT EXISTS + 验证等价性
+─ 7 项能力: G4 重写 + M4 等价性验证 (rewrite 类必跑)
+
+SELECT count(*) FROM bench_og_hot
+WHERE uid NOT IN (
+    SELECT uid FROM bench_mix_b WHERE name LIKE 'a%' LIMIT 1000
+);
+
+────────────────────────────────────────────────────────
+[SQL 5] G2 + G7 多层 CTE + 窗口函数 (中等-复杂, ~4-5 min)
+─ 现象: ROW_NUMBER + SUM OVER 在 200K 行表上, JOIN 后聚合
+─ 期望 tuner 抓到: covering index, 窗口函数排序优化, 多列 stats
+─ 7 项能力: G2 + G3 + G7 (CTE 嵌套)
+
+WITH ranked AS (
+    SELECT id, status, payload,
+        ROW_NUMBER() OVER (PARTITION BY status ORDER BY id DESC) AS rn,
+        SUM(length(payload)) OVER (PARTITION BY status) AS total_payload
+    FROM bench_mix_a
+), top_per_status AS (
+    SELECT * FROM ranked WHERE rn <= 5
+)
+SELECT t.status, count(*) AS cnt, avg(t.total_payload)::bigint AS avg_payload
+FROM top_per_status t
+JOIN bench_mix_b b ON b.id = t.id
+GROUP BY t.status
+ORDER BY 2 DESC;
+
+────────────────────────────────────────────────────────
+[SQL 6] G7 真千行 SQL (复杂, ~8-12 min, 触发自动升级 + G7 token 压缩)
+─ 详见 scripts/sqltune/case6_thousand_line.sql (517 行 ETL 形态)
+─ 期望: 自动升级触发 + G7 压缩触发, banner 应该明显标出
+─ 7 项能力: G2 + G3 + G4 + G6 + G7 (灵魂能力综合考验)
+
+dbaa -c gaussdb /sqltune "$(cat scripts/sqltune/case6_thousand_line.sql)"
+
+────────────────────────────────────────────────────────

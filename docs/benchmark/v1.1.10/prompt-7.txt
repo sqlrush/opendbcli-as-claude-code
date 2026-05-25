@@ -1,0 +1,35 @@
+── AI 诊断 (auto, 4轮) ──
+## 一、告警主线
+**当前实例无逻辑复制槽，不存在逻辑复制延迟问题。**
+
+证据：
+
+| 检查项 | 结果 | 来源工具 |
+|--------|------|---------|
+| pg_replication_slots（slot_type='logical'） | 0 行 | sql |
+| 逻辑复制槽列表 | 无逻辑复制槽 | logicalslots |
+
+## 二、关联说明
+- 由于本实例没有创建任何逻辑复制槽（pg_replication_slots 中 slot_type='logical' 的记录为空），逻辑复制（pglogical / 内置 logical replication / CDC 类订阅）当前未启用
+- 因此不存在 confirmed_flush_lsn 落后、retained WAL 累积、订阅端 apply 延迟等任何形式的逻辑复制延迟
+- 顺带发现：本实例 pg_replication_slots 视图无 `confirmed_flush_lsn` 列（OG 5.0 该列在部分版本中不暴露），首次查询报 SQLSTATE 42703，已用 `pg_xlog_location_diff` + `restart_lsn` 改写复查，结果一致为空
+
+## 三、当前对比
+无历史基线数据可对比。本次属于状态确认型查询，结论清晰：**无槽即无延迟**。
+
+## 四、综合评估
+
+| 严重度 | 结论 | 后续动作 |
+|--------|------|----------|
+| [INFO] | 未启用逻辑复制 | 无需处理 |
+
+如果你预期此实例**应该**存在逻辑复制（例如订阅端业务依赖 CDC），那么真正的问题不是"延迟"而是"槽丢失/未创建"，需要确认订阅端配置或重建发布订阅。如需进一步确认发布订阅侧配置，可执行：
+
+```sql
+-- 查看是否存在 publication（发布端）
+SELECT pubname, puballtables, pubinsert, pubupdate, pubdelete FROM pg_publication;
+
+-- 查看是否存在 subscription（订阅端，需 superuser）
+SELECT subname, subenabled, subconninfo, subpublications FROM pg_subscription;
+```
+

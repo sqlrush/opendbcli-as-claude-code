@@ -1,0 +1,81 @@
+── AI 诊断 (auto, 1轮) ──
+基于上一轮采集的证据（表 100 万行、idx_bench_t5_uid 已存在、统计信息刚刷新、执行计划走 **Index Scan + Bypass、cost=8.27、rows=1**），核心反直觉点是：**计划本身已经是最优**，单次执行应在亚毫秒级。"慢得离谱"必然来自计划之外的因素（硬解析 / SELECT * 传输 / 调用频次 / 应用侧）。
+
+## 根因复盘
+
+| 指标 | 数据 | 来源工具 |
+|------|------|---------|
+| 计划类型 | Index Scan using idx_bench_t5_uid | explain |
+| 优化模式 | [Bypass]（OG 轻量执行器，已启用） | explain |
+| 估算成本 | cost=0.00..8.27, rows=1 | explain |
+| 表/索引 | 87 MB / 索引 21 MB / 1M 行 | tableinfo |
+| 统计信息 | 11:32:25 刚 ANALYZE，dead_tup=0 | tableinfo |
+
+→ 计划层无可优化空间。"慢"的真凶在 **SQL 形态（字面量 vs 绑定变量）** 和 **`SELECT *` 触发回表 + 网络传输**。
+
+## 紧急措施（止血，立即可执行）
+
+```sql
+-- 1) 改写为只取需要的列，避免 text 大字段回表 + 网络传输
+SELECT uid, name FROM bench_t5 WHERE uid = $1;
+
+-- 2) 应用侧用 PREPARE/EXECUTE，消除硬解析
+PREPARE q_bench_t5(int) AS SELECT uid, name FROM bench_t5 WHERE uid = $1;
+EXECUTE q_bench_t5(123);
+```
+
+## 根因修复
+
+### 方案 1: 业务侧改用绑定变量（最关键）
+- **操作**：应用 JDBC/ODBC 改用 `PreparedStatement.setInt(1, uid)`，禁止字符串拼接 `"uid=" + value`
+- **⚠️ 风险评估**：无（应用层修改），但需回归测试确认 SQL 文本一致性
+- **📋 前置检查**：用 `SELECT query, calls FROM dbe_perf.statement WHERE query LIKE '%bench_t5%uid=%' ORDER BY calls DESC LIMIT 20;` 确认是否存在大量字面量版本
+- **🔄 回滚方案**：业务代码 git revert
+
+### 方案 2: 启用语句级 plan cache
+- **操作**：
+```sql
+ALTER SYSTEM SET enable_global_plancache = on;
+ALTER SYSTEM SET local_plan_cache_mode = 'force_custom_plan';  -- 或 auto
+SELECT pg_reload_conf();
+```
+- **⚠️ 风险评估**：global plan cache 占用额外共享内存，在高并发短查询场景显著降低硬解析；force_custom_plan 对参数化 SQL 的计划稳定性有正面作用
+- **📋 前置检查**：`SELECT name, setting FROM pg_settings WHERE name IN ('enable_global_plancache','local_plan_cache_mode');` 确认当前值
+- **🔄 回滚方案**：`ALTER SYSTEM RESET enable_global_plancache; SELECT pg_reload_conf();`
+
+### 方案 3: 建覆盖索引消除回表（仅当 SELECT * 短期无法改造时）
+- **操作**：
+```sql
+CREATE INDEX CONCURRENTLY idx_bench_t5_uid_inc
+  ON public.bench_t5 (uid) INCLUDE (name);
+```
+- **⚠️ 风险评估**：CONCURRENTLY 不阻塞 DML；建索引期间额外 IO；新增索引会让 INSERT/UPDATE 变慢约 5-10%
+- **📋 前置检查**：磁盘剩余 > 100 MB；表当前不在做 VACUUM FULL
+- **🔄 回滚方案**：`DROP INDEX CONCURRENTLY public.idx_bench_t5_uid_inc;`
+
+### 方案 4: 确认 Bypass 路径已被充分利用
+- **操作**：
+```sql
+SHOW enable_opfusion;        -- 应为 on
+SHOW sql_beta_feature;       -- 包含 'index_cost_with_leaf_pages_only' 更优
+```
+- **⚠️ 风险评估**：opfusion 是 OG Bypass 引擎开关，关闭会立即退化为通用执行器
+- **📋 前置检查**：当前 EXPLAIN 已显示 `[Bypass]`，说明已生效，作配置兜底确认即可
+- **🔄 回滚方案**：参数维持默认即可
+
+## 长期建议
+
+1. **SQL 规范**：业务 DAO 层强制 PreparedStatement，禁止字符串拼接（CR 检查项）
+2. **列裁剪**：审计所有 `SELECT *`，按列取数；TEXT/BYTEA 大字段单独按需取
+3. **监控**：开启 `track_stmt_stat_level = 'L1,L1'`，定期检查 `dbe_perf.statement` 中 same-shape SQL 的 `calls` 异常增长（硬解析特征）
+4. **连接池**：确认应用使用连接池（HikariCP/Druid），单次查询亚毫秒时连接建立成本会被严重放大
+5. **统计信息维护**：当前 `last_autovacuum` 为空，建议设置：
+```sql
+ALTER TABLE public.bench_t5 SET (autovacuum_analyze_scale_factor = 0.05);
+```
+6. **定位"慢"的真凶**：跑一次 `\timing on` + 客户端到 DB 的 `ping` 对比，判断慢在 SQL 执行 还是 网络/客户端
+
+---
+
+需要我接着用 `dbe_perf.statement` 验证是否存在 `uid=<字面量>` 的硬解析模式吗？这是判定方案 1 收益最直接的证据。
+

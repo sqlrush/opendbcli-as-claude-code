@@ -1,0 +1,2948 @@
+[
+  {
+    "id": "T001",
+    "name": "行锁级联: blocker idle in tx",
+    "category": "锁",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 12,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.7,
+      "connections_pct": 0.7,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "lock_wait_sessions": 10,
+      "lock_waits": 10,
+      "long_queries": 11,
+      "oldest_xact_age_sec": 4.078468,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T002",
+    "name": "行锁级联: blocker 跑慢SQL",
+    "category": "锁",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 17,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.9,
+      "connections_pct": 0.9,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "lock_wait_sessions": 15,
+      "lock_waits": 15,
+      "long_queries": 16,
+      "oldest_xact_age_sec": 4.332047,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T003",
+    "name": "行锁级联: blocker 等IO",
+    "category": "锁",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 10,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.6,
+      "connections_pct": 0.6,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "lock_wait_sessions": 8,
+      "lock_waits": 8,
+      "long_queries": 9,
+      "oldest_xact_age_sec": 3.967479,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T004",
+    "name": "多层阻塞链",
+    "category": "锁",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 19,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 1,
+      "connections_pct": 1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "lock_wait_sessions": 16,
+      "lock_waits": 16,
+      "long_queries": 18,
+      "oldest_xact_age_sec": 5.43565,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T005",
+    "name": "死锁检测",
+    "category": "锁",
+    "rule_fired": "PG-004",
+    "cause": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "severity": "低",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例轻度偏高，autovacuum 可能稍有延迟"
+    ],
+    "actions": [
+      "[预防] 持续监控死元组趋势 | SQL: SELECT relname, n_dead_tup, last_autovacuum, autovacuum_count FROM pg_stat_user_tables WHERE n_dead_tup \u003e 1000 ORDER BY n_dead_tup DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T006",
+    "name": "DDL 阻塞 DML",
+    "category": "锁",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 22,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 1.2,
+      "connections_pct": 1.2,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "lock_wait_sessions": 11,
+      "lock_waits": 11,
+      "long_queries": 21,
+      "oldest_xact_age_sec": 5.093415,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T007",
+    "name": "VACUUM 与查询锁冲突",
+    "category": "锁",
+    "rule_fired": "PG-004",
+    "cause": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "severity": "低",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例轻度偏高，autovacuum 可能稍有延迟"
+    ],
+    "actions": [
+      "[预防] 持续监控死元组趋势 | SQL: SELECT relname, n_dead_tup, last_autovacuum, autovacuum_count FROM pg_stat_user_tables WHERE n_dead_tup \u003e 1000 ORDER BY n_dead_tup DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 2,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.2,
+      "connections_pct": 0.2,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 1,
+      "oldest_xact_age_sec": 3.052061,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T008",
+    "name": "Advisory Lock 泄漏",
+    "category": "锁",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 21,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 1.1,
+      "connections_pct": 1.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 20,
+      "oldest_xact_age_sec": 4.038177,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T009",
+    "name": "外键缺索引导致锁扩散",
+    "category": "锁",
+    "rule_fired": "PG-004",
+    "cause": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "severity": "低",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例轻度偏高，autovacuum 可能稍有延迟"
+    ],
+    "actions": [
+      "[预防] 持续监控死元组趋势 | SQL: SELECT relname, n_dead_tup, last_autovacuum, autovacuum_count FROM pg_stat_user_tables WHERE n_dead_tup \u003e 1000 ORDER BY n_dead_tup DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T010",
+    "name": "并发INSERT热点页争用",
+    "category": "锁",
+    "rule_fired": "PG-004",
+    "cause": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "severity": "低",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例轻度偏高，autovacuum 可能稍有延迟"
+    ],
+    "actions": [
+      "[预防] 持续监控死元组趋势 | SQL: SELECT relname, n_dead_tup, last_autovacuum, autovacuum_count FROM pg_stat_user_tables WHERE n_dead_tup \u003e 1000 ORDER BY n_dead_tup DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T011",
+    "name": "并发索引创建被阻塞",
+    "category": "锁",
+    "rule_fired": "PG-004",
+    "cause": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "severity": "低",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例轻度偏高，autovacuum 可能稍有延迟"
+    ],
+    "actions": [
+      "[预防] 持续监控死元组趋势 | SQL: SELECT relname, n_dead_tup, last_autovacuum, autovacuum_count FROM pg_stat_user_tables WHERE n_dead_tup \u003e 1000 ORDER BY n_dead_tup DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 2,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.2,
+      "connections_pct": 0.2,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 1,
+      "oldest_xact_age_sec": 4.628677,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T012",
+    "name": "TRUNCATE 阻塞读",
+    "category": "锁",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 17,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.9,
+      "connections_pct": 0.9,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "lock_wait_sessions": 6,
+      "lock_waits": 6,
+      "long_queries": 16,
+      "oldest_xact_age_sec": 4.832266,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T013",
+    "name": "预备事务未清理",
+    "category": "锁",
+    "rule_fired": "PG-004",
+    "cause": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "severity": "低",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例轻度偏高，autovacuum 可能稍有延迟"
+    ],
+    "actions": [
+      "[预防] 持续监控死元组趋势 | SQL: SELECT relname, n_dead_tup, last_autovacuum, autovacuum_count FROM pg_stat_user_tables WHERE n_dead_tup \u003e 1000 ORDER BY n_dead_tup DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T014",
+    "name": "分区表DDL锁粒度",
+    "category": "锁",
+    "rule_fired": "PG-004",
+    "cause": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "severity": "低",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例轻度偏高，autovacuum 可能稍有延迟"
+    ],
+    "actions": [
+      "[预防] 持续监控死元组趋势 | SQL: SELECT relname, n_dead_tup, last_autovacuum, autovacuum_count FROM pg_stat_user_tables WHERE n_dead_tup \u003e 1000 ORDER BY n_dead_tup DESC LIMIT 10"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T015",
+    "name": "锁等待超时重试风暴",
+    "category": "锁",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 22,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 1.2,
+      "connections_pct": 1.2,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "lock_wait_sessions": 20,
+      "lock_waits": 20,
+      "long_queries": 1,
+      "oldest_xact_age_sec": 4.589829,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T016",
+    "name": "全表扫描缺索引",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.456517,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T017",
+    "name": "全扫描选择度低",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 9,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 4,
+      "oldest_xact_age_sec": 3.326005,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T018",
+    "name": "执行计划漂移",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.415531,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T019",
+    "name": "CTE物化性能差",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.415814,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T020",
+    "name": "Nested Loop低效",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.419755,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T021",
+    "name": "Hash Join溢出",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.415884,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T022",
+    "name": "大排序溢出",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 9,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.578126,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T023",
+    "name": "隐式类型转换",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.414307,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T024",
+    "name": "函数索引失效",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.415885,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T025",
+    "name": "LIKE前模糊全扫",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.455799,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T026",
+    "name": "分区裁剪失效",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.417096,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T027",
+    "name": "NOT IN子查询",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.415765,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T028",
+    "name": "OFFSET大分页",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.415235,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T029",
+    "name": "相关子查询N+1",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 10,
+      "dead_tuples_ratio": 10,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.415704,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T030",
+    "name": "JSONB无GIN索引",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 9.99,
+      "dead_tuples_ratio": 9.99,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.415069,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T031",
+    "name": "多列索引顺序不当",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 9,
+      "dead_tuple_ratio": 9.99,
+      "dead_tuples_ratio": 9.99,
+      "long_queries": 4,
+      "oldest_xact_age_sec": 3.262022,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T032",
+    "name": "过多索引写入慢",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 9.99,
+      "dead_tuples_ratio": 9.99,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.416467,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T033",
+    "name": "大表COUNT(*)",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 9,
+      "dead_tuple_ratio": 12.53,
+      "dead_tuples_ratio": 12.53,
+      "long_queries": 4,
+      "oldest_xact_age_sec": 3.273571,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T034",
+    "name": "DISTINCT大排序",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 7,
+      "dead_tuple_ratio": 12.53,
+      "dead_tuples_ratio": 12.53,
+      "io_wait_sessions": 2,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.504534,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T035",
+    "name": "Window Function无索引",
+    "category": "SQL",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 9,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.5,
+      "connections_pct": 0.5,
+      "cpu_sessions": 9,
+      "dead_tuple_ratio": 12.53,
+      "dead_tuples_ratio": 12.53,
+      "long_queries": 8,
+      "oldest_xact_age_sec": 3.432879,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T036",
+    "name": "Dead Tuple堆积: autovacuum跟不上",
+    "category": "VACUUM",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 12.53,
+      "dead_tuples_ratio": 12.53,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T037",
+    "name": "长事务阻止VACUUM回收",
+    "category": "VACUUM",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.2,
+      "connections_pct": 0.2,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 12.53,
+      "dead_tuples_ratio": 12.53,
+      "idle_in_transaction": 1,
+      "idle_in_tx": 1,
+      "oldest_xact_age_sec": 6.108903,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T038",
+    "name": "XID Wraparound警告",
+    "category": "VACUUM",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.42,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 12.53,
+      "dead_tuples_ratio": 12.53,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T039",
+    "name": "表膨胀严重",
+    "category": "VACUUM",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.43,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 12.53,
+      "dead_tuples_ratio": 12.53,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T040",
+    "name": "索引膨胀",
+    "category": "VACUUM",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 12.53,
+      "dead_tuples_ratio": 12.53,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T041",
+    "name": "autovacuum被频繁取消",
+    "category": "VACUUM",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 12.53,
+      "dead_tuples_ratio": 12.53,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T042",
+    "name": "HOT Update链过长",
+    "category": "VACUUM",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 12.53,
+      "dead_tuples_ratio": 12.53,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T043",
+    "name": "VACUUM FULL阻塞",
+    "category": "VACUUM",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 14.73,
+      "dead_tuples_ratio": 14.73,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T044",
+    "name": "TOAST表膨胀",
+    "category": "VACUUM",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 14.73,
+      "dead_tuples_ratio": 14.73,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T045",
+    "name": "autovacuum饥饿",
+    "category": "VACUUM",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T046",
+    "name": "Cache命中率下降:大查询冲刷",
+    "category": "内存",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "secondary": "XID 正常 — 死元组堆积但未影响 XID",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 4,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.3,
+      "connections_pct": 0.3,
+      "cpu_sessions": 3,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "oldest_xact_age_sec": 0.010084,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T047",
+    "name": "shared_buffers太小",
+    "category": "内存",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "secondary": "XID 正常 — 死元组堆积但未影响 XID",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T048",
+    "name": "work_mem不足临时文件溢出",
+    "category": "内存",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "secondary": "XID 正常 — 死元组堆积但未影响 XID",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 4,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.3,
+      "connections_pct": 0.3,
+      "cpu_sessions": 4,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "oldest_xact_age_sec": 0.242236,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T049",
+    "name": "effective_cache_size设错",
+    "category": "内存",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "secondary": "XID 正常 — 死元组堆积但未影响 XID",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T050",
+    "name": "maintenance_work_mem不足",
+    "category": "内存",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "secondary": "XID 正常 — 死元组堆积但未影响 XID",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T051",
+    "name": "OOM风险",
+    "category": "内存",
+    "skipped": true,
+    "skip_note": "不安全:触发OOM可能kill PG",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T052",
+    "name": "huge_pages未启用",
+    "category": "内存",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "secondary": "XID 正常 — 死元组堆积但未影响 XID",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T053",
+    "name": "shared_buffers过大",
+    "category": "内存",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "secondary": "XID 正常 — 死元组堆积但未影响 XID",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T054",
+    "name": "temp_buffers不足",
+    "category": "内存",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "secondary": "XID 正常 — 死元组堆积但未影响 XID",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 4,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.3,
+      "connections_pct": 0.3,
+      "cpu_sessions": 4,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "long_queries": 3,
+      "oldest_xact_age_sec": 3.157294,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T055",
+    "name": "频繁Backend创建",
+    "category": "内存",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "secondary": "XID 正常 — 死元组堆积但未影响 XID",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T056",
+    "name": "WAL生成速率过高",
+    "category": "WAL",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 4,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.3,
+      "connections_pct": 0.3,
+      "cpu_sessions": 2,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "io_wait_sessions": 1,
+      "lwlock_wait_sessions": 1,
+      "oldest_xact_age_sec": 1.213001,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T057",
+    "name": "Checkpoint过于频繁",
+    "category": "WAL",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio \u003e 20% — cost delay 可能过高",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组堆积严重，autovacuum_vacuum_cost_delay 可能设置过高导致回收缓慢"
+    ],
+    "actions": [
+      "[排查] 查看当前 cost delay 配置 | SQL: SHOW autovacuum_vacuum_cost_delay;",
+      "[修复] 降低 autovacuum_vacuum_cost_delay | SQL: ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "secondary": "XID 正常 — 死元组堆积但未影响 XID",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.46,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 25,
+      "dead_tuples_ratio": 25,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T058",
+    "name": "Checkpoint IO尖峰",
+    "category": "WAL",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.47,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T059",
+    "name": "WAL Archive失败",
+    "category": "WAL",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.47,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T060",
+    "name": "pg_wal目录膨胀",
+    "category": "WAL",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.47,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T061",
+    "name": "Replication Slot阻止WAL回收",
+    "category": "WAL",
+    "skipped": true,
+    "skip_note": "需要流复制设置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T062",
+    "name": "同步提交延迟高",
+    "category": "WAL",
+    "rule_fired": "PG-081",
+    "cause": "lwlock_wait_sessions 3-15 — 需关注",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "存在 LWLock 等待，可能有内部资源争用"
+    ],
+    "actions": [
+      "[排查] 查看 LWLock 等待分布 | SQL: SELECT wait_event, count(*) FROM pg_stat_activity WHERE wait_event_type='LWLock' AND state='active' GROUP BY wait_event ORDER BY count(*) DESC"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 11,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.47,
+      "connection_pct": 0.6,
+      "connections_pct": 0.6,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "io_wait_sessions": 1,
+      "lwlock_wait_sessions": 9,
+      "oldest_xact_age_sec": 0.000502,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T063",
+    "name": "wal_level=logical额外开销",
+    "category": "WAL",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.39,
+      "checkpoints_req": 2.47,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T064",
+    "name": "WAL Sender占满",
+    "category": "WAL",
+    "skipped": true,
+    "skip_note": "需要流复制",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T065",
+    "name": "full_page_writes IO放大",
+    "category": "WAL",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "secondary": "tuple lock 等待占比 \u003e 10%",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 6,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.4,
+      "connections_pct": 0.4,
+      "cpu_sessions": 2,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "lock_wait_sessions": 4,
+      "lock_waits": 4,
+      "oldest_xact_age_sec": 0.073927,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T066",
+    "name": "LWLock:BufferMapping争用",
+    "category": "等待",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 38,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 2.1,
+      "connections_pct": 2.1,
+      "cpu_sessions": 37,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "oldest_xact_age_sec": 0.002883,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T067",
+    "name": "LWLock:WALInsert争用",
+    "category": "等待",
+    "rule_fired": "PG-081",
+    "cause": "lwlock_wait_sessions 3-15 — 需关注",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "存在 LWLock 等待，可能有内部资源争用"
+    ],
+    "actions": [
+      "[排查] 查看 LWLock 等待分布 | SQL: SELECT wait_event, count(*) FROM pg_stat_activity WHERE wait_event_type='LWLock' AND state='active' GROUP BY wait_event ORDER BY count(*) DESC"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 11,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.6,
+      "connections_pct": 0.6,
+      "cpu_sessions": 3,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "lwlock_wait_sessions": 8,
+      "oldest_xact_age_sec": 0.334545,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T068",
+    "name": "IO:DataFileRead延迟高",
+    "category": "等待",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 6,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.4,
+      "connections_pct": 0.4,
+      "cpu_sessions": 6,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "oldest_xact_age_sec": 0.200207,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T069",
+    "name": "IO:DataFileWrite延迟高",
+    "category": "等待",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "secondary": "tuple lock 等待占比 \u003e 10%",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 6,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.4,
+      "connections_pct": 0.4,
+      "cpu_sessions": 2,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "lock_wait_sessions": 4,
+      "lock_waits": 4,
+      "oldest_xact_age_sec": 0.967886,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T070",
+    "name": "BufferPin等待",
+    "category": "等待",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 3,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.2,
+      "connections_pct": 0.2,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "long_queries": 2,
+      "lwlock_wait_sessions": 1,
+      "oldest_xact_age_sec": 3.104233,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T071",
+    "name": "Client:ClientRead等待",
+    "category": "等待",
+    "rule_fired": "PG-008",
+    "cause": "idle_in_transaction 5-20 — 需关注",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "5-20 个会话 idle in transaction，占用连接和锁资源"
+    ],
+    "actions": [
+      "[排查] 检查这些会话的来源应用 | SQL: SELECT usename, application_name, client_addr, COUNT(*) AS cnt FROM pg_stat_activity WHERE state = 'idle in transaction' GROUP BY usename, application_name, client_addr ORDER BY cnt DESC",
+      "[预防] 应用层启用连接池自动回收 | SQL: -- 建议在 PgBouncer/应用连接池配置 idle_timeout"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 1.1,
+      "connections_pct": 1.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "idle_in_transaction": 20,
+      "idle_in_tx": 20,
+      "oldest_xact_age_sec": 3.035823,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T072",
+    "name": "Lock:transactionid等待",
+    "category": "等待",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 12,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.7,
+      "connections_pct": 0.7,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "lock_wait_sessions": 10,
+      "lock_waits": 10,
+      "long_queries": 11,
+      "oldest_xact_age_sec": 3.872268,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T073",
+    "name": "Lock:extend争用",
+    "category": "等待",
+    "rule_fired": "PG-081",
+    "cause": "其他 LWLock 争用",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "大量会话等待 LWLock，内部轻量锁争用严重"
+    ],
+    "actions": [
+      "[排查] 查看所有 LWLock 等待 | SQL: SELECT wait_event, count(*) FROM pg_stat_activity WHERE wait_event_type='LWLock' AND state='active' GROUP BY wait_event ORDER BY count(*) DESC"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 21,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 1.1,
+      "connections_pct": 1.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "io_wait_sessions": 1,
+      "lwlock_wait_sessions": 19,
+      "oldest_xact_age_sec": 0.001001,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T074",
+    "name": "CPU自旋等待",
+    "category": "等待",
+    "rule_fired": "PG-021",
+    "cause": "峰值/基线 \u003e 5 — 突发连接风暴",
+    "severity": "严重",
+    "confidence_pct": 68,
+    "findings": [
+      "活跃会话突增，峰值/基线 \u003e 5 倍",
+      "可能是应用重连风暴或突发流量"
+    ],
+    "actions": [
+      "[紧急] 检查连接来源 | SQL: SELECT usename, application_name, client_addr, COUNT(*) AS cnt FROM pg_stat_activity WHERE state = 'active' GROUP BY usename, application_name, client_addr ORDER BY cnt DESC",
+      "[紧急] 限制单用户连接数 | SQL: ALTER ROLE {username} CONNECTION LIMIT 30;"
+    ],
+    "has_sql": true,
+    "secondary": "cache_hit_pct \u003e= 90% — 存储本身慢",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 61,
+      "autovacuum_count": 1,
+      "autovacuum_workers": 1,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 3.1,
+      "connections_pct": 3.1,
+      "cpu_sessions": 55,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "io_wait_sessions": 6,
+      "long_queries": 39,
+      "oldest_xact_age_sec": 6.001003,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T075",
+    "name": "IO:WALWrite延迟",
+    "category": "等待",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T076",
+    "name": "连接风暴无连接池",
+    "category": "连接",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 2.6,
+      "connections_pct": 2.6,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T077",
+    "name": "Connections接近上限",
+    "category": "连接",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 4.1,
+      "connections_pct": 4.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T078",
+    "name": "idle in transaction堆积",
+    "category": "连接",
+    "rule_fired": "PG-008",
+    "cause": "idle_in_transaction \u003e 20 — 严重泄漏",
+    "severity": "严重",
+    "confidence_pct": 68,
+    "findings": [
+      "超过 20 个会话处于 idle in transaction，事务未提交严重",
+      "长时间未提交事务阻止 VACUUM 和 XID 推进"
+    ],
+    "actions": [
+      "[紧急] 查找并终止最老的 idle in transaction | SQL: SELECT pid, usename, state, xact_start, now()-xact_start AS idle_duration, LEFT(query, 80) AS last_query FROM pg_stat_activity WHERE state = 'idle in transaction' ORDER BY xact_start LIMIT 10",
+      "[修复] 设置 idle_in_transaction_session_timeout | SQL: ALTER SYSTEM SET idle_in_transaction_session_timeout = '5min'; SELECT pg_reload_conf();"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 1.4,
+      "connections_pct": 1.4,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "idle_in_transaction": 25,
+      "idle_in_tx": 25,
+      "oldest_xact_age_sec": 3.045114,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T079",
+    "name": "会话泄漏",
+    "category": "连接",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 2.1,
+      "connections_pct": 2.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T080",
+    "name": "PgBouncer池太小",
+    "category": "连接",
+    "skipped": true,
+    "skip_note": "需要PgBouncer",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T081",
+    "name": "idle连接占满",
+    "category": "连接",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 3.1,
+      "connections_pct": 3.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T082",
+    "name": "statement_timeout未设",
+    "category": "连接",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 4,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.3,
+      "connections_pct": 0.3,
+      "cpu_sessions": 4,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "long_queries": 3,
+      "oldest_xact_age_sec": 3.182418,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T083",
+    "name": "superuser连接预留不足",
+    "category": "连接",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.4,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T084",
+    "name": "Active Sessions突增",
+    "category": "连接",
+    "rule_fired": "PG-021",
+    "cause": "峰值/基线 \u003e 5 — 突发连接风暴",
+    "severity": "严重",
+    "confidence_pct": 68,
+    "findings": [
+      "活跃会话突增，峰值/基线 \u003e 5 倍",
+      "可能是应用重连风暴或突发流量"
+    ],
+    "actions": [
+      "[紧急] 检查连接来源 | SQL: SELECT usename, application_name, client_addr, COUNT(*) AS cnt FROM pg_stat_activity WHERE state = 'active' GROUP BY usename, application_name, client_addr ORDER BY cnt DESC",
+      "[紧急] 限制单用户连接数 | SQL: ALTER ROLE {username} CONNECTION LIMIT 30;"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 61,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 3.1,
+      "connections_pct": 3.1,
+      "cpu_sessions": 59,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "long_queries": 14,
+      "oldest_xact_age_sec": 4.297003,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T085",
+    "name": "terminate导致回滚风暴",
+    "category": "连接",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T086",
+    "name": "random_page_cost过高",
+    "category": "配置",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T087",
+    "name": "并行查询禁用",
+    "category": "配置",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T088",
+    "name": "慢查询日志未开",
+    "category": "配置",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T089",
+    "name": "statistics_target过低",
+    "category": "配置",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T090",
+    "name": "缺少关键扩展",
+    "category": "配置",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T091",
+    "name": "pg_stat_statements重置",
+    "category": "系统",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T092",
+    "name": "pg_hba过于宽松",
+    "category": "系统",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T093",
+    "name": "升级后统计信息丢失",
+    "category": "系统",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 6,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.4,
+      "connections_pct": 0.4,
+      "cpu_sessions": 6,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "oldest_xact_age_sec": 0.170979,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T094",
+    "name": "扩展版本不兼容",
+    "category": "系统",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T095",
+    "name": "日志撑满磁盘",
+    "category": "系统",
+    "rule_fired": "PG-027",
+    "cause": "dead_tuple_ratio 10-20%",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "死元组比例偏高，考虑降低 vacuum cost delay 加速回收"
+    ],
+    "actions": [
+      "[排查] 查看 vacuum cost 相关参数 | SQL: SELECT name, setting FROM pg_settings WHERE name LIKE '%vacuum_cost%'"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 5-20% — 轻度堆积",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 1,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.1,
+      "connections_pct": 0.1,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T096",
+    "name": "并发ANALYZE冲突",
+    "category": "系统",
+    "rule_fired": "PG-010",
+    "cause": "Lock 等待占比 \u003e 10% — 可能有 advisory lock 问题",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "Lock 类等待事件占比较高，需排查是否有 advisory lock 泄漏"
+    ],
+    "actions": [
+      "[排查] 查看当前 advisory lock 持有情况 | SQL: SELECT l.locktype, l.objid, l.pid, a.usename, a.application_name, LEFT(a.query, 60) AS query FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.locktype = 'advisory' ORDER BY l.objid",
+      "[修复] 释放泄漏的 advisory lock | SQL: SELECT pg_advisory_unlock_all(); -- 在泄漏会话中执行"
+    ],
+    "has_sql": true,
+    "secondary": "dead_tuple_ratio 10-20%",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 4,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.3,
+      "connections_pct": 0.3,
+      "cpu_sessions": 2,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "lock_wait_sessions": 2,
+      "lock_waits": 2,
+      "oldest_xact_age_sec": 1.16099,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T097",
+    "name": "REINDEX阻塞写入",
+    "category": "系统",
+    "rule_fired": "PG-081",
+    "cause": "lwlock_wait_sessions 3-15 — 需关注",
+    "severity": "中",
+    "confidence_pct": 58,
+    "findings": [
+      "存在 LWLock 等待，可能有内部资源争用"
+    ],
+    "actions": [
+      "[排查] 查看 LWLock 等待分布 | SQL: SELECT wait_event, count(*) FROM pg_stat_activity WHERE wait_event_type='LWLock' AND state='active' GROUP BY wait_event ORDER BY count(*) DESC"
+    ],
+    "has_sql": true,
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 6,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.4,
+      "connections_pct": 0.4,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "io_wait_sessions": 1,
+      "lwlock_wait_sessions": 4,
+      "oldest_xact_age_sec": 0.000531,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T098",
+    "name": "逻辑复制冲突",
+    "category": "系统",
+    "skipped": true,
+    "skip_note": "需要逻辑复制设置",
+    "rule_fired": "",
+    "cause": "",
+    "severity": "",
+    "confidence_pct": 0,
+    "findings": null,
+    "actions": null,
+    "has_sql": false,
+    "absorbed": 0
+  },
+  {
+    "id": "T099",
+    "name": "pg_cron任务堆叠",
+    "category": "系统",
+    "rule_fired": "PG-015",
+    "cause": "单条 SQL 并发 \u003c= 5 — 不太像计划回退",
+    "severity": "低",
+    "confidence_pct": 63,
+    "findings": [
+      "慢查询存在但并发不高，可能是 SQL 本身效率低"
+    ],
+    "actions": [
+      "[排查] 使用 EXPLAIN ANALYZE 分析慢 SQL | SQL: EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) {query};"
+    ],
+    "has_sql": true,
+    "absorbed": 1,
+    "metrics": {
+      "active_sessions": 6,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.4,
+      "connections_pct": 0.4,
+      "cpu_sessions": 1,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "long_queries": 5,
+      "oldest_xact_age_sec": 3.25968,
+      "xid_age_pct": 2.12
+    }
+  },
+  {
+    "id": "T100",
+    "name": "综合:IO+Lock+WAL",
+    "category": "系统",
+    "rule_fired": "PG-037",
+    "cause": "lock_waits \u003e 3 — 可能有 DDL 锁",
+    "severity": "高",
+    "confidence_pct": 58,
+    "findings": [
+      "可能有 ALTER TABLE / CREATE INDEX 等 DDL 操作持有 AccessExclusiveLock 阻塞查询"
+    ],
+    "actions": [
+      "[排查] 查看 AccessExclusive 锁持有者 | SQL: SELECT l.pid, a.usename, l.relation::regclass, l.mode, a.state, LEFT(a.query, 80) FROM pg_locks l JOIN pg_stat_activity a ON l.pid = a.pid WHERE l.mode = 'AccessExclusiveLock' AND l.granted",
+      "[修复] 使用 CONCURRENTLY 选项避免阻塞 | SQL: CREATE INDEX CONCURRENTLY idx_name ON table_name (column);"
+    ],
+    "has_sql": true,
+    "secondary": "tuple lock 等待占比 \u003e 10%",
+    "absorbed": 0,
+    "metrics": {
+      "active_sessions": 13,
+      "cache_hit_pct": 99.41,
+      "checkpoints_req": 2.48,
+      "connection_pct": 0.7,
+      "connections_pct": 0.7,
+      "cpu_sessions": 3,
+      "dead_tuple_ratio": 19.98,
+      "dead_tuples_ratio": 19.98,
+      "io_wait_sessions": 1,
+      "lock_wait_sessions": 5,
+      "lock_waits": 5,
+      "long_queries": 6,
+      "lwlock_wait_sessions": 3,
+      "oldest_xact_age_sec": 3.829988,
+      "xid_age_pct": 2.12
+    }
+  }
+]

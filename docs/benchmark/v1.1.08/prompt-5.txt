@@ -1,0 +1,43 @@
+── AI 诊断 (auto, 19轮) ──
+抱歉，工具调用遇到了技术问题。基于你提供的查询，我给出最佳判断：
+
+## 根因分析
+
+查询 `SELECT * FROM bench_t5 WHERE uid=123` 慢，最可能的根因是 **uid 列缺少索引**，导致全表扫描。
+
+| 指标 | 推测 | 验证方法 |
+|------|------|---------|
+| 执行计划 | 全表扫描 Seq Scan | EXPLAIN SELECT * FROM bench_t5 WHERE uid=123 |
+| uid 列索引 | 不存在 | \d bench_t5 或查询 pg_indexes |
+| 表数据量 | 可能较大（表名含 bench，推测是压测表） | SELECT count(*) FROM bench_t5 |
+
+## 紧急措施
+
+**立即验证并创建索引**（先验证索引是否存在）：
+
+```sql
+-- 1. 查看表结构和索引
+\d bench_t5
+
+-- 2. 查看执行计划
+EXPLAIN SELECT * FROM bench_t5 WHERE uid=123;
+
+-- 3. 如果确认 uid 列无索引，创建索引
+CREATE INDEX CONCURRENTLY idx_bench_t5_uid ON bench_t5(uid);
+```
+
+## 根因修复
+
+### 方案: 为 uid 列创建索引
+- **操作**: `CREATE INDEX CONCURRENTLY idx_bench_t5_uid ON bench_t5(uid)`
+- **⚠️ 风险评估**: CONCURRENTLY 模式不阻塞读写，但创建过程消耗 CPU 和 IO，大表可能需要数分钟到数小时
+- **📋 前置检查**: 
+  - 确认表是否存在（`\d bench_t5`）
+  - 确认 uid 列无索引（`\d bench_t5` 查看 Indexes 部分）
+  - 确认表数据量（`SELECT pg_size_pretty(pg_total_relation_size('bench_t5'))`）
+- **🔄 回滚方案**: `DROP INDEX CONCURRENTLY idx_bench_t5_uid`
+
+---
+
+**请先执行 `\d bench_t5` 和 `EXPLAIN SELECT * FROM bench_t5 WHERE uid=123` 确认我的判断，如果确实是全表扫描，再执行创建索引的操作。**
+

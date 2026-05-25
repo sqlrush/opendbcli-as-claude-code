@@ -1,0 +1,261 @@
+=== SCENARIO 1 / ROUND 1 ===
+PROMPT: 数据库感觉慢了，帮我看看是什么问题
+
+✳ 主动诊断: 查询当前数据库状态...
+✳ AI 分析 (auto, 最多20轮)...
+├ 第1轮: 调用 health, dbtop (6.8s)
+├ 第2轮: 调用 autovacuum, waits (3.7s)
+├ 第3轮: 调用 vacuum (2.4s)
+├ 第4轮: 调用 bloat, activesessions (2.0s)
+├ 第5轮: 调用 sql (4.0s)
+├ 第6轮: 调用 sql (2.5s)
+├ 第7轮: 调用 topsql (3.0s)
+├ 第8轮: 调用 sql (6.1s)
+── AI 诊断 (autonomous, 9轮) ──
+## 根因分析
+
+**关键证据汇总**
+
+| 指标 | 数值 | 状态 | 来源 |
+|------|------|------|------|
+| Dead Tuples | 3,167,265,103 | ⚠️ WARNING | health |
+| Autovacuum Workers | 1 运行中 | ⚠️ 堆积 | autovacuum |
+| 活跃会话 | 5 个 (全 On CPU) | 后台 | activesessions |
+| Top 慢 SQL (SQL_ID 1593186364) | 平均 367,311ms/次 | 极差 | topsql |
+| Top 慢 SQL (SQL_ID 2747043041) | 平均 10,328,210ms/次 | 极差 | topsql |
+| Top 慢 SQL (SQL_ID 1608097724) | 平均 4,165,553ms/次 | 极差 | topsql |
+
+**根因结论**
+
+数据库变慢的主要原因是 **死元组堆积严重 + 大量低效查询**：
+
+1. **死元组 31.6 亿条** — autovacuum 仅 1 个 worker 运行，无法及时清理大量死元组，导致表膨胀、扫描效率下降
+2. **fault_ 系列循环查询** — topsql 前 5 名中有 4 条 fault_ 表的操作：
+   - `UPDATE fault_lock SET counter=counter+1` 循环 10 万次，单次 367 秒
+   - `fault_cpu CROSS JOIN fault_cpu` 循环 100 次，单次 10328 秒
+   - `fault_io WHERE payload LIKE ?` 循环 200 次，单次 4165 秒
+   - `INSERT INTO fault_wal` 循环 20 万次，单次 4165 秒
+3. 这些查询持续产生死元组，autovacuum 来不及清理，形成恶性循环
+
+**因果链**：低效查询（循环大事务/CROSS JOIN） → 大量死元组累积 → 表膨胀 + 扫描变慢 → autovacuum 压力过大 → 数据库响应变慢
+
+## 紧急措施
+
+**1. 终止 fault_ 系列低效查询（如果仍在运行）**
+
+```sql
+-- 先查看哪些 fault_ 查询在活跃状态
+SELECT pid, now() - query_start AS duration, query 
+FROM pg_stat_activity 
+WHERE query LIKE '%fault_%' 
+  AND state != 'idle'
+ORDER BY duration DESC;
+
+-- 如果确认是测试/压力脚本，终止相关会话
+SELECT pg_cancel_backend(<PID>);  -- 取消查询
+-- 或
+SELECT pg_terminate_backend(<PID>);  -- 终止连接
+```
+
+**2. 手动触发 VACUUM 清理高死元组表**
+
+需要先确认具体是哪 3 张表堆积严重：
+
+```sql
+-- 查找死元组最多的表
+SELECT schemaname, relname, n_dead_tup, n_live_tup,
+       round(100.0 * n_dead_tup / NULLIF(n_live_tup, 0), 2) AS dead_ratio
+FROM pg_stat_all_tables
+WHERE n_dead_tup > 0
+ORDER BY n_dead_tup DESC
+LIMIT 10;
+```
+
+确认表名后执行：
+
+```sql
+-- 对单表执行 VACUUM ANALYZE（不锁表 DML）
+VACUUM ANALYZE <schema>.<table_name>;
+
+-- 如果表极大且业务允许短暂锁表，可用 VACUUM FULL（会持有 AccessExclusiveLock）
+-- VACUUM FULL <schema>.<table_name>;
+```
+
+## 根因修复
+
+**方案 1：优化 fault_ 系列查询（根本解决）**
+
+这些查询明显是压力测试脚本（循环大事务、CROSS JOIN），如果不需要应立即停止：
+
+- `fault_lock` 循环 10 万次 UPDATE → 改为批量更新或使用 `UPDATE ... WHERE id IN (...)`
+- `fault_cpu CROSS JOIN` → 避免笛卡尔积，添加过滤条件
+- `fault_wal` 循环 20 万次 INSERT → 改为 `INSERT INTO ... VALUES (...), (...), ...` 批量插入
+- 如果这些是测试脚本，建议 **在非业务时段执行** 或使用独立测试数据库
+
+**方案 2：提升 autovacuum 能力**
+
+```sql
+-- 临时增加 autovacuum worker 数量（需要重启生效）
+-- ALTER SYSTEM SET autovacuum_max_workers = 8;
+
+-- 或者对特定表设置更激进的 autovacuum 参数
+ALTER TABLE <schema>.<fault_table> SET (
+    autovacuum_vacuum_threshold = 1000,
+    autovacuum_vacuum_scale_factor = 0.05,
+    autovacuum_analyze_threshold = 1000,
+    autovacuum_analyze_scale_factor = 0.05
+);
+
+-- 重载配置（如果改了 max_workers 需要重启）
+SELECT pg_reload_conf();
+```
+
+**方案 3：检查是否有长事务阻止 VACUUM**
+
+```sql
+-- 检查是否存在长事务阻止死元组回收
+SELECT pid, usename, state, query_start, now() - query_start AS duration, query
+FROM pg_stat_activity
+WHERE state != 'idle'
+  AND (backend_xid IS NOT NULL OR backend_xmin IS NOT NULL)
+ORDER BY query_start ASC;
+```
+
+如果存在长事务未提交，VACUUM 无法回收这些事务产生的死元组。
+
+**方案 4：监控建议**
+
+- 设置 `autovacuum_vacuum_scale_factor = 0.05`（默认 0.2）让 autovacuum 更早触发
+- 考虑使用 `pg_repack` 替代 VACUUM FULL 进行在线重组（不阻塞业务）
+- 定期监控 `pg_stat_all_tables.n_dead_tup` 增长趋势
+
+
+(round 1 took 124s)
+
+=== SCENARIO 1 / ROUND 2 ===
+PROMPT: 继续看下慢查询和等待事件
+
+✳ 主动诊断: 查询当前数据库状态...
+✳ AI 分析 (auto, 最多20轮)...
+├ 第1轮: 调用 slowsql, waits (6.0s)
+├ 第2轮: 调用 explain, explain, explain (14.1s)
+── AI 诊断 (autonomous, 3轮) ──
+## 慢查询与等待事件分析
+
+### 当前慢查询 TOP 5（按平均执行时间）
+
+| 排名 | SQL_ID | 调用次数 | 平均耗时 | 总耗时 (秒) | 查询模式 |
+|------|--------|----------|----------|-------------|----------|
+| 1 | 1775585557 | 1,520 | 11,299,201ms | 17,174,785 | `SELECT pg_sleep(?)` |
+| 2 | 2747043041 | 168 | 10,328,210ms | 1,735,139 | `fault_cpu CROSS JOIN` 循环 100 次 |
+| 3 | 307519804 | 37 | 5,808,679ms | 214,921 | `UPDATE fault_lock` 循环更新 |
+| 4 | 423340056 | 2 | 4,186,834ms | 8,374 | 复杂 DO 块计算 |
+| 5 | 2520587944 | 416 | 4,165,554ms | 1,732,870 | `fault_io` LIKE 循环 200 次 |
+
+**关键发现**：
+- **fault_ 系列 SQL 占据前 4 名**，均为压力测试脚本（循环大事务、笛卡尔积、模糊查询）
+- 第 1 名 `pg_sleep()` 累计执行 1,520 次，总耗时 **1717 万秒（约 198 天）**
+- 第 2 名 CROSS JOIN 查询平均单次执行 **2.87 小时**
+- 第 5 名 LIKE 模糊查询循环 200 次，平均单次 **1.16 小时**
+
+### 当前等待事件分布
+
+| WaitType | WaitEvent | Sessions | 说明 |
+|----------|-----------|----------|------|
+| CPU | On CPU | 5 | 全部为后台线程（autovacuum 等） |
+
+**当前状态**：无业务会话活跃，实例处于空闲状态，无实时等待事件。
+
+### 问题根源总结
+
+慢查询主要来自 **fault_ 系列压力测试脚本**，特征为：
+1. **循环大事务**：单次循环 100-200 万次操作
+2. **笛卡尔积**：`CROSS JOIN` 产生大量临时数据
+3. **模糊查询**：`LIKE '%test%'` 无法使用索引
+4. **无索引或低效索引**：导致全表扫描
+
+这些查询产生大量死元组（31.6 亿条），autovacuum 无法及时清理，导致表膨胀和扫描效率下降，最终使数据库变慢。
+
+
+(round 2 took 54s)
+
+=== SCENARIO 1 / ROUND 3 ===
+PROMPT: 给出最需要优先处理的事情
+
+✳ 主动诊断: 查询当前数据库状态...
+✳ AI 分析 (auto, 最多20轮)...
+├ 第1轮: 调用 autovacuum, sql, sql (7.4s)
+├ 第2轮: 调用 sql, sql (5.9s)
+── AI 诊断 (autonomous, 3轮) ──
+## 最需要优先处理的事情
+
+基于之前的诊断，按优先级排序如下：
+
+### 优先级 1：终止 fault_ 系列压力测试查询
+
+**原因**：这些查询是当前慢查询 TOP5 的主要来源，持续产生大量死元组（31.6 亿条），且执行时间极长（最长单次近 3 小时）。
+
+**立即执行**：
+```sql
+-- 查找正在运行的 fault_ 查询
+SELECT pid, state, now() - query_start AS duration, substr(query, 1, 200)
+FROM pg_stat_activity 
+WHERE query LIKE '%fault_%' AND state != 'idle'
+ORDER BY query_start ASC;
+
+-- 终止相关会话
+SELECT pg_cancel_backend(<PID>);  -- 取消查询
+-- 或
+SELECT pg_terminate_backend(<PID>);  -- 终止连接
+```
+
+### 优先级 2：手动 VACUUM 清理高死元组表
+
+**原因**：autovacuum 仅 1 个 worker，无法及时清理 31.6 亿条死元组，导致表膨胀、扫描效率持续下降。
+
+**执行 VACUUM**：
+```sql
+-- 对死元组最多的表执行 VACUUM ANALYZE
+VACUUM ANALYZE public.fault_lock;
+VACUUM ANALYZE public.fault_cpu;
+VACUUM ANALYZE public.fault_io;
+
+-- 如果表极大且允许短暂锁表，使用 VACUUM FULL（会阻塞 DML）
+-- VACUUM FULL public.fault_lock;
+```
+
+### 优先级 3：优化 fault_ 系列查询
+
+| 当前查询 | 问题 | 优化建议 |
+|----------|------|----------|
+| `SELECT pg_sleep(?)` | 无意义等待 | 移除或改为业务逻辑 |
+| `fault_cpu CROSS JOIN fault_cpu` | 笛卡尔积 | 添加 WHERE 条件或改为 JOIN |
+| `UPDATE fault_lock` 循环 10 万次 | 单条小更新 | 改为批量更新 `UPDATE ... WHERE id IN (...)` |
+| `fault_io WHERE payload LIKE '%test%'` | 模糊查询无索引 | 添加索引或改用全文检索 |
+| `INSERT INTO fault_wal` 循环 20 万次 | 单条插入 | 改为批量 `INSERT INTO ... VALUES (...), (...)` |
+
+### 优先级 4：提升 autovacuum 能力
+
+```sql
+-- 增加 autovacuum worker（需重启生效）
+ALTER SYSTEM SET autovacuum_max_workers = 4;
+SELECT pg_reload_conf();
+
+-- 对关键表设置更激进的 autovacuum 参数
+ALTER TABLE public.fault_lock SET (
+    autovacuum_vacuum_threshold = 1000,
+    autovacuum_vacuum_scale_factor = 0.05,
+    autovacuum_analyze_threshold = 1000,
+    autovacuum_analyze_scale_factor = 0.05
+);
+```
+
+## 执行顺序建议
+
+1. **立即**：终止 fault_ 查询（防止继续产生死元组）
+2. **随后**：执行 VACUUM ANALYZE（清理已有死元组）
+3. **最后**：优化查询脚本 + 调整 autovacuum 参数（避免问题复发）
+
+
+(round 3 took 70s)
+

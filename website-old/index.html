@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenDB — 数据库 CLI Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-alt: #f6f8fa;
+      --bg-dark: #1b1b1d;
+      --surface: #ffffff;
+      --text: #1c1e21;
+      --text-secondary: #57606a;
+      --primary: #06527a;
+      --primary-dark: #043d5c;
+      --accent: #ffc61c;
+      --green: #1a7f37;
+      --green-bg: #dafbe1;
+      --red: #cf222e;
+      --border: #d0d7de;
+      --border-light: #e8ecf0;
+      --code-bg: #f6f8fa;
+      --code-dark-bg: #24292f;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+      --max-w: 1140px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { color: var(--primary-dark); text-decoration: underline; }
+    code { font-family: var(--mono); font-size: 0.9em; background: var(--code-bg); padding: 2px 6px; border-radius: 4px; }
+
+    /* Nav */
+    nav { border-bottom: 1px solid var(--border-light); background: var(--surface); }
+    .nav-inner { max-width: var(--max-w); margin: 0 auto; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .nav-logo { font-size: 22px; font-weight: 700; color: var(--primary); }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { color: var(--text-secondary); font-size: 14px; font-weight: 500; text-decoration: none; }
+    .nav-links a:hover { color: var(--text); }
+
+    /* Hero */
+    .hero { text-align: center; padding: 80px 24px 48px; background: linear-gradient(180deg, var(--bg) 0%, var(--bg-alt) 100%); }
+    .hero-logo { font-family: var(--mono); font-size: 12px; color: var(--primary); white-space: pre; line-height: 1.15; margin-bottom: 28px; opacity: 0.7; }
+    .hero h1 { font-size: 48px; font-weight: 700; margin-bottom: 16px; line-height: 1.2; }
+    .hero h1 em { font-style: normal; color: var(--primary); }
+    .hero .subtitle { font-size: 20px; color: var(--text-secondary); max-width: 640px; margin: 0 auto 40px; line-height: 1.6; }
+
+    /* Install box */
+    .install-box { max-width: 580px; margin: 0 auto 20px; background: var(--code-dark-bg); border-radius: 10px; padding: 20px 28px; box-shadow: var(--shadow-lg); }
+    .install-label { font-size: 12px; color: #8b949e; margin-bottom: 8px; font-family: var(--mono); }
+    .install-cmd { font-family: var(--mono); font-size: 15px; color: #7ee787; word-break: break-all; }
+    .hero-meta { margin-top: 20px; display: flex; justify-content: center; gap: 20px; font-size: 13px; color: var(--text-secondary); }
+
+    /* Badges */
+    .badges { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 24px; }
+    .badge { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 16px; font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+
+    /* Section */
+    section { max-width: var(--max-w); margin: 0 auto; padding: 72px 24px; }
+    .section-alt { background: var(--bg-alt); }
+    .section-alt section { padding: 72px 24px; }
+    section h2 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+    section h2 em { font-style: normal; color: var(--primary); }
+    section .desc { color: var(--text-secondary); font-size: 17px; margin-bottom: 40px; max-width: 680px; }
+
+    /* Cards */
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .card { background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; padding: 28px; box-shadow: var(--shadow); transition: box-shadow 0.2s; }
+    .card:hover { box-shadow: var(--shadow-lg); }
+    .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--primary); }
+    .card p { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+    .cards-2 { grid-template-columns: repeat(2, 1fr); }
+
+    /* Code blocks */
+    .codeblock { background: var(--code-dark-bg); border-radius: 10px; padding: 24px 28px; overflow-x: auto; margin: 20px 0; box-shadow: var(--shadow); }
+    .codeblock pre { font-family: var(--mono); font-size: 13px; color: #e6edf3; line-height: 1.8; white-space: pre; }
+    .codeblock .dim { color: #8b949e; }
+    .codeblock .grn { color: #7ee787; }
+    .codeblock .ylw { color: #ffc61c; }
+    .codeblock .org { color: #ffa657; }
+
+    /* Feature table */
+    .feature-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 14px; }
+    .feature-table th, .feature-table td { padding: 10px 14px; border: 1px solid var(--border-light); text-align: left; }
+    .feature-table th { background: var(--bg-alt); font-weight: 600; color: var(--text-secondary); font-size: 13px; }
+    .feature-table td:first-child { font-weight: 500; }
+    .feature-table td:first-child code { background: none; padding: 0; color: var(--primary); font-weight: 600; }
+    .check { color: var(--green); font-weight: 700; }
+
+    /* Architecture */
+    .arch { font-family: var(--mono); font-size: 12px; color: #e6edf3; white-space: pre; line-height: 1.5; background: var(--code-dark-bg); border-radius: 10px; padding: 28px; overflow-x: auto; box-shadow: var(--shadow); }
+
+    /* Footer */
+    footer { border-top: 1px solid var(--border-light); background: var(--bg-alt); padding: 40px 24px; text-align: center; }
+    .footer-inner { max-width: var(--max-w); margin: 0 auto; }
+    .footer-links { margin-bottom: 12px; }
+    .footer-links a { margin: 0 16px; color: var(--text-secondary); font-size: 14px; }
+    footer p { color: var(--text-secondary); font-size: 13px; }
+    .footer-slogan { font-weight: 600; color: var(--primary); font-size: 15px; margin-top: 12px; }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 30px; }
+      .hero-logo { font-size: 8px; }
+      .cards, .cards-2 { grid-template-columns: 1fr; }
+      .hero-meta { flex-direction: column; gap: 8px; }
+    }
+    /* Mermaid */
+    .mermaid-wrap { display: flex; justify-content: center; margin: 24px 0; overflow-x: auto; }
+    .mermaid { font-family: var(--font) !important; }
+  </style>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#dbeafe',
+        primaryTextColor: '#1c1e21',
+        primaryBorderColor: '#06527a',
+        secondaryColor: '#fef3c7',
+        secondaryBorderColor: '#d97706',
+        tertiaryColor: '#dcfce7',
+        tertiaryBorderColor: '#16a34a',
+        lineColor: '#06527a',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '14px'
+      }
+    });
+  </script>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">Open<span>DB</span></div>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#skills">技能一览</a>
+      <a href="#architecture">架构</a>
+      <a href="https://github.com/sqlrush/opendb">GitHub</a>
+      <a href="mailto:sqlrush@gmail.com">联系我们</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-logo"> ██████╗ ██████╗ ███████╗███╗   ██╗██████╗ ██████╗
+██╔═══██╗██╔══██╗██╔════╝████╗  ██║██╔══██╗██╔══██╗
+██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║  ██║██████╔╝
+██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║  ██║██╔══██╗
+╚██████╔╝██║     ███████╗██║ ╚████║██████╔╝██████╔╝
+ ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚═════╝ ╚═════╝</div>
+
+  <h1>数据库 <em>CLI Agent</em></h1>
+  <p class="subtitle">参考 Claude Code 的交互方式来管理数据库。三种交互合一 — / 命令、SQL 原生语法、自然语言 — 无需切换模式。</p>
+
+  <div class="install-box">
+    <div class="install-label"># 安装 (Linux / macOS)</div>
+    <div class="install-cmd">curl -fsSL http://www.opendbcli.org/install.sh | bash</div>
+  </div>
+
+  <div class="hero-meta">
+    <span>Apache 2.0</span>
+    <span>Go · 单二进制 · 零依赖</span>
+    <span>Oracle · MySQL · PostgreSQL</span>
+  </div>
+</div>
+
+<div class="badges">
+  <span class="badge">Sentinel 实时检测</span>
+  <span class="badge">Model 大模型诊断</span>
+  <span class="badge">Rule 规则引擎</span>
+  <span class="badge">60+ 内置技能</span>
+  <span class="badge">dbtop 秒级面板</span>
+  <span class="badge">Schedule 定时巡检</span>
+</div>
+
+<!-- Three modes -->
+<section>
+  <h2>三种交互，<em>合多为一</em></h2>
+  <p class="desc">OpenDB 自动识别输入类型并路由到对应处理器 — 无需切换模式。</p>
+
+  <div class="cards">
+    <div class="card">
+      <h3>/ 简化命令</h3>
+      <p>类似 Claude Code 的 /命令，把复杂运维操作整合到一个命令里。</p>
+      <div class="codeblock" style="margin-top:16px"><pre><span class="dim">opendb&gt;</span> <span class="grn">/health</span>
+<span class="dim">opendb&gt;</span> <span class="grn">/dbtop</span>
+<span class="dim">opendb&gt;</span> <span class="grn">/slowsql 500</span>
+<span class="dim">opendb&gt;</span> <span class="grn">/llm</span></pre></div>
+    </div>
+    <div class="card">
+      <h3>SQL 和原生语法</h3>
+      <p>整合 sqlplus / mysql / psql 功能，直接输入 SQL。</p>
+      <div class="codeblock" style="margin-top:16px"><pre><span class="dim">opendb&gt;</span> <span class="grn">SELECT * FROM v$session;</span>
+<span class="dim">opendb&gt;</span> <span class="grn">SHOW PARAMETER sga_target;</span>
+<span class="dim">opendb&gt;</span> <span class="grn">DESC dba_tablespaces;</span></pre></div>
+    </div>
+    <div class="card">
+      <h3>自然语言</h3>
+      <p>像聊天一样描述问题，AI Agent 自动分析并给出修复方案。</p>
+      <div class="codeblock" style="margin-top:16px"><pre><span class="dim">opendb&gt;</span> <span class="grn">数据库现在为什么慢？</span>
+<span class="dim">⚡ 分析中... 42 个会话等待</span>
+<span class="dim">📋 根因：SID=1842 行锁 47 分钟</span>
+<span class="ylw">🔧 ALTER SYSTEM KILL SESSION</span>
+<span class="ylw">   '1842,30721' IMMEDIATE;</span></pre></div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<div class="section-alt" id="features">
+<section>
+  <h2>特色功能</h2>
+  <p class="desc">不是简单的监控告警 — 是能自主推理的数据库智能体。</p>
+
+  <table class="feature-table">
+    <tr>
+      <th>功能</th><th>定位</th><th>一句话介绍</th>
+    </tr>
+    <tr>
+      <td><code>/health</code></td>
+      <td>全局体检</td>
+      <td>20+ 项指标一键扫描，7 大维度给出 ✓/⚠/✗ 状态和可操作建议</td>
+    </tr>
+    <tr>
+      <td><code>/dbtop</code></td>
+      <td>秒级快照</td>
+      <td>类似 Linux <code>top</code>，1 秒刷新 SGA/PGA/TPS/QPS/等待事件/活跃会话</td>
+    </tr>
+    <tr>
+      <td><code>/sentinel</code></td>
+      <td>持续监控</td>
+      <td>后台探针 48 项指标 × 9 种检测策略，自适应 3σ 基线，异常自动 Burst 采集证据</td>
+    </tr>
+    <tr>
+      <td><code>/scheduler</code></td>
+      <td>定时巡检</td>
+      <td>将 health / 报告 / 维护整合为 cron 定时任务，后台自动执行</td>
+    </tr>
+    <tr>
+      <td><code>/rule</code></td>
+      <td>规则诊断</td>
+      <td>273 条规则 × 5 阶段管线，毫秒级确定性诊断，离线可用，无需 Model</td>
+    </tr>
+    <tr>
+      <td><code>/llm</code></td>
+      <td>AI 诊断</td>
+      <td>大模型 function calling 驱动最多 20 轮链式推理，自动采集证据，收敛到根因</td>
+    </tr>
+  </table>
+</section>
+</div>
+
+<!-- Real example: /llm -->
+<section>
+  <h2>真实场景 — <em>AI 诊断输出</em></h2>
+  <p class="desc">压测场景下的诊断输出（Claude Opus 驱动，3 轮推理，1 分 59 秒）：</p>
+  <div class="codeblock"><pre><span class="dim">opendb&gt;</span> <span class="grn">/llm</span>
+
+<span class="dim">  ✻ 完成 (1m 59s)</span>
+<span class="dim">  ├ 第1轮: 调用 health (21.7s)</span>
+<span class="dim">  ├ 第2轮: 调用 waits (1m 5s)</span>
+<span class="dim">  ├ 第3轮: 输出最终诊断 (32.0s)</span>
+
+<span class="ylw">■ 问题一（严重）：序列争用 — 占总等待 70.6%</span>
+
+  根因: ORDER_ITEMS.ITEM_ID identity 列序列 cache 仅 20
+        243.8K 次争用，累计等待 3630.7s
+  证据: 51 个会话同时等待 enq: SQ - contention
+
+  <span class="grn">-- 立即执行:</span>
+  <span class="grn">ALTER TABLE LOADUSER.ORDER_ITEMS</span>
+  <span class="grn">  MODIFY ITEM_ID GENERATED ALWAYS AS IDENTITY (CACHE 5000 NOORDER);</span>
+
+<span class="ylw">■ 问题二（重要）：Buffer Busy Waits — 占总等待 21.4%</span>
+
+  根因: 高并发 INSERT 竞争同一索引右侧叶子块（热块）
+  证据: 223.2K 次 buffer busy waits，累计 1098.9s
+
+<span class="ylw">■ 问题三（严重）：Redo 日志切换过频</span>
+
+  根因: 3 组 × 200MB redo，1 小时切换 162 次（22 秒/次）
+
+  <span class="grn">ALTER DATABASE ADD LOGFILE GROUP 4 SIZE 1G;</span>
+  <span class="grn">ALTER DATABASE ADD LOGFILE GROUP 5 SIZE 1G;</span>
+  <span class="grn">ALTER DATABASE ADD LOGFILE GROUP 6 SIZE 1G;</span></pre>
+  </div>
+</section>
+
+<!-- Real example: /rule -->
+<div class="section-alt">
+<section>
+  <h2>规则引擎 — <em>毫秒级诊断</em></h2>
+  <p class="desc">273 条规则 × 5 阶段管线，离线可用。真实压测场景下 2.7 秒完成诊断：</p>
+  <div class="codeblock"><pre><span class="dim">opendb&gt;</span> <span class="grn">/rule</span>
+
+<span class="ylw">  根因: 序列 CACHE 过小或 NOCACHE 导致 SQ 争用</span>
+<span class="dim">  严重程度: ■■■□ 高    置信度: 78%</span>
+
+  <span class="org">── 证据链 ──</span>
+  1. enq: SQ - contention 由序列 CACHE 值过小引起
+  2. 每次 CACHE 用完需更新 seq$，引发 row cache lock
+  3. 高并发 INSERT 使用 NOCACHE 序列时尤为严重
+
+  <span class="org">── 处置建议 ──</span>
+  <span class="grn">[紧急]</span> 查看争用序列并增大 CACHE
+  <span class="grn">[修复]</span> 查看 ASH 确认争用序列对象
+  <span class="grn">[预防]</span> 考虑 UUID 或应用层生成 ID
+
+  <span class="org">── 关联分析 ──</span>
+  <span class="dim">• cursor: pin S — 下游症状，解决根因后同步缓解</span>
+  <span class="dim">• buffer busy waits — 下游症状，解决根因后同步缓解</span></pre>
+  </div>
+</section>
+</div>
+
+<!-- Skills table -->
+<section id="skills">
+  <h2>技能一览 — <em>60+ 内置命令</em></h2>
+  <p class="desc">一条命令完成过去需要多步操作的复杂任务。三大数据库统一适配。</p>
+
+  <div class="cards-2 cards" style="margin-bottom:32px">
+    <div class="card">
+      <h3>监控与诊断</h3>
+      <table class="feature-table">
+        <tr><td><code>/dbtop</code></td><td>实时性能面板，1s 刷新</td></tr>
+        <tr><td><code>/health</code></td><td>全维度健康体检 (20+ 项)</td></tr>
+        <tr><td><code>/sentinel</code></td><td>后台实时异常探针</td></tr>
+        <tr><td><code>/llm</code></td><td>大模型多轮链式诊断</td></tr>
+        <tr><td><code>/rule</code></td><td>规则引擎诊断 (273 条)</td></tr>
+        <tr><td><code>/waits</code></td><td>等待事件统计</td></tr>
+        <tr><td><code>/sessions</code></td><td>会话概览</td></tr>
+        <tr><td><code>/locks</code></td><td>锁分析</td></tr>
+        <tr><td><code>/blocktree</code></td><td>锁阻塞链可视化</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>SQL 分析与运维</h3>
+      <table class="feature-table">
+        <tr><td><code>/slowsql</code></td><td>慢 SQL 查找</td></tr>
+        <tr><td><code>/topsql</code></td><td>Top SQL 排名</td></tr>
+        <tr><td><code>/explain</code></td><td>执行计划分析</td></tr>
+        <tr><td><code>/awr</code></td><td>AWR 快照分析 (Oracle)</td></tr>
+        <tr><td><code>/space</code></td><td>表空间使用率</td></tr>
+        <tr><td><code>/params</code></td><td>参数查询</td></tr>
+        <tr><td><code>/backup</code></td><td>备份状态</td></tr>
+        <tr><td><code>/scheduler</code></td><td>定时巡检引擎</td></tr>
+        <tr><td><code>/model</code></td><td>模型管理与热切换</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Architecture -->
+<div class="section-alt" id="architecture">
+<section>
+  <h2>架构</h2>
+  <p class="desc">三层诊断能力整合到统一的处理管线中。</p>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+graph TD
+    Input["用户输入\n/ 命令 | SQL | 自然语言"]
+    Dispatcher["智能分发器\n自动识别输入类型"]
+    Skill["技能执行器\n60+ 内置命令"]
+    SQL["SQL 引擎\n兼容 sqlplus/mysql/psql"]
+    Agent["LLM Agent\n多轮推理引擎"]
+    Sentinel["Sentinel 探针\n7×24 实时检测\n48 指标 · 3σ 基线"]
+    Rule["Rule 决策引擎\n273 条规则\n毫秒级 · 离线可用"]
+    LLM["LLM 推理引擎\nfunction calling\n最多 20 轮链式推理"]
+
+    Input --> Dispatcher
+    Dispatcher --> Skill
+    Dispatcher --> SQL
+    Dispatcher --> Agent
+    Agent --> Sentinel
+    Agent --> Rule
+    Agent --> LLM
+
+    style Input fill:#dbeafe,stroke:#2563eb
+    style Dispatcher fill:#dbeafe,stroke:#2563eb
+    style Skill fill:#e0e7ff,stroke:#4f46e5
+    style SQL fill:#e0e7ff,stroke:#4f46e5
+    style Agent fill:#e0e7ff,stroke:#4f46e5
+    style Sentinel fill:#fef3c7,stroke:#d97706
+    style Rule fill:#dcfce7,stroke:#16a34a
+    style LLM fill:#fce7f3,stroke:#db2777
+    </pre>
+  </div>
+
+  <h2 style="margin-top:60px">六大功能 — <em>协作关系</em></h2>
+  <p class="desc">从持续感知到状态评估再到智能诊断，三层能力逐层推进。</p>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+graph TD
+    subgraph L1["持续感知层"]
+        Sentinel2["/sentinel\n后台 7×24 持续监控\n48 指标, 异常自动触发"]
+        Scheduler2["/scheduler\n定时巡检, cron 调度\n每日自动 /health"]
+    end
+
+    subgraph L2["状态评估层"]
+        Health2["/health\n全局体检 20+ 项\n7 维度健康评分"]
+        Dbtop2["/dbtop\n秒级快照 1s 刷新\nSGA/等待/会话/TPS"]
+    end
+
+    subgraph L3["智能诊断层"]
+        Rule2["/rule\n确定性决策引擎\n273 规则, 毫秒级, 离线可用"]
+        LLM2["/llm\n大模型推理引擎\n最多 20 轮 function calling"]
+    end
+
+    Sentinel2 -->|异常告警| Health2
+    Sentinel2 -->|Burst 证据| Rule2
+    Sentinel2 -->|Burst 证据| LLM2
+    Scheduler2 -->|定时触发| Health2
+    Health2 -->|采集证据| Rule2
+    Health2 -->|采集证据| LLM2
+    Dbtop2 -->|实时数据| Rule2
+    Dbtop2 -->|实时数据| LLM2
+
+    style L1 fill:#eff6ff,stroke:#2563eb,color:#1e40af
+    style L2 fill:#fefce8,stroke:#ca8a04,color:#854d0e
+    style L3 fill:#f0fdf4,stroke:#16a34a,color:#166534
+    style Sentinel2 fill:#dbeafe,stroke:#2563eb
+    style Scheduler2 fill:#dbeafe,stroke:#2563eb
+    style Health2 fill:#fef3c7,stroke:#d97706
+    style Dbtop2 fill:#fef3c7,stroke:#d97706
+    style Rule2 fill:#dcfce7,stroke:#16a34a
+    style LLM2 fill:#fce7f3,stroke:#db2777
+    </pre>
+  </div>
+
+</section>
+</div>
+
+<!-- Get Started -->
+<section>
+  <h2>快速开始</h2>
+  <div class="cards-2 cards">
+    <div class="card">
+      <h3>一键安装</h3>
+      <div class="codeblock"><pre><span class="grn">curl -fsSL http://www.opendbcli.org/install.sh | bash</span></pre></div>
+      <p>安装向导会引导你完成数据库连接和 Model 配置。</p>
+    </div>
+    <div class="card">
+      <h3>从源码编译</h3>
+      <div class="codeblock"><pre><span class="grn">git clone https://github.com/sqlrush/opendb.git</span>
+<span class="grn">cd opendb && make build</span>
+<span class="grn">./bin/opendb --setup</span></pre></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-links">
+      <a href="https://github.com/sqlrush/opendb">GitHub</a>
+      <a href="mailto:sqlrush@gmail.com">联系我们</a>
+      <a href="https://github.com/sqlrush/opendb/blob/main/LICENSE">Apache 2.0</a>
+    </div>
+    <p>Copyright &copy; 2026 SQLRush. All rights reserved.</p>
+    <p class="footer-slogan">一个智能体，所有数据库，零复杂度。</p>
+  </div>
+</footer>
+
+</body>
+</html>

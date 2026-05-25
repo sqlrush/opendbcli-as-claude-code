@@ -1,0 +1,133 @@
+<h2>OpenDB Landing Page — Two Approaches</h2>
+<p class="subtitle">Both use Cursor-style aesthetics (warm dark theme, generous whitespace, micro-animations). The difference is narrative structure.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d0d0d; padding:24px; min-height:360px; position:relative; overflow:hidden;">
+      <!-- Approach A: Terminal Story Arc -->
+      <div style="font-size:11px; color:#555; text-transform:uppercase; letter-spacing:2px; margin-bottom:16px;">Approach A: Terminal Story Arc</div>
+
+      <!-- Section flow visualization -->
+      <div style="display:flex; flex-direction:column; gap:12px; font-family:'JetBrains Mono',monospace; font-size:12px;">
+
+        <div style="background:rgba(255,198,28,0.08); border-left:3px solid #ffc61c; padding:10px 14px; border-radius:0 6px 6px 0;">
+          <div style="color:#ffc61c; font-weight:600;">1. Hero — Live Terminal Animation</div>
+          <div style="color:#888; margin-top:4px;">Typewriter effect: user types /llm → AI diagnosis unfolds in real-time</div>
+          <div style="color:#555; margin-top:2px; font-size:11px;">Tagline: "One agent. All databases. Zero complexity."</div>
+        </div>
+
+        <div style="background:rgba(126,231,135,0.06); border-left:3px solid #7ee787; padding:10px 14px; border-radius:0 6px 6px 0;">
+          <div style="color:#7ee787; font-weight:600;">2. Three Modes — Interactive Tabs</div>
+          <div style="color:#888; margin-top:4px;">Click tabs: Slash / SQL / Natural Language → terminal output switches</div>
+        </div>
+
+        <div style="background:rgba(99,102,241,0.08); border-left:3px solid #6366f1; padding:10px 14px; border-radius:0 6px 6px 0;">
+          <div style="color:#6366f1; font-weight:600;">3. Six Features — Scroll-triggered Cards</div>
+          <div style="color:#888; margin-top:4px;">/health → /dbtop → /sentinel → /scheduler → /rule → /llm</div>
+          <div style="color:#555; margin-top:2px; font-size:11px;">Each card: left=description, right=real terminal mockup with animation</div>
+        </div>
+
+        <div style="background:rgba(255,107,53,0.08); border-left:3px solid #ff6b35; padding:10px 14px; border-radius:0 6px 6px 0;">
+          <div style="color:#ff6b35; font-weight:600;">4. Architecture Diagram</div>
+          <div style="color:#888; margin-top:4px;">Three-layer visualization: Perception → Assessment → Diagnosis</div>
+        </div>
+
+        <div style="background:rgba(62,207,142,0.08); border-left:3px solid #3ecf8e; padding:10px 14px; border-radius:0 6px 6px 0;">
+          <div style="color:#3ecf8e; font-weight:600;">5. Install + CTA</div>
+          <div style="color:#888; margin-top:4px;">One-liner install + GitHub Stars + Apache 2.0</div>
+        </div>
+
+      </div>
+
+      <div style="position:absolute; bottom:12px; right:16px; color:#333; font-size:10px;">~5 sections, feature-by-feature deep dive</div>
+    </div>
+    <div class="card-body">
+      <h3>A. Terminal Story Arc</h3>
+      <p><strong>Core idea:</strong> Hero 区一个震撼的终端动画，然后逐个展示六大功能，每个都有真实输出</p>
+
+      <div style="margin-top:12px;">
+        <div style="color:#3ecf8e; font-size:13px; margin-bottom:4px;">Strengths</div>
+        <ul style="color:#aaa; font-size:13px; margin:0; padding-left:18px;">
+          <li>DBA 看到真实输出立刻产生共鸣</li>
+          <li>终端动画是独特的视觉锤</li>
+          <li>叙事清晰：从"它是什么"到"它能做什么"</li>
+        </ul>
+      </div>
+      <div style="margin-top:10px;">
+        <div style="color:#ff6b35; font-size:13px; margin-bottom:4px;">Risks</div>
+        <ul style="color:#aaa; font-size:13px; margin:0; padding-left:18px;">
+          <li>六个功能逐一展示，页面较长</li>
+          <li>CTO 可能没耐心看完所有技术细节</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d0d0d; padding:24px; min-height:360px; position:relative; overflow:hidden;">
+      <!-- Approach B: Problem → Solution -->
+      <div style="font-size:11px; color:#555; text-transform:uppercase; letter-spacing:2px; margin-bottom:16px;">Approach B: Problem → Solution Narrative</div>
+
+      <div style="display:flex; flex-direction:column; gap:12px; font-family:'JetBrains Mono',monospace; font-size:12px;">
+
+        <div style="background:rgba(255,198,28,0.08); border-left:3px solid #ffc61c; padding:10px 14px; border-radius:0 6px 6px 0;">
+          <div style="color:#ffc61c; font-weight:600;">1. Hero — Problem Statement + Terminal</div>
+          <div style="color:#888; margin-top:4px;">"Database is slow. Your pager fires." → OpenDB terminal appears, diagnoses in real-time</div>
+          <div style="color:#555; margin-top:2px; font-size:11px;">Emotional hook: every DBA's 3am nightmare</div>
+        </div>
+
+        <div style="background:rgba(126,231,135,0.06); border-left:3px solid #7ee787; padding:10px 14px; border-radius:0 6px 6px 0;">
+          <div style="color:#7ee787; font-weight:600;">2. Before/After — Split Screen</div>
+          <div style="color:#888; margin-top:4px;">Left: Traditional workflow (5 tools, 30 min) → Right: OpenDB (1 command, 2 min)</div>
+        </div>
+
+        <div style="background:rgba(99,102,241,0.08); border-left:3px solid #6366f1; padding:10px 14px; border-radius:0 6px 6px 0;">
+          <div style="color:#6366f1; font-weight:600;">3. Core Capabilities — 3 Pillar Cards</div>
+          <div style="color:#888; margin-top:4px;">Monitor (/dbtop + /sentinel) | Diagnose (/rule + /llm) | Act (/health + skills)</div>
+          <div style="color:#555; margin-top:2px; font-size:11px;">Each pillar: one key metric + one terminal screenshot</div>
+        </div>
+
+        <div style="background:rgba(255,107,53,0.08); border-left:3px solid #ff6b35; padding:10px 14px; border-radius:0 6px 6px 0;">
+          <div style="color:#ff6b35; font-weight:600;">4. Why OpenDB — Value Props Grid</div>
+          <div style="color:#888; margin-top:4px;">Multi-DB | Zero Deps | 273 Rules Offline | AI + Rules Hybrid | 60+ Skills</div>
+        </div>
+
+        <div style="background:rgba(62,207,142,0.08); border-left:3px solid #3ecf8e; padding:10px 14px; border-radius:0 6px 6px 0;">
+          <div style="color:#3ecf8e; font-weight:600;">5. Install + GitHub + CTA</div>
+          <div style="color:#888; margin-top:4px;">One-liner + Star button + "Join the community"</div>
+        </div>
+
+      </div>
+
+      <div style="position:absolute; bottom:12px; right:16px; color:#333; font-size:10px;">~5 sections, problem-driven narrative</div>
+    </div>
+    <div class="card-body">
+      <h3>B. Problem → Solution Narrative</h3>
+      <p><strong>Core idea:</strong> 从 DBA 的痛点切入，展示 OpenDB 如何用一条命令解决传统需要 30 分钟的问题</p>
+
+      <div style="margin-top:12px;">
+        <div style="color:#3ecf8e; font-size:13px; margin-bottom:4px;">Strengths</div>
+        <ul style="color:#aaa; font-size:13px; margin:0; padding-left:18px;">
+          <li>情感共鸣强：DBA 都经历过半夜被叫起来排障</li>
+          <li>Before/After 对比直观震撼</li>
+          <li>CTO 能快速抓住核心价值（降本增效）</li>
+        </ul>
+      </div>
+      <div style="margin-top:10px;">
+        <div style="color:#ff6b35; font-size:13px; margin-bottom:4px;">Risks</div>
+        <ul style="color:#aaa; font-size:13px; margin:0; padding-left:18px;">
+          <li>功能展示不够深入（三个 pillar 压缩了细节）</li>
+          <li>Before/After 对比需要精心设计才不显得老套</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:24px; padding:16px; background:rgba(255,198,28,0.05); border:1px solid rgba(255,198,28,0.15); border-radius:8px;">
+  <p style="margin:0; font-size:14px; color:#ccc;">
+    <strong style="color:#ffc61c;">My recommendation:</strong> Approach A. OpenDB's terminal output is genuinely impressive — it IS the product. Showing real /dbtop dashboards, /llm multi-round diagnosis, and /rule millisecond results creates more "wow" than any marketing copy. The terminal animation in the hero section will be the visual differentiator that no other database tool has.
+  </p>
+</div>

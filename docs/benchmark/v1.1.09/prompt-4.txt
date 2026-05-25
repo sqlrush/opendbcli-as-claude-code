@@ -1,0 +1,52 @@
+── AI 诊断 (auto, 4轮) ──
+## 根因分析
+
+| 指标 | 数据 | 来源工具 |
+|------|------|---------|
+| 归档状态 | archive_mode = **off** | wal, backup |
+| WAL级别 | wal_level = hot_standby | wal, backup |
+| Checkpoint 类型分布 | Buffered: 939 / Requested: 4 | wal |
+| Checkpoint 超时 | 900 秒（15分钟） | wal |
+| 复制槽 | 无 | slots |
+| 系统负载 | LOAD = 0，CPU 极空闲 | os |
+
+**关键结论：WAL 快速增长的主要原因是归档未开启，WAL 无法清理。**
+
+证据链：
+1. `archive_mode = off` + `archive_command = (disabled)` → WAL 写完后不会被归档清理，持续堆积
+2. `wal_level = hot_standby` → 生成比 minimal 级别更多的 WAL（包含备库所需信息）
+3. 939 次 buffered checkpoint vs 仅 4 次 requested checkpoint → **99.6% 的 checkpoint 是 WAL 达到阈值触发**，说明 WAL 生成速度快
+4. 无复制槽 → 排除"复制槽阻塞导致 WAL 堆积"的可能
+
+---
+
+## 根因修复
+
+### 方案 1: 开启 WAL 归档
+```sql
+-- 1. 修改参数
+ALTER SYSTEM SET archive_mode = on;
+ALTER SYSTEM SET archive_command = 'cp %p /archive/wal/%f';  -- 根据实际归档路径修改
+
+-- 2. 重载生效
+SELECT pg_reload_conf();
+
+-- 3. 手动触发一次 checkpoint 清理旧 WAL
+CHECKPOINT;
+```
+
+- **⚠️ 风险评估**: 需确保归档目录有足够空间；archive_command 失败会导致 WAL 堆积
+- **📋 前置检查**: 确认归档目录存在且有写权限
+- **🔄 回滚**: `ALTER SYSTEM SET archive_mode = off; SELECT pg_reload_conf();`
+
+### 方案 2: 调整 checkpoint 参数减少 WAL 堆积
+```sql
+ALTER SYSTEM SET max_wal_size = '4GB';  -- 默认 1GB，增大可减少 checkpoint 频率
+ALTER SYSTEM SET checkpoint_timeout = 300; -- 缩短为 5 分钟
+SELECT pg_reload_conf();
+```
+
+- **⚠️ 风险评估**: max_wal_size 增大会占用更多磁盘空间；checkpoint 更频繁会有 IO 抖动
+- **📋 前置检查**: 确认磁盘空间充足
+- **🔄 回滚**: 恢复原参数值
+
