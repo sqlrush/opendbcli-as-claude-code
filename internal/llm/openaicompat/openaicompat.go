@@ -152,6 +152,7 @@ type oaiRequest struct {
 	Messages    []oaiMessage `json:"messages"`
 	Stream      bool         `json:"stream"`
 	Tools       []any        `json:"tools,omitempty"`
+	ToolChoice  any          `json:"tool_choice,omitempty"`
 	MaxTokens   int          `json:"max_tokens,omitempty"`
 	Temperature *float64     `json:"temperature,omitempty"`
 }
@@ -221,6 +222,7 @@ func (p *Provider) buildRequestBody(req llm.ChatRequest, stream bool) ([]byte, e
 		Messages:    messages,
 		Stream:      stream,
 		Tools:       req.Tools,
+		ToolChoice:  req.ToolChoice,
 		MaxTokens:   req.MaxTokens,
 		Temperature: req.Temperature,
 	}

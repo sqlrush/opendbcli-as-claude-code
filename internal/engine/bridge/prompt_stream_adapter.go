@@ -46,16 +46,6 @@ type promptStreamAdapter struct {
 	pendingText string
 	// finalized is true after we've emitted everything from Finish().
 	finalized bool
-
-	// v1.2.6: Qwen3/DeepSeek thinking 模式输出 `<think>...</think>` 块，
-	// 这些 token 流过来时，不能喂给 StreamingParser（否则 64 字节后会被
-	// 误判为 FormatB，导致后面真的 JSON tool_call 被当成文字 fallback）。
-	// 用一个简单状态机识别 <think>/</think> 标签：think 块**直接 forward**
-	// 给 engine（engine 自己会处理放到 thinking buffer），不进入 parser。
-	inThink bool
-	// pendingThinkOut 在同一 chunk 既含 </think> 又含后续 content 时，
-	// content 已 feed 给 parser，think 段需在下一轮 Next() 返回给 engine。
-	pendingThinkOut string
 }
 
 // newPromptStreamAdapter constructs the adapter with a fresh StreamingParser.
@@ -93,48 +83,35 @@ func (a *promptStreamAdapter) Next() (provider.StreamEvent, error) {
 		a.pendingText = ""
 		return provider.StreamEvent{Type: provider.StreamTextDelta, Content: text}, nil
 	}
-	if a.pendingThinkOut != "" {
-		text := a.pendingThinkOut
-		a.pendingThinkOut = ""
-		return provider.StreamEvent{Type: provider.StreamTextDelta, Content: text}, nil
-	}
 	if a.finalized {
 		return provider.StreamEvent{Type: provider.StreamDone, FinishReason: "stop"}, nil
 	}
 
 	for {
 		ev, err := a.inner.Next()
-		// v1.2.6: legacy stream (openaicompat) 在 finish_reason chunk 同时返回
-		// StreamDone event + io.EOF error。如果直接 return，parser.Finish 永
-		// 远不被调用，buffered JSON tool_calls 整段丢失。把 err 时仍把
-		// StreamDone 走进入 case 流程，让 Finish 把 calls 取出来。
-		if err != nil && ev.Type != provider.StreamDone {
+		if err != nil {
 			return ev, err
 		}
 		switch ev.Type {
 		case provider.StreamTextDelta:
-			thinkOut, parseIn := a.splitThinkAndContent(ev.Content)
-			if parseIn != "" {
-				textForUser, _ := a.parser.Feed(parseIn)
-				if textForUser != "" {
-					if thinkOut != "" {
-						a.pendingThinkOut = thinkOut
-					}
-					return provider.StreamEvent{Type: provider.StreamTextDelta, Content: textForUser}, nil
-				}
+			textForUser, _ := a.parser.Feed(ev.Content)
+			if textForUser != "" {
+				return provider.StreamEvent{Type: provider.StreamTextDelta, Content: textForUser}, nil
 			}
-			if thinkOut != "" {
-				return provider.StreamEvent{Type: provider.StreamTextDelta, Content: thinkOut}, nil
-			}
+			// Format A buffering — silently consume, keep reading.
 			continue
 
 		case provider.StreamThinkingDelta:
+			// Pass through unchanged (thinking content is independent of FC).
 			return ev, nil
 
 		case provider.StreamToolCallDelta:
+			// Hybrid backend slipped a native tool_call through despite
+			// prompt mode — just forward it.
 			return ev, nil
 
 		case provider.StreamDone:
+			// Finalize parser, emit pending events.
 			calls, text, _, _ := a.parser.Finish()
 			a.finalized = true
 			if len(calls) > 0 {
@@ -161,63 +138,4 @@ func (a *promptStreamAdapter) Next() (provider.StreamEvent, error) {
 // Close releases the underlying stream.
 func (a *promptStreamAdapter) Close() error {
 	return a.inner.Close()
-}
-
-// splitThinkAndContent 把一个 chunk 拆成两部分：
-//
-//	thinkOut: <think>...</think> 内（含标签自身）的文字，forward 给 engine
-//	parseIn:  think 外的真实 content，喂给 parser
-//
-// 单 chunk 内可能跨标签（"foo</think>\n{\"tool_calls\":...", 含闭合标签+JSON 开始），
-// 用状态机识别。a.inThink / a.tagBuf 维持跨 chunk 状态。
-func (a *promptStreamAdapter) splitThinkAndContent(delta string) (thinkOut, parseIn string) {
-	// 简化策略：用 strings.Index 扫描 <think> 和 </think> 标签
-	// （Qwen3/DeepSeek 都用这俩闭合标签，标签本身不会跨 byte 分割）
-	s := delta
-	for s != "" {
-		if a.inThink {
-			idx := indexOfClose(s)
-			if idx < 0 {
-				// 整段都在 think 内 → 全部 forward 为 think 文字
-				thinkOut += s
-				return
-			}
-			// 找到 </think>，结束 think 段
-			thinkOut += s[:idx+len("</think>")]
-			a.inThink = false
-			s = s[idx+len("</think>"):]
-			continue
-		}
-		idx := indexOfOpen(s)
-		if idx < 0 {
-			// 没有 <think>，全段进 parser
-			parseIn += s
-			return
-		}
-		// 找到 <think>，进入 think 状态
-		parseIn += s[:idx]
-		thinkOut += s[idx : idx+len("<think>")]
-		a.inThink = true
-		s = s[idx+len("<think>"):]
-	}
-	return
-}
-
-func indexOfOpen(s string) int {
-	// 不区分大小写不必要：Qwen3 输出固定小写 <think>
-	for i := 0; i+7 <= len(s); i++ {
-		if s[i] == '<' && s[i:i+7] == "<think>" {
-			return i
-		}
-	}
-	return -1
-}
-
-func indexOfClose(s string) int {
-	for i := 0; i+8 <= len(s); i++ {
-		if s[i] == '<' && s[i:i+8] == "</think>" {
-			return i
-		}
-	}
-	return -1
 }

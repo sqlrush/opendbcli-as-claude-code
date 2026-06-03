@@ -44,13 +44,13 @@ const (
 
 // Regex patterns for markdown element detection.
 var (
-	mdHeaderRe       = regexp.MustCompile(`^(#{1,4})\s+(.+)$`)
-	mdCodeStartRe    = regexp.MustCompile("^\\s*```(\\w*)\\s*$")
-	mdBulletRe       = regexp.MustCompile(`^(\s*)[-*]\s+(.+)$`)
-	mdNumberedRe     = regexp.MustCompile(`^(\s*)(\d+)\.\s+(.+)$`)
-	mdBoldRe         = regexp.MustCompile(`\*\*([^*]+)\*\*`)
-	mdMetricRe       = regexp.MustCompile(`(\d+[\d.]*)\s*(?:→|->)\s*(\d+[\d.]*)`)
-	mdSQLIDRe        = regexp.MustCompile(`[A-Za-z0-9]{13}`)
+	mdHeaderRe     = regexp.MustCompile(`^(#{1,4})\s+(.+)$`)
+	mdCodeStartRe  = regexp.MustCompile("^\\s*```(\\w*)\\s*$")
+	mdBulletRe     = regexp.MustCompile(`^(\s*)[-*]\s+(.+)$`)
+	mdNumberedRe   = regexp.MustCompile(`^(\s*)(\d+)\.\s+(.+)$`)
+	mdBoldRe       = regexp.MustCompile(`\*\*([^*]+)\*\*`)
+	mdMetricRe     = regexp.MustCompile(`(\d+[\d.]*)\s*(?:→|->)\s*(\d+[\d.]*)`)
+	mdSQLIDRe      = regexp.MustCompile(`[A-Za-z0-9]{13}`)
 	mdInlineCodeRe   = regexp.MustCompile("`([^`]+)`")
 	mdSlashCmdLineRe = regexp.MustCompile(`^\s*/[a-zA-Z][\w-]*\s*.*$`)
 )
@@ -340,10 +340,13 @@ func (f *diagStreamFormatter) renderCodeBlock(b *strings.Builder) {
 		}
 	}
 
+	// Apply syntax highlighting if a language is specified.
+	highlighted := highlightCode(f.codeLang, f.codeLines)
+
 	const leftPad = "  "
 	const borderExtra = 4 // "│ " prefix + " │" suffix
 
-	// Compute widest content line before wrapping.
+	// Compute widest content line (use raw lines for width, highlighted for display).
 	maxContent := 0
 	for _, l := range f.codeLines {
 		w := displayWidth(l)
@@ -386,15 +389,18 @@ func (f *diagStreamFormatter) renderCodeBlock(b *strings.Builder) {
 	}
 	b.WriteString(fmt.Sprintf("%s%s┌%s┐%s\n", leftPad, ansiDim, header+strings.Repeat("─", remaining), ansiReset))
 
-	renderLines := wrapCodeBlockLines(f.codeLines, innerWidth)
-	highlighted := highlightCode(f.codeLang, renderLines)
-
-	for i, raw := range renderLines {
+	for i, raw := range f.codeLines {
 		rawW := displayWidth(raw)
 		// Use highlighted version if available, otherwise raw.
 		display := raw
 		if i < len(highlighted) {
 			display = highlighted[i]
+		}
+		// Truncate if wider than innerWidth (use raw width for measurement).
+		if rawW > innerWidth {
+			// Fall back to raw truncation when highlighted (ANSI complicates truncation).
+			display = truncateToWidth(raw, innerWidth-2) + ".."
+			rawW = displayWidth(display)
 		}
 		pad := innerWidth - rawW
 		if pad < 0 {
@@ -409,35 +415,12 @@ func (f *diagStreamFormatter) renderCodeBlock(b *strings.Builder) {
 	b.WriteString(fmt.Sprintf("%s%s└%s┘%s\n", leftPad, ansiDim, strings.Repeat("─", innerWidth+2), ansiReset))
 }
 
-func wrapCodeBlockLines(lines []string, width int) []string {
-	if width <= 0 {
-		return append([]string(nil), lines...)
-	}
-	out := make([]string, 0, len(lines))
-	for _, line := range lines {
-		if displayWidth(line) <= width {
-			out = append(out, line)
-			continue
-		}
-		wrapped := wrapLineToWidth(line, width)
-		if len(wrapped) == 0 {
-			out = append(out, line)
-			continue
-		}
-		out = append(out, wrapped...)
-	}
-	return out
-}
-
 // highlightCode applies chroma syntax highlighting to code lines.
 // Returns ANSI-colored lines parallel to input. Falls back to raw lines
 // if the language is unknown or highlighting fails.
 func highlightCode(lang string, lines []string) []string {
 	if len(lines) == 0 {
 		return lines
-	}
-	if strings.EqualFold(lang, "plan") {
-		return highlightPlanRefs(lines)
 	}
 
 	// Find lexer by language name.
@@ -479,15 +462,6 @@ func highlightCode(lang string, lines []string) []string {
 	}
 
 	return strings.Split(buf.String(), "\n")
-}
-
-func highlightPlanRefs(lines []string) []string {
-	out := make([]string, len(lines))
-	re := regexp.MustCompile(`\[(P[0-9]+)\]`)
-	for i, line := range lines {
-		out[i] = re.ReplaceAllString(line, ansiBoldGreen+"[$1]"+ansiReset)
-	}
-	return out
 }
 
 // tokenToANSI converts a chroma token type to an ANSI escape sequence

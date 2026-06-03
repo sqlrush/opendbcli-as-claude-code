@@ -20,17 +20,21 @@ package monitor
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/sqlrush/opendb/internal/config"
 	"github.com/sqlrush/opendb/internal/diagtrace"
+	"github.com/sqlrush/opendb/internal/model"
 	"github.com/sqlrush/opendb/internal/skill"
 	"github.com/sqlrush/opendb/internal/trace"
+	"github.com/sqlrush/opendb/internal/version"
 )
 
 // TraceSkill captures OS-level stack traces and generates flame graphs for
@@ -195,9 +199,17 @@ func (s *TraceSkill) Execute(ctx context.Context, params skill.Params) (*skill.R
 // DiagTraceSkill shows DBAA diagnosis-chain traces (router, tool calls, LLM
 // rounds). It is intentionally separate from /trace, which profiles the local
 // database OS process. /trace last/history remain compatibility aliases.
-type DiagTraceSkill struct{}
+type DiagTraceSkill struct {
+	modelMgr *model.Manager
+}
 
-func NewDiagTraceSkill() *DiagTraceSkill { return &DiagTraceSkill{} }
+func NewDiagTraceSkill(managers ...*model.Manager) *DiagTraceSkill {
+	var mgr *model.Manager
+	if len(managers) > 0 {
+		mgr = managers[0]
+	}
+	return &DiagTraceSkill{modelMgr: mgr}
+}
 
 func (s *DiagTraceSkill) Name() string                       { return "diagtrace" }
 func (s *DiagTraceSkill) Description() string                { return "DBAA 诊断链路 trace (路由/工具/LLM)" }
@@ -212,7 +224,7 @@ func (s *DiagTraceSkill) ToolDef() skill.ToolDef {
 			"properties": map[string]any{
 				"args": map[string]any{
 					"type":        "string",
-					"description": "last|history [N] [--json]，默认 last",
+					"description": "默认显示最近一次详情；list 显示最近10次摘要；数字编号显示对应历史详情；export 导出证据包；支持 --json",
 				},
 			},
 		},
@@ -222,27 +234,38 @@ func (s *DiagTraceSkill) ToolDef() skill.ToolDef {
 func (s *DiagTraceSkill) CLIDef() skill.CLIDef {
 	return skill.CLIDef{
 		Command:  "diagtrace",
-		Usage:    "/diagtrace [last|history] [N] [--json]",
-		Examples: []string{"/diagtrace", "/diagtrace last", "/diagtrace last --json", "/diagtrace history", "/diagtrace history 20"},
+		Usage:    "/diagtrace [list|编号|last|history|export] [N] [--json]",
+		Examples: []string{"/diagtrace", "/diagtrace list", "/diagtrace 1", "/diagtrace 2 --json", "/diagtrace history 20", "/diagtrace export", "/diagtrace export --json"},
 	}
 }
 
 func (s *DiagTraceSkill) Validate(params skill.Params) error {
 	arg := strings.ToLower(strings.TrimSpace(params.StringOr("args", "")))
-	if arg == "" || isTraceLastArg(arg) || isTraceHistoryArg(arg) {
+	if arg == "" || isTraceLastArg(arg) || isTraceHistoryArg(arg) || isTraceExportArg(arg) || diagtraceNumericArg(arg) > 0 {
 		return nil
 	}
-	return fmt.Errorf("用法: /diagtrace [last|history] [N] [--json]")
+	return fmt.Errorf("用法: /diagtrace [list|编号|last|history|export] [N] [--json]")
 }
 
 func (s *DiagTraceSkill) Execute(ctx context.Context, params skill.Params) (*skill.Result, error) {
 	arg := strings.ToLower(strings.TrimSpace(params.StringOr("args", "")))
+	if isTraceExportArg(arg) {
+		rendered, data := s.exportDiagTrace(arg)
+		return &skill.Result{Type: skill.ResultText, Data: data, Rendered: rendered, Summary: "diagnosis trace export"}, nil
+	}
 	if arg == "" || isTraceLastArg(arg) {
 		rendered := diagtrace.RenderLast()
 		if traceJSON(arg) {
 			rendered = diagtrace.RenderLastJSON()
 		}
 		return &skill.Result{Type: skill.ResultText, Rendered: rendered, Summary: "diagnosis trace last"}, nil
+	}
+	if idx := diagtraceNumericArg(arg); idx > 0 {
+		rendered := diagtrace.RenderHistoryDetail(idx)
+		if traceJSON(arg) {
+			rendered = diagtrace.RenderHistoryDetailJSON(idx)
+		}
+		return &skill.Result{Type: skill.ResultText, Rendered: rendered, Summary: fmt.Sprintf("diagnosis trace #%d", idx)}, nil
 	}
 	rendered := diagtrace.RenderHistory(traceHistoryLimit(arg))
 	if traceJSON(arg) {
@@ -263,6 +286,153 @@ func isTraceLastArg(arg string) bool {
 func isTraceHistoryArg(arg string) bool {
 	fields := strings.Fields(arg)
 	return len(fields) > 0 && (fields[0] == "history" || fields[0] == "list")
+}
+
+func isTraceExportArg(arg string) bool {
+	fields := strings.Fields(arg)
+	return len(fields) > 0 && fields[0] == "export"
+}
+
+type diagTraceExportSummary struct {
+	Status string `json:"status"`
+	File   string `json:"file,omitempty"`
+	Format string `json:"format"`
+	Events int    `json:"events"`
+	Size   int    `json:"size"`
+	Error  string `json:"error,omitempty"`
+}
+
+func (s *DiagTraceSkill) exportDiagTrace(arg string) (string, diagTraceExportSummary) {
+	limit := traceHistoryLimit(arg)
+	events := diagtrace.History(limit)
+	last, hasLast := diagtrace.Last()
+	bundle := map[string]any{
+		"version": map[string]any{
+			"string":     version.String(),
+			"version":    version.Version,
+			"commit":     version.GitCommit,
+			"build_date": version.BuildDate,
+		},
+		"model":             s.exportModel(),
+		"diagtrace_last":    nil,
+		"diagtrace_history": events,
+		"modeltest_last":    diagtrace.LastModelTest(),
+		"tooltest_last":     diagtrace.LastToolTest(),
+		"routetest_last":    diagtrace.LastRouteTest(),
+		"runtime": map[string]any{
+			"os":          runtime.GOOS,
+			"arch":        runtime.GOARCH,
+			"time":        time.Now().Format(time.RFC3339),
+			"opendb_dir":  config.DefaultOpenDBDir(),
+			"history_len": len(events),
+		},
+	}
+	if hasLast {
+		bundle["diagtrace_last"] = last
+	}
+	data, err := json.MarshalIndent(bundle, "", "  ")
+	summary := diagTraceExportSummary{Status: "ok", Format: "json", Events: len(events), Size: len(data)}
+	if err != nil {
+		summary.Status = "error"
+		summary.Error = err.Error()
+		return renderDiagTraceExport(summary), summary
+	}
+	dir := filepath.Join(config.DefaultOpenDBDir(), "diagtrace", "exports")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		summary.Status = "error"
+		summary.Error = err.Error()
+		return renderDiagTraceExport(summary), summary
+	}
+	path := filepath.Join(dir, "dbaa-diagtrace-"+time.Now().Format("20060102-150405")+".json")
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		summary.Status = "error"
+		summary.Error = err.Error()
+		return renderDiagTraceExport(summary), summary
+	}
+	summary.File = path
+	if traceJSON(arg) {
+		out, err := json.MarshalIndent(summary, "", "  ")
+		if err == nil {
+			return string(out), summary
+		}
+	}
+	return renderDiagTraceExport(summary), summary
+}
+
+func (s *DiagTraceSkill) exportModel() map[string]any {
+	out := map[string]any{}
+	if s.modelMgr == nil {
+		return out
+	}
+	p := s.modelMgr.Active()
+	if p == nil {
+		out["active"] = ""
+		out["status"] = "no active model"
+		return out
+	}
+	out["active"] = p.Name
+	out["provider"] = p.Provider
+	out["vendor"] = p.DisplayVendor()
+	out["base_url"] = p.BaseURL
+	out["model"] = p.Model
+	out["tool_mode"] = p.ToolMode
+	out["capability"] = p.Capability
+	out["strip_think"] = p.StripThink
+	if p.APIKey != "" {
+		out["api_key"] = "***"
+	}
+	return out
+}
+
+func renderDiagTraceExport(summary diagTraceExportSummary) string {
+	var b strings.Builder
+	b.WriteString("DiagTrace Export\n\n")
+	writeTraceExportKV(&b, "status", summary.Status)
+	if summary.File != "" {
+		writeTraceExportKV(&b, "file", summary.File)
+	}
+	writeTraceExportKV(&b, "format", summary.Format)
+	writeTraceExportKV(&b, "events", fmt.Sprintf("%d", summary.Events))
+	writeTraceExportKV(&b, "size", fmt.Sprintf("%dB", summary.Size))
+	if summary.Error != "" {
+		writeTraceExportKV(&b, "error", summary.Error)
+	}
+	if summary.Status == "ok" {
+		b.WriteString("\nincluded:\n")
+		for _, item := range []string{
+			"dbaa/opendb version",
+			"active model config with api_key masked",
+			"last diagtrace",
+			"diagtrace history",
+			"recent modeltest/tooltest/routetest results",
+			"runtime summary",
+		} {
+			b.WriteString("- " + item + "\n")
+		}
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func writeTraceExportKV(b *strings.Builder, key, value string) {
+	if strings.TrimSpace(value) == "" {
+		return
+	}
+	b.WriteString(key + ": " + value + "\n")
+}
+
+func diagtraceNumericArg(arg string) int {
+	fields := strings.Fields(arg)
+	if len(fields) == 0 {
+		return 0
+	}
+	if fields[0] == "show" && len(fields) > 1 {
+		fields = fields[1:]
+	}
+	n, err := strconv.Atoi(fields[0])
+	if err != nil || n <= 0 || n > 100 {
+		return 0
+	}
+	return n
 }
 
 func traceJSON(arg string) bool {

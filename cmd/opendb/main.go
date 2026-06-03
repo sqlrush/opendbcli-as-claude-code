@@ -211,6 +211,7 @@ func main() {
 		return true, nil
 	})
 	executor := skill.NewExecutor(registry, guard)
+	registry.Register(shared.NewToolTestSkill(registry, executor))
 
 	// Register AI skills from each product — store per-DB type for dynamic resolution.
 	sentinelMap := make(map[string]ui.SentinelAlertSource)
@@ -267,6 +268,7 @@ func registerSharedSkills(
 	registry.Register(shared.NewLogoutSkill(connMgr))
 	registry.Register(shared.NewConnSkill(connMgr))
 	registry.Register(shared.NewModelSkill(modelMgr))
+	registry.Register(shared.NewModelTestSkill(modelMgr))
 	registry.Register(odberr.NewErrorSkill())
 
 	// Policy skill — uses closures to get dynamic baseDir and instance name

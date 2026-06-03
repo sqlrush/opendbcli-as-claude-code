@@ -437,9 +437,6 @@ func renderConfigWithComments(cfg config.Config) string {
 			if m.Description != "" {
 				b.WriteString(fmt.Sprintf("    description: %s\n", m.Description))
 			}
-			if m.ToolMode != "" {
-				b.WriteString(fmt.Sprintf("    tool_mode: %s\n", m.ToolMode))
-			}
 		}
 	} else {
 		b.WriteString("models: []\n")

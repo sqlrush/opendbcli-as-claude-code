@@ -60,8 +60,8 @@ type FilterContext = provider.FilterContext
 // Tools from all matching scenes are unioned and combined with an
 // always-available "fallback" set.
 type SceneBasedFilter struct {
-	scenes []Scene
-	always []string // tool names always included regardless of scene
+	scenes  []Scene
+	always  []string // tool names always included regardless of scene
 }
 
 // Scene defines a named cluster of tools and the keywords that trigger it.
@@ -82,13 +82,13 @@ func NewSceneBasedFilter(scenes []Scene, alwaysAvailable []string) *SceneBasedFi
 // the input order (so prompt cache hits on consistent ordering).
 //
 // Selection logic:
-//  1. Start with empty active set
-//  2. Match scenes against ctx.UserMessage → union their Tools
-//  3. Add any tool names in ctx.LastToolCalls (LLM might re-query)
-//  4. Add f.always (fallback tools always present)
-//  5. Filter allTools to those in the active set
-//  6. If active set ended up empty (no triggers matched), return allTools
-//     unchanged — better wide than miss.
+//   1. Start with empty active set
+//   2. Match scenes against ctx.UserMessage → union their Tools
+//   3. Add any tool names in ctx.LastToolCalls (LLM might re-query)
+//   4. Add f.always (fallback tools always present)
+//   5. Filter allTools to those in the active set
+//   6. If active set ended up empty (no triggers matched), return allTools
+//      unchanged — better wide than miss.
 func (f *SceneBasedFilter) Filter(allTools []provider.ToolSchema, ctx FilterContext) []provider.ToolSchema {
 	if len(allTools) == 0 {
 		return allTools
@@ -164,20 +164,20 @@ func DefaultScenes() []Scene {
 		},
 		{
 			Name:     "cluster_diag",
-			Triggers: []string{"当前数据库", "有哪些问题", "有没有问题", "存在什么问题", "数据库慢", "出问题", "异常", "卡", "死锁", "性能", "响应慢", "诊断", "排查", "慢查询", "连接数", "锁等待", "阻塞", "cpu", "内存", "i/o", "io等待", "io wait"},
+			Triggers: []string{"数据库慢", "出问题", "卡", "死锁", "性能", "响应慢", "诊断", "排查", "慢查询"},
 			Tools: []string{
 				"health", "alert", "activesessions", "waits",
-				"blocktree", "topsql", "slowsql", "locks",
+				"blocktree", "topsql", "slowsql", "lockwait",
 			},
 		},
 		{
 			Name:     "wdr_analysis",
-			Triggers: []string{"wdr", "awr", "报告", "snapshot", "快照", "快照分析", "wdr报告", "wdr列表", "快照列表"},
-			Tools:    []string{"wdr", "wdranalyze", "wdr_snapshot"},
+			Triggers: []string{"wdr", "awr", "报告", "snapshot", "快照分析"},
+			Tools:    []string{"wdranalyze", "wdr_snapshot"},
 		},
 		{
 			Name:     "memory_io",
-			Triggers: []string{"内存", "缓存", "命中率", "i/o", "io等待", "io wait", "buffer", "shared_buffers", "work_mem"},
+			Triggers: []string{"内存", "缓存", "命中率", "io", "buffer", "shared_buffers", "work_mem"},
 			Tools:    []string{"health", "params", "objstats", "topio"},
 		},
 		{

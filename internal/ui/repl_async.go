@@ -22,7 +22,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/sqlrush/opendb/internal/dispatch"
@@ -67,7 +66,6 @@ func (r *REPL) startDiagAsync(input string) {
 	r.diagRunning = true
 	ch := make(chan DiagProgressEvent, 256)
 	r.diagCh = ch
-	var progressFinished atomic.Bool
 
 	// Resolve the DiagnoseSkill for the currently active database.
 	// r.diagSkill may hold the wrong product's instance (last registered),
@@ -95,9 +93,6 @@ func (r *REPL) startDiagAsync(input string) {
 		default:
 			return
 		}
-		if p == DiagPhaseDone || p == DiagPhaseError {
-			progressFinished.Store(true)
-		}
 		ev := DiagProgressEvent{Phase: p, Message: message, Elapsed: elapsed, Result: result, Err: err}
 		ch <- ev
 	})
@@ -119,10 +114,8 @@ func (r *REPL) startDiagAsync(input string) {
 			if ctx.Err() == context.Canceled {
 				errMsg = "诊断已取消 (Ctrl+C)"
 			}
-			if !progressFinished.Load() {
-				ch <- DiagProgressEvent{Phase: DiagPhaseError, Err: fmt.Errorf("%s", errMsg)}
-			}
-		} else if !progressFinished.Load() {
+			ch <- DiagProgressEvent{Phase: DiagPhaseError, Err: fmt.Errorf("%s", errMsg)}
+		} else {
 			ch <- DiagProgressEvent{Phase: DiagPhaseDone, Result: result}
 		}
 	})
@@ -218,3 +211,4 @@ func (r *REPL) handleEnterSync(input string) {
 	}
 	r.writeOutputLine("")
 }
+

@@ -23,7 +23,6 @@ import (
 	"fmt"
 
 	"github.com/sqlrush/opendb/internal/db"
-	"github.com/sqlrush/opendb/internal/format"
 	"github.com/sqlrush/opendb/internal/skill"
 )
 
@@ -72,22 +71,15 @@ func (s *WDRSkill) Execute(ctx context.Context, _ skill.Params) (*skill.Result, 
 		}, nil
 	}
 
-	guide := "\n生成对比报告: /wdranalyze <begin_snap> <end_snap>"
+	guide := "\n生成对比报告: SELECT generate_wdr_report(<begin_snap>, <end_snap>, 1, 'all', 'cluster');"
 	rows := 0
 	if result != nil {
 		rows = len(result.Rows)
 	}
-
-	rendered := fmt.Sprintf("WDR 快照 — %d 条", rows)
-	if rows > 0 {
-		rendered += "\n\n" + format.FormatTableOpts(result, format.TableOptions{MaxRows: 20, TermWidth: 120})
-	}
-	rendered += guide
-
 	return &skill.Result{
-		Type:     skill.ResultText,
+		Type:     skill.ResultTable,
 		Data:     result,
-		Rendered: rendered,
+		Rendered: fmt.Sprintf("WDR 快照 — %d 条%s", rows, guide),
 		Summary:  fmt.Sprintf("%d WDR snapshots", rows),
 	}, nil
 }

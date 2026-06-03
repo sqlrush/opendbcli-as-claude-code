@@ -33,6 +33,7 @@ type ToolCall struct {
 type ChatRequest struct {
 	Messages    []Message
 	Tools       []any
+	ToolChoice  any
 	MaxTokens   int
 	Temperature *float64
 }
@@ -54,7 +55,7 @@ type Usage struct {
 type StreamEventType uint8
 
 const (
-	StreamTextDelta     StreamEventType = iota
+	StreamTextDelta StreamEventType = iota
 	StreamToolCallDelta
 	StreamDone
 )

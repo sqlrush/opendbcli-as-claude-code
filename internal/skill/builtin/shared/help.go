@@ -34,8 +34,8 @@ func NewHelpSkill(registry *skill.Registry) *HelpSkill {
 	return &HelpSkill{registry: registry}
 }
 
-func (s *HelpSkill) Name() string        { return "help" }
-func (s *HelpSkill) Description() string  { return "List available commands" }
+func (s *HelpSkill) Name() string                       { return "help" }
+func (s *HelpSkill) Description() string                { return "List available commands" }
 func (s *HelpSkill) SecurityLevel() skill.SecurityLevel { return skill.LevelReadOnly }
 
 func (s *HelpSkill) ToolDef() skill.ToolDef {
@@ -164,8 +164,8 @@ func (s *HelpSkill) Execute(_ context.Context, params skill.Params) (*skill.Resu
 		{"SQL 分析", []string{"slowsql", "topsql", "explain", "sql", "awr", "ash", "planhistory"}, false},
 		{"内存/存储", []string{"sga", "pga", "space", "tempsess", "undosess", "sortusage", "redo", "fra", "asm", "segments", "os"}, false},
 		{"管理", []string{"kill", "alter", "resize", "gather", "jobs", "resource", "alert", "backup", "standby", "params", "scheduler"}, false},
-		{"AI 诊断", []string{"llm", "rule", "sentinel", "ora"}, true},
-		{"系统", []string{"login", "logout", "conn", "users", "help", "clear", "history", "config", "model", "policy"}, false},
+		{"AI 诊断", []string{"llm", "rule", "sentinel", "ora", "routetest"}, true},
+		{"系统", []string{"login", "logout", "conn", "users", "help", "clear", "history", "config", "model", "modeltest", "tooltest", "policy"}, false},
 		{"Schema", []string{"tableinfo", "indexadvise"}, false},
 	}
 
@@ -278,63 +278,66 @@ var helpDescCN = map[string]string{
 	"mutexes":        "Mutex 争用",
 	"dbtop":          "实时性能监控面板",
 	// SQL
-	"slowsql":        "慢 SQL 查询 (默认 1000ms)",
-	"topsql":         "Top SQL (按执行时间/逻辑读等排序)",
-	"explain":        "SQL 执行计划",
-	"sql":            "执行自定义 SQL",
+	"slowsql": "慢 SQL 查询 (默认 1000ms)",
+	"topsql":  "Top SQL (按执行时间/逻辑读等排序)",
+	"explain": "SQL 执行计划",
+	"sql":     "执行自定义 SQL",
 	// 内存/存储
-	"sga":            "SGA 内存详情",
-	"pga":            "PGA 内存详情",
-	"space":          "表空间使用率",
-	"tempsess":       "临时空间占用会话",
-	"undosess":       "Undo 占用会话",
-	"sortusage":      "排序段使用详情",
-	"redo":           "Redo 日志状态",
-	"fra":            "FRA 使用详情",
-	"asm":            "ASM 磁盘组",
+	"sga":       "SGA 内存详情",
+	"pga":       "PGA 内存详情",
+	"space":     "表空间使用率",
+	"tempsess":  "临时空间占用会话",
+	"undosess":  "Undo 占用会话",
+	"sortusage": "排序段使用详情",
+	"redo":      "Redo 日志状态",
+	"fra":       "FRA 使用详情",
+	"asm":       "ASM 磁盘组",
 	// 管理
-	"kill":           "终止会话",
-	"alter":          "修改系统参数 (无值时安全检测)",
-	"resize":         "表空间扩容",
-	"jobs":           "调度作业状态",
-	"resource":       "资源限制使用",
-	"alert":          "近期 Alert Log",
-	"backup":         "备份历史",
-	"standby":        "Data Guard 状态",
-	"params":         "搜索 Oracle 参数",
+	"kill":     "终止会话",
+	"alter":    "修改系统参数 (无值时安全检测)",
+	"resize":   "表空间扩容",
+	"jobs":     "调度作业状态",
+	"resource": "资源限制使用",
+	"alert":    "近期 Alert Log",
+	"backup":   "备份历史",
+	"standby":  "Data Guard 状态",
+	"params":   "搜索 Oracle 参数",
 	// AI
-	"llm":            "数据库诊断 (规则 + AI)",
-	"rule":           "规则引擎诊断 (265条规则, 无需LLM)",
-	"sentinel":       "哨兵监控控制",
-	"ora":            "ORA 错误诊断知识库 (60+条)",
+	"llm":      "数据库诊断 (规则 + AI)",
+	"rule":     "规则引擎诊断 (265条规则, 无需LLM)",
+	"sentinel": "哨兵监控控制",
+	"ora":      "ORA 错误诊断知识库 (60+条)",
 	// 系统
-	"login":          "连接数据库",
-	"logout":         "断开连接",
-	"conn":           "显示当前连接信息",
-	"help":           "显示帮助",
-	"clear":          "清屏",
-	"history":        "查看命令历史",
-	"config":         "查看/修改配置",
+	"login":   "连接数据库",
+	"logout":  "断开连接",
+	"conn":    "显示当前连接信息",
+	"help":    "显示帮助",
+	"clear":   "清屏",
+	"history": "查看命令历史",
+	"config":  "查看/修改配置",
 	// Schema
-	"tableinfo":      "表结构信息",
-	"indexadvise":    "索引建议",
+	"tableinfo":   "表结构信息",
+	"indexadvise": "索引建议",
 	// 新增
-	"awr":            "AWR 快照分析",
-	"ash":            "ASH 活跃会话采样分析",
-	"planhistory":    "SQL 执行计划历史 (检测计划回退)",
-	"segments":       "段空间分析 (Top 表/索引)",
-	"os":             "操作系统指标 (CPU/内存/IO)",
+	"awr":         "AWR 快照分析",
+	"ash":         "ASH 活跃会话采样分析",
+	"planhistory": "SQL 执行计划历史 (检测计划回退)",
+	"segments":    "段空间分析 (Top 表/索引)",
+	"os":          "操作系统指标 (CPU/内存/IO)",
 	// 性能快照
-	"perfsnap":       "性能快照对比 (智能 AWR)",
+	"perfsnap": "性能快照对比 (智能 AWR)",
 	// 巡检调度
-	"scheduler":      "定时巡检引擎 (start/stop/status/run/history)",
+	"scheduler": "定时巡检引擎 (start/stop/status/run/history)",
 	// Phase 3/4 新增
-	"gather":         "统计信息收集 (check/run)",
-	"indexhealth":    "索引健康检查 (UNUSABLE/碎片/未使用)",
-	"users":          "用户账户与密码过期检查",
-	"model":          "LLM 模型管理 (切换/添加)",
-	"policy":         "诊断规范管理 (导入/查看/删除)",
-	"license":        "许可证和试用状态",
+	"gather":      "统计信息收集 (check/run)",
+	"indexhealth": "索引健康检查 (UNUSABLE/碎片/未使用)",
+	"users":       "用户账户与密码过期检查",
+	"model":       "LLM 模型管理 (切换/添加)",
+	"modeltest":   "测试当前 LLM 模型连通性",
+	"tooltest":    "直接测试只读工具执行",
+	"routetest":   "预判问题路由/工具调用路径",
+	"policy":      "诊断规范管理 (导入/查看/删除)",
+	"license":     "许可证和试用状态",
 }
 
 // detailedHelp 提供各命令的详细帮助文档。

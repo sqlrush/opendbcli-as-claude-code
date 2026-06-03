@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/sqlrush/opendb/internal/engine/provider"
@@ -127,17 +126,6 @@ func (p *Policy) ClassifyError(err error) RetryInfo {
 
 	var httpErr *provider.HTTPError
 	if !errors.As(err, &httpErr) {
-		msg := strings.ToLower(err.Error())
-		if strings.Contains(msg, "exceed_context_size") ||
-			strings.Contains(msg, "exceeds the available context size") ||
-			strings.Contains(msg, "context size") ||
-			strings.Contains(msg, "context length") {
-			info.IsContextTooLong = true
-			return info
-		}
-		if strings.Contains(msg, "http 400") {
-			return info
-		}
 		// Non-HTTP error (network timeout, connection refused, etc.)
 		if p.capability != nil && p.capability.IsLocal {
 			return info // Local: don't retry network errors (model may be thinking)

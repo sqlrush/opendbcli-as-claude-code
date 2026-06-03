@@ -28,12 +28,12 @@ import (
 // ModelProfile defines a named LLM endpoint, analogous to a database connection.
 type ModelProfile struct {
 	Name        string `yaml:"name"`
-	Provider    string `yaml:"provider"`         // "ollama" | "openai" — implementation selector
-	Vendor      string `yaml:"vendor,omitempty"` // display name: "MiniMax" | "Moonshot" | "Anthropic"
+	Provider    string `yaml:"provider"`              // "ollama" | "openai" — implementation selector
+	Vendor      string `yaml:"vendor,omitempty"`      // display name: "MiniMax" | "Moonshot" | "Anthropic"
 	BaseURL     string `yaml:"base_url"`
 	Model       string `yaml:"model"`
-	Capability  string `yaml:"capability,omitempty"`  // "small" | "large"
-	APIKey      string `yaml:"api_key,omitempty"`     // supports ${ENV_VAR}
+	Capability  string `yaml:"capability,omitempty"`   // "small" | "large"
+	APIKey      string `yaml:"api_key,omitempty"`      // supports ${ENV_VAR}
 	StripThink  bool   `yaml:"strip_think,omitempty"` // strip <think>...</think> from response
 	Description string `yaml:"description,omitempty"`
 	// ToolMode controls how function calling is delivered to the LLM.
@@ -46,8 +46,8 @@ type ModelProfile struct {
 	//     this for LLMs/deployments that don't expose native FC (Qwen3 on
 	//     older vLLM, gateways that strip the tools parameter, etc.).
 	//   "auto": (v1.2.1+) probe once and cache.
-	ToolMode string `yaml:"tool_mode,omitempty"`
-	Group    string `yaml:"-"` // set from parent file
+	ToolMode    string `yaml:"tool_mode,omitempty"`
+	Group       string `yaml:"-"` // set from parent file
 }
 
 // DisplayVendor returns Vendor if set, otherwise falls back to Provider.

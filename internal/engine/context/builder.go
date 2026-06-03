@@ -44,7 +44,7 @@ type BuildInput struct {
 	// concrete output patterns to fill (since smaller models can't internalize
 	// abstract rules as well). Empty string falls back to the strict variant
 	// to preserve back-compat.
-	Capability string
+	Capability       string
 }
 
 // BuildResult holds the assembled context for the first Engine turn.
@@ -58,8 +58,8 @@ type Builder struct {
 	profile      profile.PromptProfile
 	capability   *provider.ProviderCapability
 	rules        *RulesLoader
-	policyLoader *policy.Loader // nil = use RulesLoader fallback
-	memoryStore  *memory.Store  // nil = no memory injection
+	policyLoader *policy.Loader  // nil = use RulesLoader fallback
+	memoryStore  *memory.Store   // nil = no memory injection
 }
 
 // NewBuilder creates a context builder.
@@ -429,7 +429,7 @@ func universalSystemPromptStrict() string {
 判断用户意图后选对应工具集，**不要混用**：
 
 **用户意图: 单条 SQL 调优**（"这条 SQL 怎么优化 / 有没有优化空间 / SQL 慢 / 帮我看下这个 SQL / SQL_ID xxx 怎么优化"）
-  → **第一调用 sqltune** 工具；用户给完整 SQL 就传完整 SQL，用户给 SQL_ID 就只传数字 ID
+  → **第一调用 sqltune** 工具，传给它**可 EXPLAIN 的完整 SQL**（关键：见下面取 SQL 策略）
   → sqltune 内部跑 5 维度专项调优分析（SQL 重写 / 索引 / HINT / 表结构 / 统计），含真实 EXPLAIN 验证 + 等价性检查
   → **不要走 health/alert/activesessions 那一套**（那是聚类层诊断，跟单 SQL 调优无关）
   → sqltune 输出已经是完整 markdown 报告，你直接转给用户即可，不用再加自己的分析
@@ -450,13 +450,18 @@ func universalSystemPromptStrict() string {
 **判断关键**：用户消息中是否粘贴了一条具体 SQL **或者给了 SQL_ID** + 问"怎么优化 / 怎么改 / 有没有优化空间"。
 是 → sqltune；否 → 标准诊断。
 
-### SQL_ID 调优策略（**重要 — 小模型必须遵守**）
+### 取 SQL 文本的策略（**重要 — 单条 SQL 调优场景必读**）
 
   - **用户直接粘 SQL** → 用粘的版本传 sqltune
   - **用户只给 SQL_ID（如 "SQL_ID 33402943 怎么优化"）**：
-    1. **直接调用 sqltune，args 只传数字 ID**，例如 ` + "`" + `{"args":"33402943","mode":"quick"}` + "`" + `
-    2. sqltune 内部会走受控 sqlfetch 路径查 statement_history / statement，并处理占位符
-    3. **禁止模型自己手写 SQL 查 dbe_perf，也禁止根据 SQL_ID 编造示例表或示例 SQL**
+    1. 先调 sql 工具查带字面量的版本（不要直接传归一化的 query 字段，会挂）：
+       ` + "`" + `SELECT query FROM dbe_perf.statement_history
+        WHERE unique_query = (SELECT query FROM dbe_perf.statement WHERE unique_sql_id = <ID>)
+        ORDER BY start_time DESC LIMIT 1;` + "`" + `
+    2. 若上面拿不到（statement_history 已淘汰），用 statement.query 但**先用样例字面量替换 ?**
+       例如 ` + "`LIKE ?`" + ` → ` + "`LIKE '%test%'`" + `，` + "`TO_CHAR(d,?)`" + ` → ` + "`TO_CHAR(d,'YYYY')`" + `
+    3. 表名缺 schema 前缀（裸 ` + "`customers`" + ` 而非 ` + "`sqltune_demo.customers`" + `）：
+       调 sql 查 information_schema.tables 找归属 schema，重写后再传 sqltune
 
 ### og-lite 元数据列名速查（**实测多个模型都用错过 PG 命名约定，照下面来**）
 
@@ -471,14 +476,25 @@ func universalSystemPromptStrict() string {
   - 两视图链接：` + "`statement.unique_sql_id == statement_history.unique_query_id`" + `（同值，字段名不同）
   - statement_history.query 已淘汰时显示占位字符串
     ` + "`/* missing SQL statement, GUC instr_unique_sql_count is too small. */`" + `
-    这类情况由 sqltune/sqlfetch 内部处理；外层模型不要手写 SQL 拉取。
+    遇这种情况优先用 ` + "`/sqlfetch <SQL_ID>`" + ` 工具兜底。
+
+**首选拉取 SQL 的 SQL 模板（直接抄）**：
+` + "```sql" + `
+SELECT schema_name, query
+  FROM dbe_perf.statement_history
+ WHERE unique_query_id = <SQL_ID>
+   AND query NOT LIKE '/* missing SQL statement%'
+ ORDER BY start_time DESC LIMIT 1;
+` + "```" + `
+
+  失败一次就**不要在同一字段名上重试**。**有 /sqlfetch 工具就用它**，不要手写 SQL 拉取。
 
 ### sqltune 失败处理（**重要**）
 
   - sqltune 返回错误时**不要静默切通用诊断**，必须在最终输出明确说明：
     "/sqltune 调用失败，原因：<error message>。已降级到通用诊断"
   - 错误含 ` + "`phase A`" + ` / ` + "`plan collection failed`" + ` / ` + "`relation does not exist`" + ` / ` + "`unbound parameter`" + ` / ` + "`placeholder`" + `：
-    直接说明失败原因。不要用模型编造的示例表名重试。
+    优先尝试 schema 补全或字面量替换后重试 sqltune；3 次重试都失败再降级。
 
 ## 主动深挖原则（强制 — 严格遵守）
 
@@ -573,8 +589,8 @@ func universalSystemPromptTemplated() string {
 
 判断用户意图，选对应工具集，不要混用：
 
-**意图 A: 单条 SQL 调优**（用户消息含一段具体 SQL，或 SQL_ID + "怎么优化 / 有没有优化空间 / 这条 SQL 慢"）
-  → **第一调用 sqltune 工具**；完整 SQL 传完整 SQL，SQL_ID 只传数字 ID
+**意图 A: 单条 SQL 调优**（用户消息含一段具体 SQL + 问"怎么优化 / 有没有优化空间 / 这条 SQL 慢"）
+  → **第一调用 sqltune 工具**，把用户的完整 SQL 传给它
   → sqltune 内部跑 5 维度专项调优分析（SQL 重写 / 索引 / HINT / 表结构 / 统计），含真实 EXPLAIN 验证 + 等价性检查
   → **不要走 health/alert/activesessions 那一套**（那是聚类层诊断）
   → sqltune 的输出是完整 markdown 报告，直接转给用户即可
@@ -590,7 +606,7 @@ func universalSystemPromptTemplated() string {
      (工具结果开头有 ` + "`<!-- WDR_REPORT_BEGIN: ... -->`" + ` 注释作为 passthrough 标记)
   → 同 sqltune: 工具输出已是终态报告, 二次加工只会损失结构化信息
 
-**判断关键**：用户消息是否粘贴了一条具体 SQL，或是否给了 SQL_ID + 问"怎么优化"。是 → sqltune；
+**判断关键**：用户消息是否粘贴了一条具体 SQL + 问"怎么优化"。是 → sqltune；
        是否提到 wdr 报告? 是 → wdranalyze; 否 → 标准诊断。
 
 # 主动深挖（强制）

@@ -36,8 +36,8 @@ func NewModelSkill(manager *model.Manager) *ModelSkill {
 	return &ModelSkill{manager: manager}
 }
 
-func (s *ModelSkill) Name() string                       { return "model" }
-func (s *ModelSkill) Description() string                { return "List, switch, or add LLM models" }
+func (s *ModelSkill) Name() string        { return "model" }
+func (s *ModelSkill) Description() string  { return "List, switch, or add LLM models" }
 func (s *ModelSkill) SecurityLevel() skill.SecurityLevel { return skill.LevelReadOnly }
 
 func (s *ModelSkill) ToolDef() skill.ToolDef {
@@ -113,7 +113,7 @@ func (s *ModelSkill) listModels() (*skill.Result, error) {
 	}
 
 	// Calculate column widths.
-	nameW, vendorW, modeW := 4, 4, len("TOOL_MODE") // minimum header widths
+	nameW, vendorW, modelW := 4, 4, 4 // minimum header widths
 	for _, p := range profiles {
 		if len(p.Name) > nameW {
 			nameW = len(p.Name)
@@ -122,15 +122,15 @@ func (s *ModelSkill) listModels() (*skill.Result, error) {
 		if len(v) > vendorW {
 			vendorW = len(v)
 		}
-		tm := displayToolMode(p.ToolMode)
-		if len(tm) > modeW {
-			modeW = len(tm)
+		dm := p.DisplayModel()
+		if len(dm) > modelW {
+			modelW = len(dm)
 		}
 	}
 
 	// Header.
-	fmtStr := fmt.Sprintf("  %%s %%-%ds  %%-%ds  %%-%ds  %%s\n", nameW, vendorW, modeW)
-	b.WriteString(fmt.Sprintf(fmtStr, " ", "NAME", "VENDOR", "TOOL_MODE", "MODEL"))
+	fmtStr := fmt.Sprintf("  %%s %%-%ds  %%-%ds  %%s\n", nameW, vendorW)
+	b.WriteString(fmt.Sprintf(fmtStr, " ", "NAME", "VENDOR", "MODEL"))
 
 	// Rows.
 	for _, p := range profiles {
@@ -138,7 +138,7 @@ func (s *ModelSkill) listModels() (*skill.Result, error) {
 		if p.Name == activeName {
 			marker = "▸"
 		}
-		b.WriteString(fmt.Sprintf(fmtStr, marker, p.Name, p.DisplayVendor(), displayToolMode(p.ToolMode), p.DisplayModel()))
+		b.WriteString(fmt.Sprintf(fmtStr, marker, p.Name, p.DisplayVendor(), p.DisplayModel()))
 	}
 
 	b.WriteString(fmt.Sprintf("\n  Usage: /model <name> 切换  /model none 禁用\n  添加新模型: %s configure (在另一个 shell 中运行)", brand.Current().BinaryName))
@@ -149,13 +149,6 @@ func (s *ModelSkill) listModels() (*skill.Result, error) {
 		Rendered: b.String(),
 		Summary:  fmt.Sprintf("%d models, active=%s", len(profiles), activeName),
 	}, nil
-}
-
-func displayToolMode(mode string) string {
-	if strings.TrimSpace(mode) == "" {
-		return "native"
-	}
-	return mode
 }
 
 // switchModel activates a named model.
@@ -239,3 +232,4 @@ func (s *ModelSkill) reloadModels() (*skill.Result, error) {
 		Summary:  fmt.Sprintf("reloaded %d models", count),
 	}, nil
 }
+

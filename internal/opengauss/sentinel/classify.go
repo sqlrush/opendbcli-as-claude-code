@@ -28,42 +28,37 @@ func Classify(report BurstReport) Classification {
 		return c
 	}
 
-	// Rule 2: IO bottleneck or temp spill.
-	if c := classifyIOBottleneck(report); c.Confidence > 0.3 {
-		return c
-	}
-
-	// Rule 3: Single slow SQL dominates.
+	// Rule 2: Single slow SQL dominates.
 	if c := classifySlowQuery(report); c.Confidence > 0.3 {
 		return c
 	}
 
-	// Rule 4: Vacuum lag (dead tuple ratio high).
+	// Rule 3: Vacuum lag (dead tuple ratio high).
 	if c := classifyVacuumLag(report); c.Confidence > 0.3 {
 		return c
 	}
 
-	// Rule 5: XID wraparound risk.
+	// Rule 4: XID wraparound risk.
 	if c := classifyXIDWraparound(report); c.Confidence > 0.3 {
 		return c
 	}
 
-	// Rule 6: WAL bottleneck.
+	// Rule 5: WAL bottleneck.
 	if c := classifyWALBottleneck(report); c.Confidence > 0.3 {
 		return c
 	}
 
-	// Rule 7: Connection storm.
+	// Rule 6: Connection storm.
 	if c := classifyConnectionStorm(report); c.Confidence > 0.3 {
 		return c
 	}
 
-	// Rule 8: Replication lag.
+	// Rule 7: Replication lag.
 	if c := classifyReplicationLag(report); c.Confidence > 0.3 {
 		return c
 	}
 
-	// Rule 9: Checkpoint storm.
+	// Rule 8: Checkpoint storm.
 	if c := classifyCheckpointStorm(report); c.Confidence > 0.3 {
 		return c
 	}
@@ -104,45 +99,6 @@ func classifyLockContention(r BurstReport) Classification {
 
 	return Classification{
 		Cause:      CauseLockContention,
-		Confidence: confidence,
-		Evidence:   evidence,
-	}
-}
-
-func classifyIOBottleneck(r BurstReport) Classification {
-	tempRate := metricMax(r, string(MetricTempBytesRate))
-	cacheHit := metricMax(r, string(MetricCacheHitPct))
-	active := metricMax(r, string(MetricActiveSessions))
-	ioWaitPct := ioWaitPercentage(r)
-
-	if tempRate < 50*1024*1024 && ioWaitPct < 30 && !(cacheHit > 0 && cacheHit < 70 && active >= 10) {
-		return Classification{}
-	}
-
-	confidence := 0.55
-	if tempRate >= 200*1024*1024 || ioWaitPct >= 50 {
-		confidence = 0.75
-	}
-	if ioWaitPct >= 70 || (cacheHit > 0 && cacheHit < 50 && active >= 20) {
-		confidence = 0.85
-	}
-
-	evidence := []string{}
-	if tempRate >= 50*1024*1024 {
-		evidence = append(evidence, formatEvidence("临时空间写入速率 %.1f MB/s", tempRate/1024/1024))
-	}
-	if ioWaitPct >= 30 {
-		evidence = append(evidence, formatEvidence("IO 等待占比 %.1f%%", ioWaitPct))
-	}
-	if cacheHit > 0 && cacheHit < 70 {
-		evidence = append(evidence, formatEvidence("缓存命中率 %.1f%%, 活跃会话 %.0f", cacheHit, active))
-	}
-	if len(evidence) == 0 {
-		evidence = append(evidence, "IO 指标异常")
-	}
-
-	return Classification{
-		Cause:      CauseIOBottleneck,
 		Confidence: confidence,
 		Evidence:   evidence,
 	}
@@ -308,8 +264,6 @@ func classifyFromTrigger(trigger TriggerEvent) Classification {
 		MetricDeadTupleRatio:    CauseVacuumLag,
 		MetricXIDAgeRatio:       CauseXIDWraparound,
 		MetricWALBytesRate:      CauseWALBottleneck,
-		MetricTempBytesRate:     CauseIOBottleneck,
-		MetricCacheHitPct:       CauseIOBottleneck,
 		MetricConnectionsPct:    CauseConnectionStorm,
 		MetricReplicationLag:    CauseReplicationLag,
 		MetricCheckpointsReq:    CauseCheckpointStorm,
@@ -317,6 +271,8 @@ func classifyFromTrigger(trigger TriggerEvent) Classification {
 		MetricIdleInTransaction: CauseLockContention,
 		MetricBlockerCount:      CauseLockContention,
 		MetricDeadlocks:         CauseLockContention,
+		MetricCacheHitPct:       CauseSlowQuery,
+		MetricTempBytesRate:     CauseSlowQuery,
 		MetricXactCommitRate:    CauseSlowQuery,
 	}
 
@@ -333,16 +289,6 @@ func classifyFromTrigger(trigger TriggerEvent) Classification {
 				trigger.Metric, trigger.Baseline, trigger.Current, trigger.Threshold),
 		},
 	}
-}
-
-func ioWaitPercentage(r BurstReport) float64 {
-	var pct float64
-	for _, w := range r.WaitProfile {
-		if w.WaitEventType == "IO" {
-			pct += w.Percentage
-		}
-	}
-	return pct
 }
 
 // metricMax returns the max value for a metric across burst frames.

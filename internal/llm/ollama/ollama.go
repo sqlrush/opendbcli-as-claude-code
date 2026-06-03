@@ -67,19 +67,20 @@ func (p *OllamaProvider) Name() string {
 
 // openAIRequest is the request body for the OpenAI-compatible chat endpoint.
 type openAIRequest struct {
-	Model       string           `json:"model"`
-	Messages    []openAIMessage  `json:"messages"`
-	Stream      bool             `json:"stream"`
-	Tools       []any            `json:"tools,omitempty"`
-	MaxTokens   int              `json:"max_tokens,omitempty"`
-	Temperature *float64         `json:"temperature,omitempty"`
+	Model       string          `json:"model"`
+	Messages    []openAIMessage `json:"messages"`
+	Stream      bool            `json:"stream"`
+	Tools       []any           `json:"tools,omitempty"`
+	ToolChoice  any             `json:"tool_choice,omitempty"`
+	MaxTokens   int             `json:"max_tokens,omitempty"`
+	Temperature *float64        `json:"temperature,omitempty"`
 }
 
 type openAIMessage struct {
-	Role       string          `json:"role"`
-	Content    string          `json:"content,omitempty"`
+	Role       string           `json:"role"`
+	Content    string           `json:"content,omitempty"`
 	ToolCalls  []openAIToolCall `json:"tool_calls,omitempty"`
-	ToolCallID string          `json:"tool_call_id,omitempty"`
+	ToolCallID string           `json:"tool_call_id,omitempty"`
 }
 
 type openAIToolCall struct {
@@ -198,6 +199,7 @@ func (p *OllamaProvider) buildRequestBody(req llm.ChatRequest, stream bool) ([]b
 		Messages:    messages,
 		Stream:      stream,
 		Tools:       req.Tools,
+		ToolChoice:  req.ToolChoice,
 		MaxTokens:   req.MaxTokens,
 		Temperature: req.Temperature,
 	}

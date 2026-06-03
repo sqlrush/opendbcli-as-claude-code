@@ -497,8 +497,6 @@ func rootCauseToCategory(cause sentinel.RootCauseType) string {
 		return "vacuum"
 	case sentinel.CauseWALBottleneck:
 		return "wal"
-	case sentinel.CauseIOBottleneck:
-		return "io"
 	case sentinel.CauseConnectionStorm:
 		return "connection"
 	case sentinel.CauseReplicationLag:

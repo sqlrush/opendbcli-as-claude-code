@@ -80,8 +80,8 @@ func RegisterSkills(
 
 	// Monitor — wait / waits / trace
 	reg(monitor.NewWaitsSkill(driver))
-	reg(monitor.NewTraceSkillForDB(DBType, "GaussDB", connMgr.CurrentHost(), &cfg.Trace))
-	reg(monitor.NewDiagTraceSkill())
+	reg(monitor.NewTraceSkill(connMgr.CurrentHost(), &cfg.Trace))
+	reg(monitor.NewDiagTraceSkill(modelMgr))
 
 	// Monitor — memory / buffers
 	reg(monitor.NewGSMemSkill(driver))
@@ -135,9 +135,6 @@ func RegisterSkills(
 	// (looksLikeSQLID + fetchLiteralSQLByID) so /sqltune <numeric_id>
 	// works on GaussDB the same way it does on og.
 	reg(query.NewSQLTuneSkill(driver, modelMgr, nil))
-	sqlfetchSkill := query.NewSQLFetchSkill(driver)
-	reg(sqlfetchSkill)
-	reg(query.NewWDRAnalyzeSkill(driver, sqlfetchSkill, modelMgr, nil))
 
 	// Admin
 	reg(admin.NewKillSkill(driver))
@@ -174,6 +171,8 @@ func RegisterAISkills(
 
 	ruleSkill := ai.NewRuleSkill(sentinelSkill, driver)
 	reg(ruleSkill)
+
+	reg(ai.NewRouteTestSkill(modelMgr))
 
 	diagnoseSkill := ai.NewDiagnoseSkill(modelMgr, executor, registry, sentinelSkill, ruleSkill)
 	reg(diagnoseSkill)

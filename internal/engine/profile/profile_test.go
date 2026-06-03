@@ -19,6 +19,8 @@ package profile
 import (
 	"strings"
 	"testing"
+
+	
 )
 
 func TestNewProfileOracle(t *testing.T) {
@@ -32,19 +34,6 @@ func TestNewProfileMySQL(t *testing.T) {
 	p := NewProfile("mysql")
 	if p.Product() != "mysql" {
 		t.Errorf("expected 'mysql', got %q", p.Product())
-	}
-}
-
-func TestNewProfileGaussDBUsesOpenGaussKnowledgeWithGaussDBIdentity(t *testing.T) {
-	p := NewProfile("gaussdb")
-	if p.Product() != "gaussdb" {
-		t.Fatalf("expected gaussdb product, got %q", p.Product())
-	}
-	rules := p.SystemPromptRules()
-	for _, want := range []string{"GaussDB", "dbe_perf", "WDR", "MOT"} {
-		if !strings.Contains(rules, want) {
-			t.Fatalf("GaussDB profile should include %q in rules", want)
-		}
 	}
 }
 

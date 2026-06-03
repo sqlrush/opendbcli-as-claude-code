@@ -81,15 +81,13 @@ func TestSceneBasedFilter_ClusterDiag(t *testing.T) {
 }
 
 func TestSceneBasedFilter_WDR(t *testing.T) {
-	all := makeTools("health", "wdr", "wdranalyze", "wdr_snapshot", "sqltune")
+	all := makeTools("health", "wdranalyze", "wdr_snapshot", "sqltune")
 	f := NewSceneBasedFilter(DefaultScenes(), DefaultAlwaysAvailable())
 	got := extractNames(f.Filter(all, FilterContext{
 		UserMessage: "分析下这个 WDR 报告",
 	}))
-	for _, want := range []string{"wdr", "wdranalyze", "wdr_snapshot"} {
-		if !contains(got, want) {
-			t.Errorf("WDR scene missed %q: %v", want, got)
-		}
+	if !contains(got, "wdranalyze") {
+		t.Errorf("WDR scene missed wdranalyze: %v", got)
 	}
 }
 

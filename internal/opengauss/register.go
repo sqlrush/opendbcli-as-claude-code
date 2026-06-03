@@ -65,8 +65,8 @@ func RegisterSkills(
 
 	// Monitor — wait / waits / trace
 	reg(monitor.NewWaitsSkill(driver))
-	reg(monitor.NewTraceSkillForDB("opengauss", "openGauss", connMgr.CurrentHost(), &cfg.Trace)) // NEW P0: OS stack / flamegraph (Linux)
-	reg(monitor.NewDiagTraceSkill())                                                             // DBAA diagnosis-chain trace
+	reg(monitor.NewTraceSkill(connMgr.CurrentHost(), &cfg.Trace)) // NEW P0: OS stack / flamegraph (Linux)
+	reg(monitor.NewDiagTraceSkill(modelMgr))                      // DBAA diagnosis-chain trace
 
 	// Monitor — memory / buffers
 	reg(monitor.NewGSMemSkill(driver))
@@ -157,6 +157,8 @@ func RegisterAISkills(
 
 	ruleSkill := ai.NewRuleSkill(sentinelSkill, driver)
 	reg(ruleSkill)
+
+	reg(ai.NewRouteTestSkill(modelMgr))
 
 	diagnoseSkill := ai.NewDiagnoseSkill(modelMgr, executor, registry, sentinelSkill, ruleSkill)
 	reg(diagnoseSkill)

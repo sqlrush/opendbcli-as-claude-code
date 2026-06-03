@@ -78,14 +78,13 @@ func Synthesize(
 	if resp == nil || strings.TrimSpace(resp.Content) == "" {
 		return "", fmt.Errorf("LLM returned empty content")
 	}
-	return GateWDRSynthesis(resp.Content), nil
+	return strings.TrimSpace(resp.Content), nil
 }
 
 // buildWDRSystemPrompt encodes the v1.1.51 three-layer output contract:
-//
-//	Layer 1: 总览评估表 (基于 scorecard, 不重新打分)
-//	Layer 2: 风险详解 (仅 🔴/🟡 项, 模板化)
-//	Layer 3: 优化方案 (反向引用 R# 编号)
+//   Layer 1: 总览评估表 (基于 scorecard, 不重新打分)
+//   Layer 2: 风险详解 (仅 🔴/🟡 项, 模板化)
+//   Layer 3: 优化方案 (反向引用 R# 编号)
 //
 // Hard constraints prevent: hallucinating data, inventing new severity
 // levels (deterministic scorecard is authoritative), and giving generic
@@ -151,9 +150,6 @@ func buildWDRSystemPrompt() string {
 5. 不要重复 Layer 1 的内容到 Layer 2 (Layer 2 是展开不是复述).
 6. 全文不超过 1500 字, 不要加 "## 工作负载特征" / "## Top SQL 列表" 这种由
    renderer 自己处理的章节.
-7. 只有 🟡 warning 的风险不能写 P0；P0 只允许用于 🔴 或明确在线故障证据。
-8. 不要写未验证的 PostgreSQL 参数/对象作为直接执行项；pg_stat_statements、pgBouncer、statement_cache_size、enable_prepared_statement 等必须标“需确认 GaussDB/openGauss 兼容”。
-9. 不要用 <br>、HTML 标签或不受证据支撑的精确收益数字（例如“CPU 降低 15%”）。
 `
 }
 
@@ -174,10 +170,6 @@ func buildWDRUserMessage(report *WDRReport, fallback []Finding, sqlTunes []SQLTu
 		formatDuration(report.Header.WindowDuration())))
 	b.WriteString(fmt.Sprintf("- 实例: %s · %s\n",
 		report.Header.InstanceHost, report.Header.DBVersion))
-	b.WriteString("\n")
-
-	b.WriteString("## 结构化证据输出（必须作为主证据，不要只总结表面现象）\n\n")
-	b.WriteString(EvidencePromptBlock(report, fallback, sqlTunes))
 	b.WriteString("\n")
 
 	// v1.1.51: deterministic scorecard (Layer 1 input). The LLM is asked
