@@ -32,10 +32,11 @@ import (
 // Tuner is the main /sqltune entry point.
 //
 // Flow (design doc §5):
-//   Phase A: 确定性收集（plan + schema + view + dialect + runtime + memory），全部并行
-//   Round 1: LLM mega-analysis → JSON Round1Output
-//   Round 2 verify: 并发跑 EXPLAIN 验证每个 candidate cost + 等价性验证 rewrite 类
-//   Round 2 report: LLM 写最终 markdown 报告
+//
+//	Phase A: 确定性收集（plan + schema + view + dialect + runtime + memory），全部并行
+//	Round 1: LLM mega-analysis → JSON Round1Output
+//	Round 2 verify: 并发跑 EXPLAIN 验证每个 candidate cost + 等价性验证 rewrite 类
+//	Round 2 report: LLM 写最终 markdown 报告
 type Tuner struct {
 	driver   db.Driver
 	provider llm.Provider
@@ -487,6 +488,10 @@ func (t *Tuner) runRound2(ctx context.Context, cc *CollectedContext, round1 *Rou
 
 ## 4. 关键证据
 （表格：证据 / 数据 / 来源）
+PG/openGauss 的 total_cost 是累积成本；计划热点必须按 self_cost = node.total_cost - 子节点 total_cost 之和排序。
+不要把只继承子节点成本的父节点写成主要瓶颈；低占比 Seq Scan 不要写成“高成本顺序扫描”。
+逗号隐式连接没有漏连接条件/笛卡尔积证据时，只作为风格提示，不列为性能反模式。
+DISTINCT + GROUP BY 只有列集语义等价时才说冗余；NOT IN 改 NOT EXISTS 必须说明 NULL 语义风险。
 
 ## 5. 优化方案（按预期收益排序）
 
@@ -544,6 +549,11 @@ func (t *Tuner) runRound2(ctx context.Context, cc *CollectedContext, round1 *Rou
 	b.WriteString("原 SQL:\n```sql\n" + cc.OrigSQL + "\n```\n\n")
 	if cc.Plan != nil {
 		b.WriteString(fmt.Sprintf("原 plan total_cost: %.2f\n\n", cc.Plan.TotalCost))
+		if hotspots := formatSelfCostHotspots(cc.Plan, 12); hotspots != "" {
+			b.WriteString("## self_cost 计划热点\n\n")
+			b.WriteString(hotspots)
+			b.WriteString("\n")
+		}
 	}
 
 	b.WriteString("\n请按指定结构输出 markdown 报告。")
@@ -578,6 +588,11 @@ func renderFallbackReport(cc *CollectedContext, round1 *Round1Output, verifies [
 
 	if cc.Plan != nil {
 		b.WriteString(fmt.Sprintf("## 2. 执行计划\n\nTotal cost: %.2f\n\n", cc.Plan.TotalCost))
+		if hotspots := formatSelfCostHotspots(cc.Plan, 12); hotspots != "" {
+			b.WriteString("### Self-cost 计划热点\n\n")
+			b.WriteString(hotspots)
+			b.WriteString("\n")
+		}
 	}
 
 	b.WriteString("## 3. CBO 分析\n\n" + round1.CBOAnalysis + "\n\n")
@@ -631,4 +646,194 @@ func renderFallbackReport(cc *CollectedContext, round1 *Round1Output, verifies [
 		}
 	}
 	return b.String()
+}
+
+type selfCostHotspot struct {
+	Node      *PlanNode
+	SelfCost  float64
+	TotalCost float64
+	Share     float64
+	Reason    string
+}
+
+func formatSelfCostHotspots(plan *PlanInfo, limit int) string {
+	hotspots := buildSelfCostHotspots(plan, limit)
+	if len(hotspots) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	for _, h := range hotspots {
+		if h.Node == nil {
+			continue
+		}
+		b.WriteString(fmt.Sprintf("- %s on %s: self_cost=%.0f total_cost=%.0f share=%.1f%%, %s\n",
+			h.Node.Operator, nonEmptyRelation(h.Node.RelationName), h.SelfCost, h.TotalCost, h.Share*100, h.Reason))
+	}
+	return b.String()
+}
+
+func buildSelfCostHotspots(plan *PlanInfo, limit int) []selfCostHotspot {
+	if plan == nil || plan.Root == nil || limit <= 0 {
+		return nil
+	}
+	rootCost := planRootTotalCost(plan)
+	var items []selfCostHotspot
+	walkPlanNodes(plan.Root, func(n *PlanNode) {
+		if n == nil || !isSelfCostCandidate(n) {
+			return
+		}
+		selfCost := planNodeSelfCost(n)
+		share := planCostShare(selfCost, rootCost)
+		if !isSelfCostHotspot(n, selfCost, share, rootCost) {
+			return
+		}
+		items = append(items, selfCostHotspot{
+			Node:      n,
+			SelfCost:  selfCost,
+			TotalCost: n.TotalCost,
+			Share:     share,
+			Reason:    selfCostHotspotReason(n, selfCost, share),
+		})
+	})
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].SelfCost != items[j].SelfCost {
+			return items[i].SelfCost > items[j].SelfCost
+		}
+		return items[i].Node.Operator < items[j].Node.Operator
+	})
+	if len(items) > limit {
+		items = items[:limit]
+	}
+	return items
+}
+
+func walkPlanNodes(root *PlanNode, fn func(*PlanNode)) {
+	if root == nil {
+		return
+	}
+	fn(root)
+	for _, child := range root.Children {
+		walkPlanNodes(child, fn)
+	}
+}
+
+func planRootTotalCost(plan *PlanInfo) float64 {
+	if plan == nil {
+		return 0
+	}
+	if plan.Root != nil && plan.Root.TotalCost > 0 {
+		return plan.Root.TotalCost
+	}
+	if plan.TotalCost > 0 {
+		return plan.TotalCost
+	}
+	return 0
+}
+
+func planNodeSelfCost(n *PlanNode) float64 {
+	if n == nil || n.TotalCost <= 0 {
+		return 0
+	}
+	childCost := 0.0
+	for _, child := range n.Children {
+		if child != nil && child.TotalCost > 0 {
+			childCost += child.TotalCost
+		}
+	}
+	selfCost := n.TotalCost - childCost
+	if selfCost < 0 {
+		return 0
+	}
+	return selfCost
+}
+
+func planCostShare(cost, total float64) float64 {
+	if cost <= 0 || total <= 0 {
+		return 0
+	}
+	return cost / total
+}
+
+func isSelfCostCandidate(n *PlanNode) bool {
+	op := strings.ToLower(n.Operator)
+	return strings.Contains(op, "seq scan") ||
+		strings.Contains(op, "bitmap heap") ||
+		strings.Contains(op, "sort") ||
+		strings.Contains(op, "hash join") ||
+		strings.Contains(op, "nested loop")
+}
+
+func isSelfCostHotspot(n *PlanNode, selfCost, share, rootCost float64) bool {
+	if n == nil || selfCost <= 0 {
+		return false
+	}
+	const (
+		minAbsoluteSelfCost = 100.0
+		minShare            = 0.03
+		minLargeScanShare   = 0.01
+		minSkewShare        = 0.005
+	)
+	if rootCost <= 0 {
+		return selfCost >= minAbsoluteSelfCost
+	}
+	if selfCost >= minAbsoluteSelfCost && share >= minShare {
+		return true
+	}
+	op := strings.ToLower(n.Operator)
+	if strings.Contains(op, "seq scan") && n.PlanRows >= 10000 &&
+		selfCost >= minAbsoluteSelfCost && share >= minLargeScanShare {
+		return true
+	}
+	if n.SortSpaceType != "" && !strings.EqualFold(n.SortSpaceType, "Memory") && selfCost >= 50 {
+		return true
+	}
+	if hasPlanRowSkew(n) && selfCost >= 50 && share >= minSkewShare {
+		return true
+	}
+	return false
+}
+
+func selfCostHotspotReason(n *PlanNode, selfCost, share float64) string {
+	if n == nil {
+		return ""
+	}
+	op := strings.ToLower(n.Operator)
+	if hasPlanRowSkew(n) {
+		return "估算行数与实际行数偏差明显，优先修复统计信息"
+	}
+	if n.SortSpaceType != "" && !strings.EqualFold(n.SortSpaceType, "Memory") {
+		return "排序落盘，检查 work_mem、排序键索引或 LIMIT 下推"
+	}
+	switch {
+	case strings.Contains(op, "seq scan"):
+		if n.PlanRows >= 10000 {
+			return "顺序扫描自身成本占比显著，且扫描行数较大，优先检查过滤列/连接列索引与统计信息"
+		}
+		return "顺序扫描自身成本占比显著，检查谓词是否可走索引与统计信息是否准确"
+	case strings.Contains(op, "bitmap heap"):
+		return "Bitmap Heap 自身成本占比显著，检查索引覆盖度、回表行数与过滤选择性"
+	case strings.Contains(op, "sort"):
+		return "排序自身成本占比显著，检查排序键索引、LIMIT 下推或 work_mem"
+	case strings.Contains(op, "hash join"):
+		return "Hash Join 自身成本占比显著，检查构建端行数、连接列索引和统计信息"
+	case strings.Contains(op, "nested loop"):
+		return "Nested Loop 自身成本占比显著，检查内层是否可用连接列索引"
+	default:
+		return fmt.Sprintf("该节点 self_cost=%.0f，占总 cost %.1f%%", selfCost, share*100)
+	}
+}
+
+func hasPlanRowSkew(n *PlanNode) bool {
+	if n == nil || n.ActualRows <= 0 || n.PlanRows <= 0 {
+		return false
+	}
+	ratio := float64(n.ActualRows) / float64(n.PlanRows)
+	return ratio > 10 || ratio < 0.1
+}
+
+func nonEmptyRelation(v string) string {
+	if strings.TrimSpace(v) == "" {
+		return "-"
+	}
+	return v
 }

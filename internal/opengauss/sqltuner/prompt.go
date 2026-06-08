@@ -99,6 +99,10 @@ CBO 不走索引的常见原因:
   - 估算行数过大 → 修统计 / 加 partial index
   - 列类型 vs 谓词字面量类型不匹配 → 隐式转换阻断
 
+注意: PG/openGauss 的 plan total_cost 是累积成本，父节点 total_cost 包含子节点成本。
+定位瓶颈不要按 total_cost 直接排序；先估算 self_cost = max(node.total_cost - sum(children.total_cost), 0)，
+优先看 self_cost 占比显著的叶子扫描或算子。父节点 total_cost 高但 self_cost 低时，只能说明它继承了下层成本。
+
 ---
 
 `)
@@ -106,7 +110,7 @@ CBO 不走索引的常见原因:
 	// Section 4: PlanTrace 解读模板（G5 灵魂）
 	b.WriteString(`# 读 EXPLAIN 的标准流程
 
-1. 找 cost 最高的节点（瓶颈算子）
+1. 找 self_cost 占比最高的节点（瓶颈算子）；不要把只继承子节点成本的父节点当热点
 2. 看 estimated_rows vs actual_rows:
    - 偏差 > 10× → 统计失真（G3 主因）
    - 偏差 < 2×  → 统计 OK，看算子选错
@@ -121,6 +125,11 @@ CBO 不走索引的常见原因:
    - "如果选择性估算正确, CBO 还会选这个吗?"
    - "如果统计修复了, CBO 会切换到什么算子?"
    - "如果加了 hint X, plan 会变成什么样?"
+
+SQL 写法诊断边界:
+  - 逗号隐式连接与显式 INNER JOIN 性能等价；没有漏连接条件/笛卡尔积证据时，只能作为可读性风格提示，不要列为性能反模式。
+  - DISTINCT 与 GROUP BY 同时出现时，只有 SELECT DISTINCT 列集与 GROUP BY key 语义等价才可判定冗余；仅凭共存只能标注不确定。
+  - NOT IN 子查询改 NOT EXISTS 必须说明 NULL 语义不等价；除非确认子查询列 NOT NULL 或补充 IS NOT NULL 保护，否则不能直接声称等价。
 
 # G5 输出标准 (cbo_analysis 字段)
 
@@ -304,7 +313,8 @@ func formatPlanTree(n *PlanNode, depth int) string {
 			b.WriteString(" " + n.Alias)
 		}
 	}
-	b.WriteString(fmt.Sprintf("  (cost=%.2f..%.2f rows=%d width=%d)", n.StartupCost, n.TotalCost, n.PlanRows, n.PlanWidth))
+	b.WriteString(fmt.Sprintf("  (cost=%.2f..%.2f self_cost=%.2f rows=%d width=%d)",
+		n.StartupCost, n.TotalCost, planNodeSelfCost(n), n.PlanRows, n.PlanWidth))
 	if n.ActualRows > 0 || n.ActualLoops > 0 {
 		b.WriteString(fmt.Sprintf("  (actual time=%.2f..%.2f rows=%d loops=%d)", n.ActualStartup, n.ActualTotal, n.ActualRows, n.ActualLoops))
 	}
