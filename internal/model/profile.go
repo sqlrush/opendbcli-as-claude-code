@@ -35,6 +35,7 @@ type ModelProfile struct {
 	Capability  string `yaml:"capability,omitempty"`   // "small" | "large"
 	APIKey      string `yaml:"api_key,omitempty"`      // supports ${ENV_VAR}
 	StripThink  bool   `yaml:"strip_think,omitempty"` // strip <think>...</think> from response
+	CompatMode  string `yaml:"compat_mode,omitempty"` // "conservative" trims optional OpenAI-compatible params
 	Description string `yaml:"description,omitempty"`
 	// ToolMode controls how function calling is delivered to the LLM.
 	// Values:

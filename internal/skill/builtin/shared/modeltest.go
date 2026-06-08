@@ -69,6 +69,8 @@ type modelTestReport struct {
 	Content        string              `json:"content,omitempty"`
 	ToolCalls      []modelTestToolCall `json:"tool_calls,omitempty"`
 	ParserStatus   string              `json:"parser_status,omitempty"`
+	ParserSource   string              `json:"parser_source,omitempty"`
+	ParserFormat   string              `json:"parser_format,omitempty"`
 	ParserError    string              `json:"parser_error,omitempty"`
 	Corrected      int                 `json:"corrected,omitempty"`
 	StartedAt      string              `json:"started_at"`
@@ -224,6 +226,10 @@ func runModelTestNativeFC(ctx context.Context, profile *model.ModelProfile, prov
 	}
 	fillModelTestResponse(&report, resp)
 	if len(report.ToolCalls) == 0 {
+		if parseModelTestContentToolCalls(&report, resp, []string{"health"}, "native_content_fallback") {
+			report.Status = "ok"
+			return report
+		}
 		report.Status = "error"
 		report.Error = "model returned no native tool_calls"
 		if opts.Force {
@@ -233,6 +239,8 @@ func runModelTestNativeFC(ctx context.Context, profile *model.ModelProfile, prov
 		}
 		return report
 	}
+	report.ParserStatus = "native_tool_calls"
+	report.ParserSource = "openai_native"
 	report.Status = "ok"
 	return report
 }
@@ -256,12 +264,16 @@ func runModelTestPromptFC(ctx context.Context, profile *model.ModelProfile, prov
 		report.Corrected = parsed.Corrected
 		if parsed.ParseError != nil {
 			report.ParserStatus = "error"
+			report.ParserSource = "prompt_content_parser"
 			report.ParserError = parsed.ParseError.Error()
 		} else if len(parsed.Calls) > 0 {
 			report.ParserStatus = "ok"
+			report.ParserSource = "prompt_content_parser"
+			report.ParserFormat = parsed.Format
 			report.ToolCalls = engineToolCallsToModelTest(parsed.Calls)
 		} else {
 			report.ParserStatus = "no_tool_calls"
+			report.ParserSource = "prompt_content_parser"
 		}
 	}
 	if len(report.ToolCalls) == 0 {
@@ -275,6 +287,7 @@ func runModelTestPromptFC(ctx context.Context, profile *model.ModelProfile, prov
 	report.Status = "ok"
 	if report.ParserStatus == "" {
 		report.ParserStatus = "native_tool_calls"
+		report.ParserSource = "provider_native"
 	}
 	return report
 }
@@ -452,6 +465,29 @@ func fillModelTestResponse(report *modelTestReport, resp *llm.Response) {
 	report.ToolCalls = llmToolCallsToModelTest(resp.ToolCalls)
 }
 
+func parseModelTestContentToolCalls(report *modelTestReport, resp *llm.Response, knownTools []string, source string) bool {
+	if report == nil || resp == nil || strings.TrimSpace(resp.Content) == "" {
+		return false
+	}
+	parser := engineprovider.NewJSONToolCallParser(knownTools)
+	parsed := parser.Parse(resp.Content)
+	report.Corrected = parsed.Corrected
+	report.ParserSource = source
+	if parsed.ParseError != nil {
+		report.ParserStatus = "error"
+		report.ParserError = parsed.ParseError.Error()
+		return false
+	}
+	if len(parsed.Calls) == 0 {
+		report.ParserStatus = "no_tool_calls"
+		return false
+	}
+	report.ParserStatus = "ok"
+	report.ParserFormat = parsed.Format
+	report.ToolCalls = engineToolCallsToModelTest(parsed.Calls)
+	return true
+}
+
 func llmToolCallsToModelTest(calls []llm.ToolCall) []modelTestToolCall {
 	out := make([]modelTestToolCall, 0, len(calls))
 	for _, c := range calls {
@@ -513,6 +549,12 @@ func renderModelTestReport(report modelTestReport) string {
 	}
 	if report.ParserStatus != "" {
 		writeModelTestKV(&b, "parser_status", report.ParserStatus)
+	}
+	if report.ParserSource != "" {
+		writeModelTestKV(&b, "parser_source", report.ParserSource)
+	}
+	if report.ParserFormat != "" {
+		writeModelTestKV(&b, "parser_format", report.ParserFormat)
 	}
 	if report.ParserError != "" {
 		writeModelTestKV(&b, "parser_error", report.ParserError)

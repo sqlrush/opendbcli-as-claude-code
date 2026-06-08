@@ -38,6 +38,7 @@ type Provider struct {
 	model      string
 	apiKey     string
 	stripThink bool
+	compatMode string
 	httpClient *http.Client
 }
 
@@ -47,6 +48,12 @@ type ProviderOption func(*Provider)
 // WithStripThink enables stripping <think>...</think> blocks from responses.
 func WithStripThink(v bool) ProviderOption {
 	return func(p *Provider) { p.stripThink = v }
+}
+
+// WithCompatMode enables provider-specific request compatibility behavior.
+// "conservative" emits the smallest OpenAI-compatible request body.
+func WithCompatMode(mode string) ProviderOption {
+	return func(p *Provider) { p.compatMode = strings.ToLower(strings.TrimSpace(mode)) }
 }
 
 // NewProvider creates an OpenAI-compatible provider.
@@ -225,6 +232,26 @@ func (p *Provider) buildRequestBody(req llm.ChatRequest, stream bool) ([]byte, e
 		ToolChoice:  req.ToolChoice,
 		MaxTokens:   req.MaxTokens,
 		Temperature: req.Temperature,
+	}
+
+	if p.compatMode == "conservative" {
+		body := map[string]any{
+			"model":    p.model,
+			"messages": messages,
+		}
+		if stream {
+			body["stream"] = true
+		}
+		if len(req.Tools) > 0 {
+			body["tools"] = req.Tools
+		}
+		if req.MaxTokens > 0 {
+			body["max_tokens"] = req.MaxTokens
+		}
+		if req.Temperature != nil {
+			body["temperature"] = req.Temperature
+		}
+		return json.Marshal(body)
 	}
 
 	return json.Marshal(oaiReq)

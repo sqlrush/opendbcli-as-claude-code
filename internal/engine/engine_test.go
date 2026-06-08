@@ -661,3 +661,37 @@ func TestToolCallSignature(t *testing.T) {
 		t.Error("different tool names with same args should NOT share signature")
 	}
 }
+
+func TestApplyContentToolCallFallbackParsesCustomerFormats(t *testing.T) {
+	tools := []provider.ToolSchema{{Name: "health"}, {Name: "activesessions"}}
+
+	jsonResp := &provider.Response{
+		Content: "```json\n" + `{"tool_call":{"name":"health","arguments":{}}}` + "\n```",
+	}
+	if !applyContentToolCallFallback(jsonResp, tools) {
+		t.Fatal("expected JSON content fallback to parse")
+	}
+	if len(jsonResp.ToolCalls) != 1 || jsonResp.ToolCalls[0].Name != "health" || jsonResp.Content != "" {
+		t.Fatalf("unexpected JSON fallback response: %+v", jsonResp)
+	}
+
+	xmlResp := &provider.Response{
+		Content: `<tool_call><function=activesessions></function></tool_call>`,
+	}
+	if !applyContentToolCallFallback(xmlResp, tools) {
+		t.Fatal("expected XML content fallback to parse")
+	}
+	if len(xmlResp.ToolCalls) != 1 || xmlResp.ToolCalls[0].Name != "activesessions" || xmlResp.Content != "" {
+		t.Fatalf("unexpected XML fallback response: %+v", xmlResp)
+	}
+}
+
+func TestApplyContentToolCallFallbackPreservesPlainText(t *testing.T) {
+	resp := &provider.Response{Content: "我是普通回答，不是工具调用"}
+	if applyContentToolCallFallback(resp, []provider.ToolSchema{{Name: "health"}}) {
+		t.Fatal("plain text should not parse as tool call")
+	}
+	if len(resp.ToolCalls) != 0 || resp.Content == "" {
+		t.Fatalf("plain text should be preserved: %+v", resp)
+	}
+}

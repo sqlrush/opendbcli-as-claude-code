@@ -93,6 +93,87 @@ func TestStreamingParser_FormatA_FullFlow(t *testing.T) {
 	}
 }
 
+func TestStreamingParser_FormatA_XMLFullFlow(t *testing.T) {
+	p := NewStreamingParser([]string{"health"}, 64)
+	chunks := []string{
+		"<tool>\n",
+		"<name>health</name>\n",
+		"<args>{}</args>\n</tool>",
+	}
+	for _, c := range chunks {
+		out, _ := p.Feed(c)
+		if out != "" {
+			t.Errorf("XML Format A should never emit text mid-stream, got %q", out)
+		}
+	}
+	calls, text, mode, err := p.Finish()
+	if err != nil {
+		t.Fatalf("finish err: %v", err)
+	}
+	if mode != StreamModeFormatA {
+		t.Errorf("final mode: got %s, want format_a", mode)
+	}
+	if len(calls) != 1 || calls[0].Name != "health" || calls[0].Arguments != "{}" {
+		t.Errorf("expected 1 XML call to health, got %+v", calls)
+	}
+	if text != "" {
+		t.Errorf("XML Format A should not produce text on success, got %q", text)
+	}
+}
+
+func TestStreamingParser_FormatA_XMLFunctionEqualsFullFlow(t *testing.T) {
+	p := NewStreamingParser([]string{"health"}, 64)
+	chunks := []string{
+		"<tool_call>\n",
+		"<function=health>\n",
+		"</function>\n</tool_call>",
+	}
+	for _, c := range chunks {
+		out, _ := p.Feed(c)
+		if out != "" {
+			t.Errorf("XML function Format A should never emit text mid-stream, got %q", out)
+		}
+	}
+	calls, text, mode, err := p.Finish()
+	if err != nil {
+		t.Fatalf("finish err: %v", err)
+	}
+	if mode != StreamModeFormatA {
+		t.Errorf("final mode: got %s, want format_a", mode)
+	}
+	if len(calls) != 1 || calls[0].Name != "health" || calls[0].Arguments != "{}" {
+		t.Errorf("expected 1 XML function call to health, got %+v", calls)
+	}
+	if text != "" {
+		t.Errorf("XML function Format A should not produce text on success, got %q", text)
+	}
+}
+
+func TestStreamingParser_FormatA_XMLAfterThink(t *testing.T) {
+	p := NewStreamingParser([]string{"health"}, 16)
+	out, mode := p.Feed("<think>正在判断下一步动作, 这段思考超过检测阈值")
+	if mode != StreamModeUnknown {
+		t.Fatalf("unfinished think block should stay unknown, got %s", mode)
+	}
+	if out != "" {
+		t.Fatalf("unfinished think block should be held, got %q", out)
+	}
+	p.Feed("</think>\n<tool><name>health</name><args>{}</args></tool>")
+	calls, text, mode, err := p.Finish()
+	if err != nil {
+		t.Fatalf("finish err: %v", err)
+	}
+	if mode != StreamModeFormatA {
+		t.Errorf("final mode: got %s, want format_a", mode)
+	}
+	if len(calls) != 1 || calls[0].Name != "health" {
+		t.Errorf("expected XML call after think, got %+v", calls)
+	}
+	if text != "" {
+		t.Errorf("XML after think should not produce text on success, got %q", text)
+	}
+}
+
 func TestStreamingParser_FormatB_RealtimeStream(t *testing.T) {
 	p := NewStreamingParser(nil, 64)
 	// First chunk triggers mode detection AND should flush.
@@ -174,18 +255,22 @@ func TestStreamingParser_Reset(t *testing.T) {
 
 func TestDetectModeFromPrefix(t *testing.T) {
 	cases := map[string]StreamMode{
-		"```json\n":         StreamModeFormatA,
-		"```":               StreamModeFormatA,
-		`{"tool_calls":`:    StreamModeFormatA,
-		"## 根因":            StreamModeFormatB,
-		"# header":          StreamModeFormatB,
-		"> blockquote":      StreamModeFormatB,
-		"- bullet":          StreamModeFormatB,
-		"* bullet":          StreamModeFormatB,
-		"根据现象":             StreamModeFormatB,
-		"":                  StreamModeUnknown,
-		" ":                 StreamModeUnknown,
-		"some plain text":   StreamModeUnknown,
+		"```json\n":                StreamModeFormatA,
+		"```":                      StreamModeFormatA,
+		`{"tool_calls":`:           StreamModeFormatA,
+		"<tool><name>":             StreamModeFormatA,
+		"<tool_call>":              StreamModeFormatA,
+		"<think>分析中":               StreamModeUnknown,
+		"<think>x</think>\n<tool>": StreamModeFormatA,
+		"## 根因":                    StreamModeFormatB,
+		"# header":                 StreamModeFormatB,
+		"> blockquote":             StreamModeFormatB,
+		"- bullet":                 StreamModeFormatB,
+		"* bullet":                 StreamModeFormatB,
+		"根据现象":                     StreamModeFormatB,
+		"":                         StreamModeUnknown,
+		" ":                        StreamModeUnknown,
+		"some plain text":          StreamModeUnknown,
 	}
 	for in, want := range cases {
 		got := detectModeFromPrefix(in)

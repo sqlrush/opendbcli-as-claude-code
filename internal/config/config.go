@@ -61,6 +61,7 @@ type ModelConfig struct {
 	Capability  string `yaml:"capability,omitempty"`   // "small" | "large"
 	APIKey      string `yaml:"api_key,omitempty"`
 	StripThink  bool   `yaml:"strip_think,omitempty"`
+	CompatMode  string `yaml:"compat_mode,omitempty"` // "conservative" trims optional OpenAI-compatible params
 	Description string `yaml:"description,omitempty"`
 	// ToolMode (v1.2.0): "" / "native" / "prompt".
 	// Native (default) uses provider FC API; prompt injects tool descriptions

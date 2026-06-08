@@ -132,7 +132,8 @@ func (p *StreamingParser) Feed(delta string) (textForUser string, mode StreamMod
 		// Accumulate into detection window.
 		p.detectionWindow.WriteString(delta)
 		detected := detectModeFromPrefix(p.detectionWindow.String())
-		if detected == StreamModeUnknown && p.detectionWindow.Len() < p.detectThreshold {
+		if detected == StreamModeUnknown &&
+			(p.detectionWindow.Len() < p.detectThreshold || shouldHoldDetectionWindow(p.detectionWindow.String())) {
 			// Still undecided; hold the bytes.
 			return "", StreamModeUnknown
 		}
@@ -223,6 +224,8 @@ func (p *StreamingParser) Reset() {
 //   - leading whitespace ignored
 //   - starts with ``` → Format A (code fence; assume JSON inside)
 //   - starts with { → Format A
+//   - starts with <tool_call...> or <tool...> → Format A
+//   - starts with an unfinished <think> block → Unknown
 //   - starts with markdown heading (#) → Format B
 //   - starts with > or - or 0-9. → Format B (list/blockquote)
 //   - contains "tool_calls" within first 50 chars → Format A
@@ -232,8 +235,23 @@ func detectModeFromPrefix(s string) StreamMode {
 	if trimmed == "" {
 		return StreamModeUnknown
 	}
+	lower := strings.ToLower(trimmed)
+	if strings.HasPrefix(lower, "<think") && !strings.Contains(lower, "</think>") {
+		return StreamModeUnknown
+	}
+	withoutThink := strings.TrimLeft(stripThinkBlocks(trimmed), " \t\n\r")
+	if withoutThink != trimmed {
+		trimmed = withoutThink
+		lower = strings.ToLower(trimmed)
+		if trimmed == "" {
+			return StreamModeUnknown
+		}
+	}
 	// Strong Format A signals.
 	if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "{") {
+		return StreamModeFormatA
+	}
+	if strings.HasPrefix(lower, "<tool_call") || strings.HasPrefix(lower, "<tool") {
 		return StreamModeFormatA
 	}
 	// Strong Format B signals (markdown structures).
@@ -250,8 +268,15 @@ func detectModeFromPrefix(s string) StreamMode {
 		return StreamModeFormatB
 	}
 	// Mid-stream signal: "tool_calls" keyword appearing.
-	if strings.Contains(trimmed, "tool_calls") || strings.Contains(trimmed, "\"name\"") {
+	if strings.Contains(trimmed, "tool_calls") || strings.Contains(trimmed, "\"name\"") ||
+		strings.Contains(lower, "<tool_call") || strings.Contains(lower, "<tool>") {
 		return StreamModeFormatA
 	}
 	return StreamModeUnknown // still undecided
+}
+
+func shouldHoldDetectionWindow(s string) bool {
+	trimmed := strings.TrimLeft(s, " \t\n\r")
+	lower := strings.ToLower(trimmed)
+	return strings.HasPrefix(lower, "<think") && !strings.Contains(lower, "</think>")
 }

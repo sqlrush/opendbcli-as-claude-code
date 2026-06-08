@@ -374,6 +374,7 @@ func configToInlineModels(cfg *config.Config) []model.InlineModel {
 			Capability:  m.Capability,
 			APIKey:      m.APIKey,
 			StripThink:  m.StripThink,
+			CompatMode:  m.CompatMode,
 			Description: m.Description,
 			ToolMode:    m.ToolMode,
 		}

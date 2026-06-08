@@ -155,6 +155,31 @@ func TestModelTestSkillNativeFCNoToolCallsShowsContent(t *testing.T) {
 	}
 }
 
+func TestModelTestSkillNativeFCParsesContentFallback(t *testing.T) {
+	provider := &modelTestProvider{resp: &llm.Response{
+		Content:    "```json\n" + `{"tool_call":{"name":"health","arguments":{}}}` + "\n```",
+		Usage:      llm.Usage{InputTokens: 25, OutputTokens: 93},
+		StopReason: "stop",
+	}}
+	mgr := model.NewManagerForTest(provider, "large")
+	result, err := NewModelTestSkill(mgr).Execute(context.Background(), skill.ParamsFromMap(map[string]any{"args": "fc"}))
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	for _, want := range []string{
+		"mode: fc",
+		"status: ok",
+		"parser_status: ok",
+		"parser_source: native_content_fallback",
+		"parser_format: json_tool_call_single",
+		"health",
+	} {
+		if !strings.Contains(result.Rendered, want) {
+			t.Fatalf("modeltest fc content fallback output missing %q:\n%s", want, result.Rendered)
+		}
+	}
+}
+
 func TestModelTestSkillPromptFCParsesToolCall(t *testing.T) {
 	provider := &modelTestProvider{resp: &llm.Response{
 		Content: `{"tool_calls":[{"name":"health","args":{}}]}`,

@@ -129,10 +129,10 @@ func TestParse_MultipleToolCalls(t *testing.T) {
 func TestParse_LevenshteinCorrection(t *testing.T) {
 	p := NewJSONToolCallParser(defaultKnownTools)
 	cases := map[string]string{
-		"heath":    "health",  // missing 'l'
-		"healtg":   "health",  // 'g' instead of 'h'
-		"topsq1":   "topsql",  // '1' instead of 'l'
-		"HEALTH":   "health",  // case mismatch
+		"heath":  "health", // missing 'l'
+		"healtg": "health", // 'g' instead of 'h'
+		"topsq1": "topsql", // '1' instead of 'l'
+		"HEALTH": "health", // case mismatch
 	}
 	for typo, want := range cases {
 		in := `{"tool_calls":[{"name":"` + typo + `","args":{}}]}`
@@ -216,6 +216,41 @@ func TestParse_BareToolCallObject(t *testing.T) {
 	}
 }
 
+func TestParse_SingularToolCallEnvelopeArguments(t *testing.T) {
+	p := NewJSONToolCallParser(defaultKnownTools)
+	in := "```json\n" + `{
+  "tool_call": {
+    "name": "health",
+    "arguments": {}
+  }
+}` + "\n```"
+	r := p.Parse(in)
+	if len(r.Calls) != 1 {
+		t.Fatalf("want 1 call, got %d: %+v", len(r.Calls), r)
+	}
+	if r.Calls[0].Name != "health" {
+		t.Fatalf("unexpected call: %+v", r.Calls[0])
+	}
+	if r.Calls[0].Arguments != "{}" {
+		t.Fatalf("unexpected args: %q", r.Calls[0].Arguments)
+	}
+	if r.Format != "json_tool_call_single" {
+		t.Fatalf("format = %q, want json_tool_call_single", r.Format)
+	}
+}
+
+func TestParse_BareFunctionToolCallObject(t *testing.T) {
+	p := NewJSONToolCallParser(defaultKnownTools)
+	in := `{"function":{"name":"health","arguments":{}}}`
+	r := p.Parse(in)
+	if len(r.Calls) != 1 {
+		t.Fatalf("want 1 call, got %d: %+v", len(r.Calls), r)
+	}
+	if r.Calls[0].Name != "health" || r.Calls[0].Arguments != "{}" {
+		t.Fatalf("unexpected call: %+v", r.Calls[0])
+	}
+}
+
 func TestParse_NullArgsBecomesEmptyObject(t *testing.T) {
 	p := NewJSONToolCallParser(defaultKnownTools)
 	in := `{"tool_calls":[{"name":"health","args":null}]}`
@@ -238,6 +273,108 @@ func TestParse_ComplexSQLArgument(t *testing.T) {
 	}
 	if !strings.Contains(r.Calls[0].Arguments, "John") {
 		t.Errorf("SQL content lost: %q", r.Calls[0].Arguments)
+	}
+}
+
+func TestParse_ICBCXMLToolCalls(t *testing.T) {
+	p := NewJSONToolCallParser(defaultKnownTools)
+	in := `<tool_call>
+<tool_name>health</tool_name>
+<tool_argument>{}</tool_argument>
+</tool_call>
+<tool_call>
+<tool_name>alert</tool_name>
+<tool_argument>{}</tool_argument>
+</tool_call>`
+	r := p.Parse(in)
+	if len(r.Calls) != 2 {
+		t.Fatalf("want 2 calls, got %d: %+v", len(r.Calls), r)
+	}
+	if r.Calls[0].Name != "health" || r.Calls[1].Name != "alert" {
+		t.Fatalf("unexpected calls: %+v", r.Calls)
+	}
+	if r.Calls[0].Arguments != "{}" || r.Calls[1].Arguments != "{}" {
+		t.Fatalf("unexpected args: %+v", r.Calls)
+	}
+}
+
+func TestParse_ICBCSimpleXMLToolAfterThink(t *testing.T) {
+	p := NewJSONToolCallParser(defaultKnownTools)
+	in := `<think>
+用户问"当前数据库有什么问题"，这是聚类层问题。
+</think>
+
+我先检查数据库整体健康状态。
+
+<tool>
+<name>health</name>
+<args>
+{}
+</args>
+</tool>`
+	r := p.Parse(in)
+	if len(r.Calls) != 1 {
+		t.Fatalf("want 1 call, got %d: %+v", len(r.Calls), r)
+	}
+	if r.Calls[0].Name != "health" {
+		t.Fatalf("unexpected call: %+v", r.Calls[0])
+	}
+	if r.Calls[0].Arguments != "{}" {
+		t.Fatalf("unexpected args: %q", r.Calls[0].Arguments)
+	}
+}
+
+func TestParse_ICBCXMLTextArgumentFallsBackToArgs(t *testing.T) {
+	p := NewJSONToolCallParser(defaultKnownTools)
+	in := `<tool_call><tool_name>topsql</tool_name><tool_argument>60s</tool_argument></tool_call>`
+	r := p.Parse(in)
+	if len(r.Calls) != 1 {
+		t.Fatalf("want 1 call, got %d: %+v", len(r.Calls), r)
+	}
+	if r.Calls[0].Arguments != `{"args":"60s"}` {
+		t.Fatalf("unexpected text arg normalization: %q", r.Calls[0].Arguments)
+	}
+}
+
+func TestParse_XMLFunctionEqualsToolCall(t *testing.T) {
+	p := NewJSONToolCallParser(append(defaultKnownTools, "activesessions"))
+	in := `<tool_call>
+<function=activesessions>
+</function>
+</tool_call>`
+	r := p.Parse(in)
+	if len(r.Calls) != 1 {
+		t.Fatalf("want 1 call, got %d: %+v", len(r.Calls), r)
+	}
+	if r.Calls[0].Name != "activesessions" {
+		t.Fatalf("unexpected call: %+v", r.Calls[0])
+	}
+	if r.Calls[0].Arguments != "{}" {
+		t.Fatalf("unexpected args: %q", r.Calls[0].Arguments)
+	}
+	if r.Format != "xml_function_equals" {
+		t.Fatalf("format = %q, want xml_function_equals", r.Format)
+	}
+}
+
+func TestParse_XMLFunctionEqualsParameters(t *testing.T) {
+	p := NewJSONToolCallParser(defaultKnownTools)
+	in := `<tool_call>
+<function=topsql>
+  <parameter=args>60s</parameter>
+  <parameter=limit>10</parameter>
+</function>
+</tool_call>`
+	r := p.Parse(in)
+	if len(r.Calls) != 1 {
+		t.Fatalf("want 1 call, got %d: %+v", len(r.Calls), r)
+	}
+	if r.Calls[0].Name != "topsql" {
+		t.Fatalf("unexpected call: %+v", r.Calls[0])
+	}
+	if !strings.Contains(r.Calls[0].Arguments, `"args":"60s"`) ||
+		!strings.Contains(r.Calls[0].Arguments, `"limit":10`) {
+		t.Fatalf("unexpected args: %q", r.Calls[0].Arguments)
 	}
 }
 

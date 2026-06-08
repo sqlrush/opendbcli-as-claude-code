@@ -152,6 +152,38 @@ func TestPromptModeBuilder_PostProcessResponse_ExtractsToolCalls(t *testing.T) {
 	}
 }
 
+func TestPromptModeBuilder_PostProcessResponse_ExtractsICBCSimpleXMLToolCall(t *testing.T) {
+	b := NewPromptModeBuilder([]string{"health"})
+	resp := &Response{
+		Content: `<think>
+用户问"当前数据库有什么问题"，这是聚类层问题。
+</think>
+
+我先检查数据库整体健康状态。
+
+<tool>
+<name>health</name>
+<args>
+{}
+</args>
+</tool>`,
+	}
+	out := b.PostProcessResponse(resp)
+
+	if len(out.ToolCalls) != 1 {
+		t.Fatalf("want 1 XML tool call, got %d; content=%q", len(out.ToolCalls), out.Content)
+	}
+	if out.ToolCalls[0].Name != "health" {
+		t.Errorf("name: got %q, want health", out.ToolCalls[0].Name)
+	}
+	if out.ToolCalls[0].Arguments != "{}" {
+		t.Errorf("args: got %q, want {}", out.ToolCalls[0].Arguments)
+	}
+	if out.Content != "" {
+		t.Errorf("Content should be cleared when XML ToolCalls populated, got %q", out.Content)
+	}
+}
+
 func TestPromptModeBuilder_PostProcessResponse_PreservesFormatB(t *testing.T) {
 	b := NewPromptModeBuilder(nil)
 	resp := &Response{

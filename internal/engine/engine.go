@@ -896,7 +896,37 @@ done:
 		ToolCalls: toolCalls,
 		Truncated: finishReason == "length" || finishReason == "max_tokens",
 	}
+	if applyContentToolCallFallback(resp, req.Tools) {
+		chunks = nil
+	}
 	return resp, chunks, false, nil
+}
+
+func applyContentToolCallFallback(resp *provider.Response, tools []provider.ToolSchema) bool {
+	if resp == nil || len(resp.ToolCalls) > 0 || strings.TrimSpace(resp.Content) == "" {
+		return false
+	}
+	parser := provider.NewJSONToolCallParser(toolNamesFromSchemas(tools))
+	parsed := parser.Parse(resp.Content)
+	if len(parsed.Calls) == 0 {
+		return false
+	}
+	resp.ToolCalls = parsed.Calls
+	resp.Content = ""
+	return true
+}
+
+func toolNamesFromSchemas(tools []provider.ToolSchema) []string {
+	if len(tools) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(tools))
+	for _, t := range tools {
+		if strings.TrimSpace(t.Name) != "" {
+			names = append(names, t.Name)
+		}
+	}
+	return names
 }
 
 // chatFallback executes a non-streaming Chat() call and returns the response

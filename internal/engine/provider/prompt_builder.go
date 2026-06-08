@@ -55,14 +55,16 @@ type ToolFilterFunc func(allTools []ToolSchema, ctx FilterContext) []ToolSchema
 //
 // Call order during a single Chat() invocation:
 //
-//	1. BuildSystemPrompt(base, tools)  → final system prompt string
-//	2. PrepareRequest(req)             → mutate req (e.g., clear req.Tools
-//	                                      for prompt mode)
-//	3. Provider sends req to LLM API
-//	4. PostProcessResponse(resp)       → mutate resp (e.g., parse JSON
-//	                                      tool_calls out of resp.Content)
+//  1. BuildSystemPrompt(base, tools)  → final system prompt string
+//  2. PrepareRequest(req)             → mutate req (e.g., clear req.Tools
+//     for prompt mode)
+//  3. Provider sends req to LLM API
+//  4. PostProcessResponse(resp)       → mutate resp (e.g., parse JSON
+//     tool_calls out of resp.Content)
 //
-// NativeFCBuilder is a no-op on steps 1, 2, 4 — pre-v1.2.0 behavior preserved.
+// NativeFCBuilder is a no-op on steps 1 and 2. Step 4 preserves structured
+// native tool_calls and only falls back to parsing content when gateways leak
+// tool calls as JSON/XML text.
 type PromptBuilder interface {
 	// BuildSystemPrompt returns the final system prompt for a turn. The
 	// `base` argument is the engine's standard system prompt (role,
@@ -103,9 +105,22 @@ func (NativeFCBuilder) BuildSystemPrompt(base string, _ []ToolSchema) string {
 // PrepareRequest is a no-op for native FC mode.
 func (NativeFCBuilder) PrepareRequest(_ *Request) {}
 
-// PostProcessResponse returns the response unchanged. Native FC providers
-// already populate ToolCalls structurally.
-func (NativeFCBuilder) PostProcessResponse(resp *Response) *Response { return resp }
+// PostProcessResponse preserves structured native tool_calls when present.
+// Some OpenAI-compatible gateways instead leak tool calls into
+// message.content as JSON/XML text; parse that as a fallback so native mode
+// can stay lightweight while still handling non-standard responses.
+func (NativeFCBuilder) PostProcessResponse(resp *Response) *Response {
+	if resp == nil || len(resp.ToolCalls) > 0 || resp.Content == "" {
+		return resp
+	}
+	result := NewJSONToolCallParser(nil).Parse(resp.Content)
+	if len(result.Calls) == 0 {
+		return resp
+	}
+	resp.ToolCalls = result.Calls
+	resp.Content = ""
+	return resp
+}
 
 // Mode returns "native".
 func (NativeFCBuilder) Mode() string { return "native" }
@@ -115,11 +130,12 @@ func (NativeFCBuilder) Mode() string { return "native" }
 // with a warning logged at provider construction time.
 //
 // Valid modes:
-//   "" / "native" / "auto" → NativeFCBuilder
-//   "prompt"               → PromptModeBuilder (created by caller; this
-//                            function only returns nil-as-sentinel here
-//                            because PromptModeBuilder needs additional
-//                            dependencies — caller wires it in)
+//
+//	"" / "native" / "auto" → NativeFCBuilder
+//	"prompt"               → PromptModeBuilder (created by caller; this
+//	                         function only returns nil-as-sentinel here
+//	                         because PromptModeBuilder needs additional
+//	                         dependencies — caller wires it in)
 //
 // Returning nil for "prompt" lets the caller (openaicompat constructor)
 // build the full PromptModeBuilder with its own ToolFilter and few-shot set.

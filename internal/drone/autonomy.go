@@ -33,8 +33,8 @@ import (
 	"github.com/sqlrush/opendb/internal/connection"
 	"github.com/sqlrush/opendb/internal/db"
 	"github.com/sqlrush/opendb/internal/model"
-	"github.com/sqlrush/opendb/internal/security"
 	"github.com/sqlrush/opendb/internal/odberr"
+	"github.com/sqlrush/opendb/internal/security"
 	"github.com/sqlrush/opendb/internal/skill"
 )
 
@@ -74,23 +74,23 @@ type AutonomyLoop struct {
 
 // AutonomyConfig holds configuration for the autonomy loop.
 type AutonomyConfig struct {
-	Config       *config.Config
-	ConnMgr      *connection.Manager
-	Driver       db.Driver
-	Registry     *skill.Registry
-	Executor     *skill.Executor
-	ModelMgr     *model.Manager
-	AuditLogger  *AuditLogger
-	Role         string
-	Listen       string // gRPC listen address (e.g., "0.0.0.0:9300")
-	WorkerID     string // Unique worker identifier
-	DBType       string // Database type for gRPC registration
-	Instance     string // Instance name for gRPC registration
-	OverlordAddr string // Overlord address for registration
-	JoinToken    string // Join token for Overlord registration
-	RuleWriter   *RuleWriter // Rule auto-generation from successful repairs
-	LLMRecordDir string // --llm-record directory (empty = disabled)
-	LLMReplayFile string // --llm-replay file (empty = disabled)
+	Config        *config.Config
+	ConnMgr       *connection.Manager
+	Driver        db.Driver
+	Registry      *skill.Registry
+	Executor      *skill.Executor
+	ModelMgr      *model.Manager
+	AuditLogger   *AuditLogger
+	Role          string
+	Listen        string      // gRPC listen address (e.g., "0.0.0.0:9300")
+	WorkerID      string      // Unique worker identifier
+	DBType        string      // Database type for gRPC registration
+	Instance      string      // Instance name for gRPC registration
+	OverlordAddr  string      // Overlord address for registration
+	JoinToken     string      // Join token for Overlord registration
+	RuleWriter    *RuleWriter // Rule auto-generation from successful repairs
+	LLMRecordDir  string      // --llm-record directory (empty = disabled)
+	LLMReplayFile string      // --llm-replay file (empty = disabled)
 }
 
 // NewAutonomyLoop creates a new autonomy loop with the given configuration.
@@ -214,7 +214,7 @@ func (al *AutonomyLoop) Run(ctx context.Context) error {
 var crossNodeCauses = map[string]bool{
 	"replication_lag":  true, // involves primary + replica
 	"connection_storm": true, // may be application-layer global issue
-	"xid_wraparound":  true, // needs global freeze coordination
+	"xid_wraparound":   true, // needs global freeze coordination
 	"wal_bottleneck":   true, // affects replica replication
 }
 
@@ -525,6 +525,7 @@ func configToInlineModels(cfg *config.Config) []model.InlineModel {
 			Capability:  m.Capability,
 			APIKey:      m.APIKey,
 			StripThink:  m.StripThink,
+			CompatMode:  m.CompatMode,
 			Description: m.Description,
 		}
 	}

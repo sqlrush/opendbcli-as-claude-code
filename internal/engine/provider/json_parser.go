@@ -40,6 +40,7 @@ package provider
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"regexp"
 	"strings"
 )
@@ -74,6 +75,19 @@ type ParseResult struct {
 	// malformed beyond repair. Caller may use this to trigger retry
 	// feedback in the next turn.
 	ParseError error
+	// Format identifies the concrete content-tool-call format that matched.
+	// It is used by diagnostics such as /modeltest.
+	Format string
+}
+
+type rawToolCall struct {
+	Name     string          `json:"name"`
+	Args     json.RawMessage `json:"args"`
+	Function struct {
+		Name      string          `json:"name"`
+		Arguments json.RawMessage `json:"arguments"`
+	} `json:"function"`
+	Arguments json.RawMessage `json:"arguments"`
 }
 
 // Parse runs the full extraction pipeline on a single LLM response string.
@@ -84,8 +98,13 @@ func (p *JSONToolCallParser) Parse(content string) ParseResult {
 		return ParseResult{FallbackContent: content}
 	}
 
+	parseContent := stripThinkBlocks(content)
+	if calls, format := p.parseXMLToolCalls(parseContent); len(calls) > 0 {
+		return ParseResult{Calls: calls, Format: format}
+	}
+
 	// Step 1: locate the most-likely JSON payload.
-	payload, ok := extractJSONPayload(content)
+	payload, ok := extractJSONPayload(parseContent)
 	if !ok {
 		// No JSON detected at all → Format B.
 		return ParseResult{FallbackContent: content}
@@ -96,19 +115,14 @@ func (p *JSONToolCallParser) Parse(content string) ParseResult {
 
 	// Step 3: unmarshal.
 	var raw struct {
-		ToolCalls []struct {
-			Name string          `json:"name"`
-			Args json.RawMessage `json:"args"`
-		} `json:"tool_calls"`
+		ToolCalls []rawToolCall `json:"tool_calls"`
+		ToolCall  *rawToolCall  `json:"tool_call"`
 	}
 	if err := json.Unmarshal([]byte(fixed), &raw); err != nil {
 		// Try one more recovery: maybe LLM gave a single tool object
 		// without the wrapping {tool_calls: [...]} envelope.
 		if single, recovered := tryUnwrapSingleCall(fixed); recovered {
-			raw.ToolCalls = []struct {
-				Name string          `json:"name"`
-				Args json.RawMessage `json:"args"`
-			}{single}
+			raw.ToolCalls = []rawToolCall{single}
 		} else {
 			// Hard parse failure — return as fallback with error for retry.
 			return ParseResult{
@@ -120,12 +134,14 @@ func (p *JSONToolCallParser) Parse(content string) ParseResult {
 	// Even if unmarshal succeeded, the envelope might be empty — LLM
 	// could have emitted a bare {"name": "...", "args": ...} object.
 	// Try the single-call unwrap as a salvage path.
+	format := "json_tool_calls_array"
 	if len(raw.ToolCalls) == 0 {
-		if single, recovered := tryUnwrapSingleCall(fixed); recovered {
-			raw.ToolCalls = []struct {
-				Name string          `json:"name"`
-				Args json.RawMessage `json:"args"`
-			}{single}
+		if raw.ToolCall != nil {
+			raw.ToolCalls = []rawToolCall{*raw.ToolCall}
+			format = "json_tool_call_single"
+		} else if single, recovered := tryUnwrapSingleCall(fixed); recovered {
+			raw.ToolCalls = []rawToolCall{single}
+			format = "json_bare_tool_call"
 		} else {
 			return ParseResult{FallbackContent: content}
 		}
@@ -137,6 +153,9 @@ func (p *JSONToolCallParser) Parse(content string) ParseResult {
 	for i, tc := range raw.ToolCalls {
 		name := strings.TrimSpace(tc.Name)
 		if name == "" {
+			name = strings.TrimSpace(tc.Function.Name)
+		}
+		if name == "" {
 			continue // skip malformed entries
 		}
 		if p.known != nil {
@@ -146,6 +165,12 @@ func (p *JSONToolCallParser) Parse(content string) ParseResult {
 			}
 		}
 		args := string(tc.Args)
+		if args == "" || args == "null" {
+			args = string(tc.Function.Arguments)
+		}
+		if args == "" || args == "null" {
+			args = string(tc.Arguments)
+		}
 		if args == "" || args == "null" {
 			args = "{}"
 		}
@@ -158,8 +183,174 @@ func (p *JSONToolCallParser) Parse(content string) ParseResult {
 	if len(out) == 0 {
 		return ParseResult{FallbackContent: content}
 	}
-	return ParseResult{Calls: out, Corrected: corrected}
+	return ParseResult{Calls: out, Corrected: corrected, Format: format}
 }
+
+// parseXMLToolCalls handles OpenAI-compatible gateways that leak prompt-mode
+// tool calls into message.content as XML text. Supports both the earlier
+// ICBC form (<tool_call><tool_name>...) and the observed Qwen form
+// (<tool><name>...).
+func (p *JSONToolCallParser) parseXMLToolCalls(content string) ([]ToolCall, string) {
+	var out []ToolCall
+	format := ""
+	for _, block := range xmlToolCallRE.FindAllStringSubmatch(content, -1) {
+		before := len(out)
+		out = p.appendXMLToolCall(out, block[1], "tool_name", "tool_argument")
+		if len(out) > before {
+			if format == "" {
+				format = "xml_tool_name"
+			}
+			continue
+		}
+		out = p.appendXMLFunctionToolCall(out, block[1])
+		if len(out) > before && format == "" {
+			format = "xml_function_equals"
+		}
+	}
+	for _, block := range xmlSimpleToolRE.FindAllStringSubmatch(content, -1) {
+		before := len(out)
+		out = p.appendXMLToolCall(out, block[1], "name", "args")
+		if len(out) > before && format == "" {
+			format = "xml_tool_simple"
+		}
+	}
+	return out, format
+}
+
+func (p *JSONToolCallParser) appendXMLToolCall(out []ToolCall, body, nameTag, argsTag string) []ToolCall {
+	name := strings.TrimSpace(extractXMLTag(body, nameTag))
+	if name == "" {
+		return out
+	}
+	if p.known != nil {
+		if fixed, changed := p.correctName(name); changed || fixed != "" {
+			name = fixed
+		}
+	}
+	return append(out, ToolCall{
+		ID:        fmt.Sprintf("prompt_%d", len(out)),
+		Name:      name,
+		Arguments: normalizeXMLToolArguments(extractXMLTag(body, argsTag)),
+	})
+}
+
+func (p *JSONToolCallParser) appendXMLFunctionToolCall(out []ToolCall, body string) []ToolCall {
+	matches := xmlFunctionEqualsRE.FindStringSubmatch(body)
+	if len(matches) < 2 {
+		return out
+	}
+	name := strings.TrimSpace(matches[1])
+	if name == "" {
+		return out
+	}
+	if p.known != nil {
+		if fixed, changed := p.correctName(name); changed || fixed != "" {
+			name = fixed
+		}
+	}
+	args := "{}"
+	if len(matches) > 2 {
+		args = normalizeXMLFunctionArguments(matches[2])
+	}
+	return append(out, ToolCall{
+		ID:        fmt.Sprintf("prompt_%d", len(out)),
+		Name:      name,
+		Arguments: args,
+	})
+}
+
+func extractXMLTag(body, tag string) string {
+	re := regexp.MustCompile(`(?is)<` + regexp.QuoteMeta(tag) + `\b[^>]*>(.*?)</` + regexp.QuoteMeta(tag) + `>`)
+	matches := re.FindStringSubmatch(body)
+	if len(matches) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(stripXMLCData(html.UnescapeString(matches[1])))
+}
+
+func stripXMLCData(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "<![CDATA[") && strings.HasSuffix(s, "]]>") {
+		s = strings.TrimPrefix(s, "<![CDATA[")
+		s = strings.TrimSuffix(s, "]]>")
+	}
+	return strings.TrimSpace(s)
+}
+
+func stripThinkBlocks(s string) string {
+	return thinkBlockRE.ReplaceAllString(s, "")
+}
+
+func normalizeXMLToolArguments(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "null" {
+		return "{}"
+	}
+	if strings.HasPrefix(raw, "{") && json.Valid([]byte(raw)) {
+		return raw
+	}
+	b, err := json.Marshal(map[string]string{"args": raw})
+	if err != nil {
+		return "{}"
+	}
+	return string(b)
+}
+
+func normalizeXMLFunctionArguments(raw string) string {
+	raw = strings.TrimSpace(stripXMLCData(html.UnescapeString(raw)))
+	if raw == "" || raw == "null" {
+		return "{}"
+	}
+	if strings.HasPrefix(raw, "{") && json.Valid([]byte(raw)) {
+		return raw
+	}
+
+	params := xmlParameterEqualsRE.FindAllStringSubmatch(raw, -1)
+	if len(params) == 0 {
+		return normalizeXMLToolArguments(raw)
+	}
+	obj := make(map[string]any, len(params))
+	for _, param := range params {
+		if len(param) < 3 {
+			continue
+		}
+		key := strings.TrimSpace(param[1])
+		if key == "" {
+			continue
+		}
+		value := strings.TrimSpace(stripXMLCData(html.UnescapeString(param[2])))
+		if value == "" {
+			obj[key] = ""
+			continue
+		}
+		if json.Valid([]byte(value)) {
+			var decoded any
+			if err := json.Unmarshal([]byte(value), &decoded); err == nil {
+				obj[key] = decoded
+				continue
+			}
+		}
+		obj[key] = value
+	}
+	if len(obj) == 0 {
+		return "{}"
+	}
+	b, err := json.Marshal(obj)
+	if err != nil {
+		return "{}"
+	}
+	return string(b)
+}
+
+var (
+	xmlToolCallRE        = regexp.MustCompile(`(?is)<tool_call\b[^>]*>(.*?)</tool_call>`)
+	xmlSimpleToolRE      = regexp.MustCompile(`(?is)<tool\b[^>]*>(.*?)</tool>`)
+	xmlFunctionEqualsRE  = regexp.MustCompile(`(?is)<function\s*=\s*["']?([^"'\s>/]+)["']?\s*[^>]*>(.*?)</function>`)
+	xmlParameterEqualsRE = regexp.MustCompile(
+		`(?is)<parameter\s*=\s*["']?([^"'\s>/]+)["']?\s*[^>]*>(.*?)</parameter>`,
+	)
+	thinkBlockRE = regexp.MustCompile(`(?is)<think\b[^>]*>.*?</think>`)
+)
 
 // ───────────────────────────────────────────────────────────────────────
 // Extraction
@@ -173,9 +364,9 @@ var (
 
 // extractJSONPayload tries (in order):
 //
-//	1. ```json ... ``` code fence
-//	2. ``` ... ``` plain fence
-//	3. Raw {} substring (brace-balanced, ignoring strings)
+//  1. ```json ... ``` code fence
+//  2. ``` ... ``` plain fence
+//  3. Raw {} substring (brace-balanced, ignoring strings)
 //
 // Returns the candidate JSON payload string and whether anything was found.
 func extractJSONPayload(content string) (string, bool) {
@@ -279,18 +470,12 @@ func tolerantFix(s string) string {
 //	{"name": "health", "args": {}}
 //
 // Returns the call struct + true if recovery succeeded.
-func tryUnwrapSingleCall(s string) (struct {
-	Name string          `json:"name"`
-	Args json.RawMessage `json:"args"`
-}, bool) {
-	var single struct {
-		Name string          `json:"name"`
-		Args json.RawMessage `json:"args"`
-	}
+func tryUnwrapSingleCall(s string) (rawToolCall, bool) {
+	var single rawToolCall
 	if err := json.Unmarshal([]byte(s), &single); err != nil {
 		return single, false
 	}
-	if single.Name == "" {
+	if strings.TrimSpace(single.Name) == "" && strings.TrimSpace(single.Function.Name) == "" {
 		return single, false
 	}
 	return single, true
@@ -303,9 +488,9 @@ func tryUnwrapSingleCall(s string) (struct {
 // correctName attempts to map an LLM-provided tool name to one of the
 // known tools using:
 //
-//	1. Exact match (case-sensitive)
-//	2. Case-insensitive match
-//	3. Levenshtein distance ≤ 1
+//  1. Exact match (case-sensitive)
+//  2. Case-insensitive match
+//  3. Levenshtein distance ≤ 1
 //
 // Returns the corrected name and whether a correction was applied.
 func (p *JSONToolCallParser) correctName(provided string) (string, bool) {

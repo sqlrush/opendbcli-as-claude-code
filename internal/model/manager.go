@@ -86,6 +86,7 @@ func NewManager(modelsDir string, activeName string, fallback FallbackLLM) (*Man
 			Capability:  cap,
 			APIKey:      im.APIKey,
 			StripThink:  im.StripThink,
+			CompatMode:  im.CompatMode,
 			Description: im.Description,
 			ToolMode:    im.ToolMode,
 			Group:       "(config)",
@@ -156,6 +157,7 @@ type InlineModel struct {
 	Capability  string
 	APIKey      string
 	StripThink  bool
+	CompatMode  string
 	Description string
 	ToolMode    string // "" / "native" / "prompt" (v1.2.0)
 }
@@ -302,6 +304,7 @@ func (m *Manager) Reload() (int, error) {
 			Capability:  cap,
 			APIKey:      im.APIKey,
 			StripThink:  im.StripThink,
+			CompatMode:  im.CompatMode,
 			Description: im.Description,
 			ToolMode:    im.ToolMode,
 			Group:       "(config)",
@@ -346,6 +349,7 @@ func (m *Manager) AddProfile(p ModelProfile) {
 		Capability:  p.Capability,
 		APIKey:      p.APIKey,
 		StripThink:  p.StripThink,
+		CompatMode:  p.CompatMode,
 		Description: p.Description,
 		ToolMode:    p.ToolMode,
 	})
@@ -362,6 +366,9 @@ func buildProvider(p ModelProfile) (llm.Provider, error) {
 		var opts []openaicompat.ProviderOption
 		if p.StripThink {
 			opts = append(opts, openaicompat.WithStripThink(true))
+		}
+		if p.CompatMode != "" {
+			opts = append(opts, openaicompat.WithCompatMode(p.CompatMode))
 		}
 		return openaicompat.NewProvider(p.BaseURL, p.Model, apiKey, opts...), nil
 	default:
